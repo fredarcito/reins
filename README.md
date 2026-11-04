@@ -38,15 +38,22 @@ reins fixes both:
 
 ## Quick start
 
+In the root of your project (Node 22 or newer):
+
 ```bash
-npx reins install                  # hook, CI job, .gitignore, AGENTS.md, .claude/ (never overwrites anything)
-npx reins init                     # drafts architecture.yml, baseline.json, a review report and one note per domain
-# ask your agent: "fill in the TODO lines of the notes in .reins/notes/"
-npx reins check --update-baseline  # after adjusting the plan: freeze today's violations
-npx reins check                    # green; from now on only *new* violations fail
+npm install -D @agentreins/cli @agentreins/adapter-js
+npx reins install                  # git hook, CI job, AGENTS.md, .claude/
+npx reins init                     # architecture plan, baseline, module notes
+npx reins check --update-baseline  # freeze today's violations
+npx reins check                    # from now on, only new violations fail
 ```
 
-`reins` is the command of the `@agentreins/cli` package, installed in your repo as a dev dependency. How to get the packages into your repo: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+Between `init` and `check --update-baseline`:
+
+1. Review `.reins/init-report.md` and adjust `.reins/architecture.yml` if needed.
+2. Ask your agent: *"fill in the TODO lines of the notes in .reins/notes/"*.
+
+Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
 ## Contents
 

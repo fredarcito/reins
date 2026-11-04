@@ -18,10 +18,11 @@ flowchart LR
 cp -R examples/vite-react /tmp/shop && cd /tmp/shop && rm -rf .reins
 git init -b main && printf 'node_modules/\n' > .gitignore && git add -A && git commit -m "app"
 
-mkdir -p vendor/reins && cp /path/to/reins/.tarballs/*.tgz vendor/reins/
-npm install -D ./vendor/reins/*.tgz husky@9
+npm install -D @agentreins/cli @agentreins/adapter-js husky@9
 npx husky init && : > .husky/pre-commit     # this repo already uses Husky; start with an empty hook
 ```
+
+(The automated replay, `e2e-install.sh`, installs the same packages from local tarballs, so it tests the code before it is published.)
 
 ## 2. Wire it
 
