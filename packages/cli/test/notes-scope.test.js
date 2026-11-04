@@ -86,7 +86,7 @@ test('notes new <domain>: drafts the note from the graph; refuses to overwrite w
   const dir = exampleRepo('next-app');
   const r = await cli(dir, ['notes', 'new', 'orders']);
   assert.equal(r.code, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /Drafted \.reins\/notes\/orders\.md\. Fill in the TODO lines/);
+  assert.match(r.stdout, /Drafted \.reins\/notes\/orders\.md\. Run `reins sync` to add it to the AGENTS\.md index, then ask your agent to fill in its TODO lines \(in Claude Code: \/reins-fill-notes\)\./);
   const text = readFileSync(path.join(dir, '.reins/notes/orders.md'), 'utf8');
   assert.match(text, /^---\npaths: \["src\/features\/orders\/\*\*"\]\n---\n# orders\n/);
   assert.match(text, /- Public API: `src\/features\/orders\/index\.ts`/);

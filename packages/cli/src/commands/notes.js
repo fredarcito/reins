@@ -93,7 +93,7 @@ async function newNote(ctx, target) {
   const date = ctx.today ?? new Date().toISOString().slice(0, 10);
   const r = writeNoteDraft(root, { name, paths, publicApi: api }, graph, files, domains, date, { force: true });
   if (r.empty) out(`! warning  No file matches ${paths.join(', ')}.`);
-  out(`Drafted ${file}. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run \`reins sync\` to add it to the AGENTS.md index.`);
+  out(`Drafted ${file}. Run \`reins sync\` to add it to the AGENTS.md index, then ask your agent to fill in its TODO lines (in Claude Code: /reins-fill-notes).`);
   return 0;
 }
 

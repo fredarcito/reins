@@ -14,7 +14,7 @@ They ship inside `reins` (copied at pack time).
 | `.reins/templates/progress-*.md` | Notebook templates: mini (medium), hot + cold folder (large). Adapt them to your team; `reins progress new` uses them | When starting a notebook |
 | `.reins/review/checklist.md` | Short review checklist | Reviewer agent, `reins review` |
 | `.reins/notes/_template.md` | Shape of a module note (files starting with `_` are not notes) | — |
-| `.reins/skills/{audit,close-task}/` | Skill sources → `.claude/skills/reins-*` | On demand, by description |
+| `.reins/skills/{audit,close-task,fill-notes}/` | Skill sources → `.claude/skills/reins-*` | On demand, by description (or `/reins-fill-notes`) |
 | `.reins/agents/{reviewer,explorer}.md` | Read-only agent sources → `.claude/agents/reins-*` | When delegated |
 | `.reins/hooks/pre-commit.sh` | `reins check --files <staged files>` | Git, not the agent |
 | `.reins/doctor.yml` | Doctor thresholds | `reins doctor` |

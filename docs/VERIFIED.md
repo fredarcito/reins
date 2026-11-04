@@ -209,6 +209,10 @@ Test 2 (end to end, [`scripts/verify/cc-resume.sh`](../scripts/verify/cc-resume.
 - **`SessionStart` with `startup`, `compact` and `clear` — pass** with Claude Code 2.1.318, haiku, 1 run (`cc-resume.sh`). `clear` was not tested on its own.
 - **`notes new` — pass** on both examples (with and without a graph).
 
+## After the rename: `reins-fill-notes` skill — pass (1/1, haiku)
+
+On a copy of `examples/vite-react` installed from npm (`@agentreins/cli` 0.1.0, notes drafted by `reins init`), plus the new skill synced into `.claude/skills/reins-fill-notes/`: `claude -p "/reins-fill-notes"` (haiku, `acceptEdits`). Result: both notes filled, no `TODO` left, Map lines from the graph kept, decisions not invented (one git commit, so they became `- ? question` lines), real traps found (integer cents, the `format.js`/`currency.js` cycle, `Home.jsx` bypassing the catalog public API). It could not run `npx reins doctor` (Bash not allowed in that run) and said so. Follow-up: the draft comment stayed; the skill now says to delete it.
+
 ## Still unverified
 
 Everything below is assumed, not tested. Each is a candidate for the pilot or for a script in `scripts/verify/`.

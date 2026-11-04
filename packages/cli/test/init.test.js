@@ -111,7 +111,7 @@ test('init drafts one module note per domain without one, never touching existin
 
   const r = await cli(dir, ['init']);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /Module notes drafted from the code: \.reins\/notes\/catalog\.md\. Ask your agent to fill in their TODO lines\./);
+  assert.match(r.stdout, /Module notes drafted from the code: \.reins\/notes\/catalog\.md\. Ask your agent to fill in their TODO lines \(in Claude Code: \/reins-fill-notes\)\./);
   assert.match(readFileSync(path.join(dir, '.reins/notes/catalog.md'), 'utf8'), /^---\npaths: \["src\/features\/catalog\/\*\*"\]\n---\n# catalog\n[\s\S]*## Map\n- Public API: `src\/features\/catalog\/index\.js`/);
   assert.equal(existsSync(path.join(dir, '.reins/notes/cart.md')), false, 'cart already has a note under another name');
   assert.equal(readFileSync(path.join(dir, '.reins/notes/shop-cart.md'), 'utf8'), '---\npaths: ["src/features/cart/**"]\n---\nmine\n');

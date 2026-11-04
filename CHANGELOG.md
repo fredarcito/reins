@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- New skill `reins-fill-notes` (`/reins-fill-notes` in Claude Code): the agent fills in the `TODO` lines of the module notes from the code, never invents a decision, and leaves `- ? question` lines for what only the team knows. `init`, `notes new` and `doctor` point to it.
 - `reins progress new` uses the repo's notebook templates in `.reins/templates/` first (so a team can adapt them), falling back to the packaged ones, and refuses a template that doesn't produce a valid notebook.
 
 ## 0.1.0 · 2026-11-04

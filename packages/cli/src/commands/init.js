@@ -118,7 +118,7 @@ export async function init(ctx) {
     [
       `Wrote ${ARCHITECTURE_FILE} (draft), ${BASELINE_FILE} (${s} existing violation${s === 1 ? '' : 's'} frozen) and ${INIT_REPORT_FILE}.`,
       `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains: ${domains.map((x) => x.name).join(', ') || 'none'}`,
-      ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines.`] : []),
+      ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines (in Claude Code: /reins-fill-notes).`] : []),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
       `Next: review ${INIT_REPORT_FILE}, adjust ${ARCHITECTURE_FILE}, run \`reins check --update-baseline\`, then \`reins check\`.`,
     ].join('\n'),

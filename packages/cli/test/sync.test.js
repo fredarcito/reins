@@ -23,7 +23,7 @@ function repo({ keepAgentsMd = false } = {}) {
 }
 
 const GENERATED = [
-  '.claude/skills/reins-audit/SKILL.md', '.claude/skills/reins-close-task/SKILL.md',
+  '.claude/skills/reins-audit/SKILL.md', '.claude/skills/reins-close-task/SKILL.md', '.claude/skills/reins-fill-notes/SKILL.md',
   '.claude/agents/reins-reviewer.md', '.claude/agents/reins-explorer.md',
   '.claude/settings.json', 'AGENTS.md', 'CLAUDE.md', '.reins/.generated.json',
 ];

@@ -7,7 +7,9 @@
     ".claude/agents/reins-explorer.md": "5ae00cbe0364e93aa3e33c48aeffb934849db2d80270652e602c62c46673c32b",
     ".claude/agents/reins-reviewer.md": "ba8373a8ff521d1bab1447e3307cea675bd430a1035ff91ea22d082a4ce342de"
   },
-  "blocks": {},
+  "blocks": {
+    "AGENTS.md#notes": "db5483da50a6f9e94d6c2331eceb06dad9bb88e03b094827987679071f819d56"
+  },
   "settings": {
     "deny": [
       "Bash(git commit:*)",

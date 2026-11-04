@@ -49,7 +49,7 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
 
   for (const n of touching) {
     if (NOTE_TODO_RE.test(n.body)) {
-      findings.push(finding('note-draft', n.file, 'The note still has TODO lines from its draft.', 'Replace each TODO with what you know, or delete the line if there is nothing to say.'));
+      findings.push(finding('note-draft', n.file, 'The note still has TODO lines from its draft.', 'Ask your agent to fill it in (in Claude Code: /reins-fill-notes), or replace each TODO yourself; delete a TODO line if there is nothing true to say.'));
     }
     const lines = n.body.split('\n').length;
     if (lines > maxLines) {

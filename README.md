@@ -51,7 +51,7 @@ npx reins check                    # from now on, only new violations fail
 Between `init` and `check --update-baseline`:
 
 1. Review `.reins/init-report.md` and adjust `.reins/architecture.yml` if needed.
-2. Ask your agent: *"fill in the TODO lines of the notes in .reins/notes/"*.
+2. Have your agent fill in the module notes: in Claude Code, type `/reins-fill-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
 
 Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
@@ -312,6 +312,8 @@ A **decision** answers "why is it like this?"; a **trap** warns "careful: this l
 
 **A conversation gets compacted.** Claude Code fires the `SessionStart` hook with `compact`; `reins resume --hook` puts back the branch notebook, the files changed on the branch and their module notes. Verified with Claude Code: after a compaction the model quoted a notebook and a note that had changed on disk in the meantime ([details](docs/VERIFIED.md#p9-sessionstart-hook-after-a-compaction--pass)). Other agents get the same text with `npx reins resume`.
 
+**Filling them in.** `/reins-fill-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
+
 **Notes stay current.** The `reins-close-task` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
 
 ## What lands in your repo
@@ -494,7 +496,7 @@ Notebook format (`.reins/progress/<branch>.md`, local, outside git):
 ```mermaid
 flowchart LR
     subgraph src[".reins/ (sources, in git)"]
-        skills["skills/audit/SKILL.md<br/>skills/close-task/SKILL.md"]
+        skills["skills/audit/<br/>skills/close-task/<br/>skills/fill-notes/"]
         agents["agents/reviewer.md<br/>agents/explorer.md"]
         notes["notes/*.md<br/>(paths in frontmatter)"]
     end

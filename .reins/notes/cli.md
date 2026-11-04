@@ -2,22 +2,34 @@
 paths: ["packages/cli/**"]
 ---
 # cli
-<!-- Drafted by reins notes new on 2026-11-04. Replace every TODO line; keep the note short (it is read whenever an agent works here). -->
 
 ## Purpose
-TODO: what this module does and for whom, in one or two lines.
+The `reins` command line: wires the core and the language adapter to a consumer repo's files, git and Claude Code (`check`, `init`, `doctor`, `sync`, `notes`, `scope`, `resume`, `audit`, `progress`, `review`, `install`).
 
 ## Map
-- Files: 33. Most imported: `packages/cli/src/context.js`, `packages/cli/src/project.js`, `packages/cli/test/helpers.js`, `packages/cli/src/commands/check.js`, `packages/cli/src/sync/index.js`, `packages/cli/src/templates.js`, `packages/cli/src/adapter.js`, `packages/cli/src/commands/notes.js` (+25 more)
-- Used by: nothing outside the module
-- Depends on: domain core (13)
-- TODO: one line per key file saying what it is for (only the ones worth knowing).
+- Files: 33. Used by: nothing outside the module. Depends on: domain core (13), only through `@agentreins/core`; adapters are loaded at runtime, never imported
+- `src/main.js`: `run(argv, io)` — command table, `parseArgs`, repo root, `CliError` -> exit code. Everything in `io` is injectable for tests.
+- `src/context.js`: `.reins/` file paths, repo root, package-manager commands, `CliError`.
+- `src/project.js`: reads `architecture.yml` domains, `doctor.yml` and notes without loading the adapter.
+- `src/adapter.js`: resolves `@agentreins/adapter-<x>` / `reins-adapter-<x>` from the repo root, checks `reins.contract`, validates it.
+- `src/commands/*.js`: one file per command exporting `options`, `help` and the run function.
+- `src/sync/index.js`: generates `.claude/` and the AGENTS.md notes index from `.reins/`; manifest `.reins/.generated.json`.
+- `src/init/`: `infer.js` (layers, domains, rules from the graph and preset), `render.js` (YAML and init report).
+- `src/templates.js`: finds `templates/` (packed copy or monorepo root). `notes-seen.js`, `notes-draft.js`: notes hook state and drafting.
 
 ## How it works
-TODO: the main flow in a few lines: where the data comes from, what changes it, who reads it.
+`bin.js` calls `run`, which picks the command and passes a context (`root`, `cwd`, `values`, `out`, `err`, `env`, `confirm`, `today`). Commands do the I/O (files, git) and call pure core functions. `check` loads the config, resolves the adapter, builds the graph, adds integrity (git merge base) and generated-file divergences (`sync --check`), then runs `runCheck` and prints the report. Exit codes: 0 ok, 1 new errors, 2 could not run.
 
 ## Decisions
-- TODO YYYY-MM-DD: a decision and why it was made (what was rejected, and why).
+- 2026-11-04: no CLI framework, `node:util` `parseArgs`. The npm scope is derived from the package's own name (`scope.js`), never hardcoded.
+- 2026-11-04: the CLI never installs packages; a missing adapter prints the install command for the repo's package manager.
+- 2026-11-04: `sync` only touches what its manifest records; third-party skills, agents and settings are never overwritten or deleted. Hand-edited generated files are overwritten with a message.
+- 2026-11-04: Claude Code hooks (`notes --hook`, `resume --hook`) must never fail: any error means no output and exit 0.
+- 2026-11-04: on `compact`/`clear`, `resume --hook` forgets the session's seen-notes record so notes are delivered again.
 
 ## Traps
-- TODO: what looks wrong but is intentional, and the invariants that must hold.
+- `cwd` and root are real paths on purpose: macOS `/var` -> `/private/var` would break `--files` repo-relative paths.
+- Adapter resolution starts at the consumer repo, not the CLI folder: with pnpm the CLI can't see packages it doesn't declare.
+- `confirm` is undefined without a TTY (CI, hooks, agents): commands that would overwrite must refuse and suggest `--force`/`--dry-run`.
+- Report goes to stdout (pass or fail); usage and setup errors to stderr.
+- `templates/` lives at the repo root and is copied into the package only at pack time.
