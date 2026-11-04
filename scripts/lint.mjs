@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Simple repo linter, no dependencies. Checks:
 //   syntax          every .js/.mjs file under packages/ and scripts/ parses (node --check)
-//   import-boundary core never imports cli/adapters; adapters only import core through "<scope>/core/contract"
+//   import-boundary core never imports cli/adapters; adapter code (not its tests) only imports core through "<scope>/core/contract"
 //   agents-md       AGENTS.md has at most 30 lines; AGENTS.md/CLAUDE.md only at the root, templates/ or examples/<name>/
 //   packages        every workspace package is ESM and uses the same npm scope; adapters declare core as peer + harness.contract
 // The real architecture check of this repo (phase 9) will replace import-boundary.
@@ -86,7 +86,7 @@ export function lint(root) {
         }
       }
     }
-    if (r.startsWith('packages/adapters/')) {
+    if (r.startsWith('packages/adapters/') && !r.split('/').includes('test')) {
       for (const s of specs) {
         if (s.startsWith(`${scope}/cli`)) report('import-boundary', file, `adapters must not import the cli ("${s}")`);
         if (s.startsWith(`${scope}/core`) && s !== `${scope}/core/contract`) {

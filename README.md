@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress — nothing is usable from the command line yet.** Phase **2 of 9** is done: the rules engine works and is tested, but the JS adapter (phase 3) and the `harness check` command (phase 4) don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress — nothing is usable from the command line yet.** Phase **3 of 9** is done: the rules engine and the JS adapter work and are tested end to end on two example apps, but the `harness check` and `harness init` commands arrive in phase 4. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -104,6 +104,7 @@ Rules:
 | `layer-direction` | A layer imports from a layer above it | `components/Button` imports from `features/billing` |
 | `domain-boundary` | Code imports a domain's internals instead of its public API | `features/search` imports `features/billing/total.js` instead of `features/billing/index.js` |
 | `no-cycles` | Modules import each other in a loop | `a → b → c → a` |
+| `next-server-client` (optional, Next) | A `'use client'` component reaches a module that imports `server-only` or `next/headers` | `OrderList.tsx` (client) → `queries.ts` → `lib/db.ts` (`import 'server-only'`) |
 
 Plus `integrity`, which warns when a PR changes `architecture.yml` or makes `baseline.json` grow (see below).
 
@@ -153,6 +154,35 @@ flowchart LR
 - `integrity` is `warn` by default; set it to `error` in `architecture.yml` to make those changes block.
 
 Full reference of the file, rules, globs and defaults: [`docs/architecture-yml.md`](docs/architecture-yml.md).
+
+### How the JS adapter reads your project
+
+Aliases are the most likely source of silent bugs: if `@/features/x` doesn't resolve, that edge disappears and `check` can't see the violation. So the adapter reads them itself and **warns** about anything it can't resolve.
+
+```mermaid
+flowchart TB
+    subgraph sources["Alias sources (read as text, never executed)"]
+        direction LR
+        ts["tsconfig.json / jsconfig.json<br/>paths · baseUrl<br/>(+ extends, + references<br/>→ tsconfig.app.json)"]
+        vite["vite.config.*<br/>resolve.alias<br/>(object or array)"]
+    end
+    sources --> alias["@/ → src/ …"]
+    alias --> dc["dependency-cruiser"]
+    files[".js .jsx .ts .tsx"] --> dc
+    dc --> edges["edges<br/>static · dynamic · type"]
+    dc --> unresolved["unresolved local imports<br/>→ warning"]
+    preset["preset<br/>vite-react · next-app · next-pages"] --> entries["entry points<br/>(Next page/layout/route, main.jsx…)"]
+```
+
+| Project | Works | Notes |
+| --- | --- | --- |
+| Vite + React, **plain JS/JSX** | ✅ | Nothing extra to install. Aliases from `jsconfig.json` or `vite.config.js` |
+| Vite + React, TypeScript | ✅ | Needs `typescript` in the repo (it already is). Reads `tsconfig.app.json` through `references` |
+| Next app router (JS or TS) | ✅ | `page`, `layout`, `route`… are entry points, not orphans |
+| Next pages router (JS or TS) | ✅ | Every file under `pages/` is an entry point |
+
+> [!IMPORTANT]
+> A repo with `.ts`/`.tsx` files and no `typescript` package makes the adapter **stop with an error** instead of skipping those files: we verified that dependency-cruiser would otherwise ignore them silently and `check` would pass without looking.
 
 ### Packages and dependency direction
 
@@ -233,7 +263,8 @@ shared       ─┘
 | --- | --- | --- |
 | `check` engine (rules, baseline, integrity, reports) | stable | ✅ in `@harness/core`, tested; no command yet |
 | `architecture.yml` validation | stable | ✅ |
-| `adapter-js` (Vite, Next, aliases) | stable | ❌ phase 3 |
+| `adapter-js` (Vite, Next, aliases, presets) | stable | ✅ tested on [`examples/`](examples/) |
+| `next-server-client` rule | stable | ✅ optional |
 | CLI `check` and `init` | stable | 🟡 skeleton (`--help`, `--version`) |
 | Git hook + CI job | stable | ❌ phase 8 |
 | `doctor` | experimental | ❌ |
@@ -264,14 +295,14 @@ pnpm harness sync          # AGENTS.md index, .claude/
 pnpm harness check         # green: existing violations are in the baseline
 ```
 
-Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. `@/` aliases are read from `jsconfig.json`/`tsconfig.json` and `vite.config`.
+Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
 
 ## Roadmap
 
 ```mermaid
 flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
-    p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"] --> p4["4 · CLI<br/>check + init"]
+    p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]
     p4 --> gate{{"Validation gate<br/>real repo"}}
     gate --> p5["5 · doctor"] --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20

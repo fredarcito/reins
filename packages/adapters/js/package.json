@@ -7,11 +7,38 @@
     ".": "./src/index.js",
     "./package.json": "./package.json"
   },
-  "files": ["src", "presets", "rules"],
-  "keywords": ["harness-adapter"],
-  "harness": { "contract": 1 },
-  "engines": { "node": ">=22" },
-  "peerDependencies": { "@harness/core": "workspace:^" },
-  "devDependencies": { "@harness/core": "workspace:^" },
-  "scripts": { "test": "node --test" }
+  "files": [
+    "src",
+    "presets",
+    "rules"
+  ],
+  "keywords": [
+    "harness-adapter"
+  ],
+  "harness": {
+    "contract": 1
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@harness/core": "workspace:^",
+    "typescript": ">=4"
+  },
+  "devDependencies": {
+    "@harness/core": "workspace:^",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "dependency-cruiser": "^18.7.2",
+    "yaml": "^2.9.1"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  }
 }

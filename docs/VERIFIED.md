@@ -136,6 +136,14 @@ Details that affect the design:
 - **Integrity in CI — unverified.** `integrity` needs the base branch's history (`git merge-base HEAD <base>`). GitHub's `actions/checkout` fetches one commit by default, so the CI job will probably need `fetch-depth: 0` or an explicit fetch of the base branch. Without it, `check` warns "Could not compare with <base>" instead of failing. To test in phase 8.
 - Integrity was tested against real temporary git repos (merge base, committed and uncommitted changes, missing ref).
 
+## Phase 3 findings
+
+- **TypeScript files are skipped silently without the `typescript` package — observed.** dependency-cruiser 18.7.2 on the Next TS fixture without `typescript` installed: 0 modules, no error. With it: all files and edges. `getAvailableTranspilers()` reports whether it is available; adapter-js now throws in that case.
+- **dependency-cruiser engines** are `^22 || ^24 || >=26`: Node 20 is not supported by the graph engine (another reason for the Node 22 minimum).
+- **Both examples and three extra fixtures — pass.** Vite JS/JSX (aliases in `jsconfig.json` and `vite.config.js`), Next app router TS (`tsconfig.json` `paths`), Vite TS template (`paths` in `tsconfig.app.json` via `references` + `extends`, `vite.config.ts` with `fileURLToPath(new URL(...))`), Next pages router JSX (`baseUrl` only), and a Vite `alias` array with `find`/`replacement`. Exact edges and violations asserted in `packages/adapters/js/test/`.
+- **Unverified:** that dependency-cruiser (a dependency of adapter-js) can load the consumer repo's `typescript` under pnpm's strict layout. In this monorepo it works through hoisting. To test with tarballs in phase 8; if it fails, the adapter's error message tells the user, it doesn't pass silently.
+- **Unverified:** real-world `vite.config` alias forms beyond the ones in the fixtures (computed objects, spread helpers, aliases from plugins such as `vite-tsconfig-paths`). Unknown forms produce a warning, not a silent miss.
+
 ## Unverified (pending)
 
 - Session start hook (`SessionStart`) to load the progress notebook: not tested.

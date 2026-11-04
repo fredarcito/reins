@@ -25,7 +25,7 @@ test('glob: *, **, ?, {a,b}', () => {
 });
 
 test('contract: a valid adapter passes, a broken one lists every problem', () => {
-  const ok = { name: 'js', contract: CONTRACT_VERSION, detect() {}, graph() {}, rules: ['next-server-client'] };
+  const ok = { name: 'js', contract: CONTRACT_VERSION, detect() {}, graph() {}, rules: ['next-server-client'], evaluate() {} };
   assert.deepEqual(validateAdapter(ok), []);
   assert.deepEqual(validateAdapter({ contract: 99, rules: 'x' }), [
     '"name" must be a non-empty string',

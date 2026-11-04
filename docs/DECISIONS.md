@@ -38,7 +38,7 @@ Source of truth for the design: [`DESIGN.md`](DESIGN.md). This file summarizes w
 | Versions | `0.0.0` until phase 9 (`0.1.0`, unpublished). No `license` field until the license is decided |
 | Internal deps | `workspace:^` for core in the cli (dependency) and in adapters (peer + dev). `pnpm pack` turns it into a real range |
 | `exports` | Every package exposes `./package.json` as well, so the CLI can read an adapter's `harness.contract` |
-| Tests | `node --test` with no arguments in each package. Root runs `pnpm -r test` plus `scripts/*.test.mjs` |
+| Tests | `node --test "test/**/*.test.js"` in each package (an explicit glob: with no arguments node also runs the fixtures under `test/`). Root runs `pnpm -r test` plus `scripts/*.test.mjs` |
 | Linter | Own script without dependencies (`scripts/lint.mjs`): syntax, import boundaries (interim self-check until phase 9), AGENTS.md rules, package metadata. No ESLint/Prettier: not worth a dependency yet |
 | CI | GitHub Actions, Node 22 (minimum) and 24, pnpm 12.11.2 pinned in the workflow (matches the local version and the lockfile) |
 
@@ -63,12 +63,31 @@ Semantics are documented for users in [`architecture-yml.md`](architecture-yml.m
 | Generated-files integrity (`sync --check`) | Not in phase 2 | `sync` arrives in phase 6 |
 | Messages | Default `message`/`fix` per rule, overridable with placeholders | Design: errors useful for an agent |
 
+## Phase 3 defaults (adapter-js)
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| TypeScript | Optional peer dependency of adapter-js (dev dependency for its tests). If the repo has `.ts`/`.tsx` files and dependency-cruiser can't load `typescript`, `graph()` **throws** with the install command | Verified: without it dependency-cruiser skips TS files silently (zero edges, check green). JS/JSX projects install nothing extra |
+| Aliases | Parsed by the adapter, never by executing config files: tsconfig/jsconfig `paths` + `baseUrl` (following relative `extends` and `references`), and `resolve.alias` in `vite.config.*` read as text (object and array forms, `path.resolve`, `fileURLToPath(new URL(...))`, `'/src'`). Anything it can't read becomes a warning that says to declare it in `paths` | Executing `vite.config` needs Vite installed and runs user code; JS projects must not need TypeScript |
+| Unsupported `paths` | Only `prefix/*` and exact keys; other patterns produce a warning | Covers `@/*`, `~/*`, `@components/*`; rare patterns are reported, not guessed |
+| Unresolved imports | Relative or alias-looking imports that don't resolve are listed in `warnings`. Bare package imports are not | An unresolved alias silently removes edges; the user must see it |
+| Scanned files | Whole repo except `node_modules`, `.git`, `.next`, `.harness`, `dist`, `build`, `out`, `coverage`, `.turbo`, `.vercel`, `.cache`, `storybook-static` | Layers decide what matters; files outside every layer are ignored by the rules |
+| Edge kinds | `type` (type-only, with `tsPreCompilationDeps`), `dynamic` (`import()`), `static` (everything else) | Lets `ignore_kinds: [type]` work |
+| Presets | YAML: `layers` (starting point for `init`), `domains_from` (folders whose children become domains), `entries` (globs) | Presets are data, not code |
+| Entries | Next special files (`page`, `layout`, `route`, `template`, `loading`, `error`, `not-found`, metadata files, `middleware`…), every file under `pages/`, `src/main.*`, config files, tests and stories | Design: Next special files are entries, not orphans |
+| `next-server-client` | Optional (off unless listed). A `'use client'` file (directive as first statement) must not reach, through runtime imports, a module that imports `server-only` or `next/headers`. Reports the nearest one per path, with the chain | Everything a client component imports ships to the browser. `'use server'` files are allowed: client components may import server actions |
+| Contract growth | `graph()` may return `{ edges, files, entries, warnings }`; adapters may declare `rules` and implement `evaluate(repoPath, config, graph)`. Still contract 1 (all optional) | `init` needs files/entries; adapter rules need file contents |
+| Contract surface | `matchesAny` re-exported from `@harness/core/contract` | Adapters can only import the contract; avoids a second glob implementation |
+| Test runner | Each package runs `node --test "test/**/*.test.js"` | Without arguments node also runs fixture files under `test/` |
+
 ## Dependencies
 
 | Package | Where | Why |
 | --- | --- | --- |
 | `yaml` | `core` | Read `architecture.yml` and `doctor.yml`. Node has no YAML parser |
-| `dependency-cruiser` | `adapters/js` only | Compute the import graph (with aliases). Decided in the design over writing our own parser |
+| `dependency-cruiser` | `adapters/js` only | Compute the import graph (with aliases). Decided in the design over writing our own parser. Requires Node `^22 \|\| ^24 \|\| >=26` |
+| `yaml` | `adapters/js` | Read the presets (`presets/*.yml`). The adapter can't use the core's copy: it may only import `@harness/core/contract` |
+| `typescript` | `adapters/js`: optional peer + dev | Only needed for TS repos; dependency-cruiser uses it to parse `.ts`/`.tsx`. Dev dependency so the TS example can be tested |
 
 ## Design adjustments proposed after phase 0
 

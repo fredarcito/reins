@@ -1,0 +1,7 @@
+{
+  // Editor support for the same alias as vite.config.js
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+  },
+}

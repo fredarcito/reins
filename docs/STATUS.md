@@ -13,8 +13,8 @@ Nothing here is measured. The design is a design, not a proven product.
 | `architecture.yml` loader and validation | core | stable | Yes (phase 2), tested |
 | `check`: `layer-direction`, `domain-boundary`, `no-cycles`, baseline, integrity | core | stable | Engine yes (phase 2), tested; no command until phase 4 |
 | Reports (text and JSON) | core | stable | Yes (phase 2), tested |
-| `adapter-js`: detect, aliases, graph, presets | adapters/js | stable | Skeleton (phase 3) |
-| `next-server-client` rule | adapters/js | stable | No (phase 3) |
+| `adapter-js`: detect, aliases, graph, presets | adapters/js | stable | Yes (phase 3), tested on both examples and 3 fixtures |
+| `next-server-client` rule (optional, Next) | adapters/js | stable | Yes (phase 3), tested |
 | CLI `check`, `init`, adapter resolution | cli | stable | Skeleton: `--help`, `--version` |
 | Git pre-commit hook and CI job running `check` | templates | stable | No (phase 8) |
 | `doctor` | core + cli | experimental | Not started (after the validation gate) |

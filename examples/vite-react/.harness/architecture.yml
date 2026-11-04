@@ -1,0 +1,18 @@
+version: 1
+adapter: js
+preset: vite-react
+
+layers:
+  - { name: app,        paths: ["src/main.jsx", "src/App.jsx", "src/pages/**"] }
+  - { name: features,   paths: ["src/features/**"] }
+  - { name: components, paths: ["src/components/**"] }
+  - { name: shared,     paths: ["src/lib/**", "src/hooks/**"] }
+
+domains:
+  catalog: { paths: ["src/features/catalog/**"], public_api: ["src/features/catalog/index.js"] }
+  cart:    { paths: ["src/features/cart/**"],    public_api: ["src/features/cart/index.js"] }
+
+rules:
+  - { id: layer-direction, severity: error }
+  - { id: domain-boundary, severity: error }
+  - { id: no-cycles,       severity: error }

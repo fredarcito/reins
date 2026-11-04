@@ -1,0 +1,20 @@
+# Preset for Next with the app router (plain JS/JSX or TypeScript, with or without src/).
+# `harness init` uses `layers` as a starting point and keeps only the folders that exist.
+# `entries` are Next's special files: Next loads them by convention, so they are never orphans.
+description: Next.js, app router
+
+layers:
+  - { name: app,        paths: ["app/**", "src/app/**"] }
+  - { name: features,   paths: ["features/**", "src/features/**", "modules/**", "src/modules/**"] }
+  - { name: components, paths: ["components/**", "src/components/**", "ui/**", "src/ui/**"] }
+  - { name: shared,     paths: ["{lib,hooks,utils,services,actions,types}/**", "src/{lib,hooks,utils,services,actions,types}/**"] }
+
+domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
+
+entries:
+  - "{,src/}app/**/{page,layout,template,loading,error,global-error,not-found,default,route,forbidden,unauthorized}.{js,jsx,ts,tsx}"
+  - "{,src/}app/**/{opengraph-image,twitter-image,icon,apple-icon,sitemap,robots,manifest}.{js,jsx,ts,tsx}"
+  - "{,src/}{middleware,instrumentation,instrumentation-client}.{js,ts}"
+  - "next.config.*"
+  - "**/*.{test,spec}.{js,jsx,ts,tsx}"
+  - "**/*.stories.{js,jsx,ts,tsx}"

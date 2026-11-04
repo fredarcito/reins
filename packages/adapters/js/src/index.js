@@ -1,15 +1,24 @@
-// @harness/adapter-js. Phase 1 skeleton: detect/graph are implemented in phase 3.
+// @harness/adapter-js: JavaScript and TypeScript projects (Vite + React, Next app and pages router).
+// Plain JS/JSX projects need no TypeScript. Imports from the core: only the contract.
 import { CONTRACT_VERSION } from '@harness/core/contract';
+import { detect } from './detect.js';
+import { graph } from './graph.js';
+import * as nextServerClient from '../rules/next-server-client.js';
 
-export default {
+/** @type {import('@harness/core/contract').Adapter} */
+const adapter = {
   name: 'js',
   contract: CONTRACT_VERSION,
-  /** @param {string} _repoPath */
-  detect(_repoPath) {
-    return false;
-  },
-  /** @param {string} _repoPath @param {unknown} _config */
-  graph(_repoPath, _config) {
-    throw new Error('adapter-js: graph() is not implemented yet (phase 3).');
+  detect,
+  graph,
+  rules: [nextServerClient.id],
+  evaluate(repoPath, config, graph) {
+    return nextServerClient.run(repoPath, /** @type {any} */ (config), graph);
   },
 };
+
+export default adapter;
+export { detectFramework } from './detect.js';
+export { readAliases, parseJsonc } from './aliases.js';
+export { loadPreset, PRESETS } from './presets.js';
+export { graph };

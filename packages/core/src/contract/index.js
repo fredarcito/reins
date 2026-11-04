@@ -27,13 +27,39 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  */
 
 /**
+ * What graph() returns: either the edges alone, or an object with extra information.
+ * - files:    every source file the adapter scanned (lets `init` find orphans)
+ * - entries:  files that are entry points by convention (Next pages, main.jsx…), never orphans
+ * - warnings: problems the user should see, e.g. imports that could not be resolved
+ * @typedef {Edge[] | { edges: Edge[], files?: string[], entries?: string[], warnings?: string[] }} GraphResult
+ */
+
+/**
+ * A finding produced by an adapter rule (same fields as a core violation, without status).
+ * @typedef {{ rule: string, severity: 'error'|'warn', key: string, from: string, to?: string, files?: string[], message: string, fix: string }} AdapterViolation
+ */
+
+/**
  * @typedef {object} Adapter
  * @property {string} name     short name, e.g. "js" (matches `adapter:` in architecture.yml)
  * @property {number} contract contract version it implements (must equal CONTRACT_VERSION)
  * @property {(repoPath: string) => boolean | Promise<boolean>} detect  does this adapter apply to the repo?
- * @property {(repoPath: string, config: object) => Edge[] | Promise<Edge[]>} graph  dependency edges of the repo
+ * @property {(repoPath: string, config: object) => GraphResult | Promise<GraphResult>} graph  dependency edges of the repo
  * @property {string[]} [rules] extra rule ids the adapter implements (e.g. "next-server-client")
+ * @property {(repoPath: string, config: object, graph: { edges: Edge[], files: string[], entries: string[] }) => AdapterViolation[] | Promise<AdapterViolation[]>} [evaluate]
+ *   runs the adapter's own rules on the normalized graph; required when `rules` is not empty
  */
+
+/**
+ * Normalizes a GraphResult into one shape.
+ * @param {GraphResult} result
+ * @returns {{ edges: Edge[], files: string[], entries: string[], warnings: string[] }}
+ */
+export function normalizeGraph(result) {
+  if (Array.isArray(result)) return { edges: result, files: [], entries: [], warnings: [] };
+  const r = /** @type {any} */ (result ?? {});
+  return { edges: r.edges, files: r.files ?? [], entries: r.entries ?? [], warnings: r.warnings ?? [] };
+}
 
 /**
  * Checks the shape of an adapter module's default export.
@@ -53,6 +79,10 @@ export function validateAdapter(adapter) {
   if (typeof a.graph !== 'function') problems.push('"graph" must be a function');
   if (a.rules !== undefined && !(Array.isArray(a.rules) && a.rules.every((r) => typeof r === 'string'))) {
     problems.push('"rules" must be a list of rule ids');
+  }
+  if (a.evaluate !== undefined && typeof a.evaluate !== 'function') problems.push('"evaluate" must be a function');
+  if (Array.isArray(a.rules) && a.rules.length > 0 && typeof a.evaluate !== 'function') {
+    problems.push('declares "rules" but has no "evaluate" function to run them');
   }
   return problems;
 }
@@ -84,3 +114,6 @@ export function validateEdges(edges, limit = 10) {
   }
   return problems;
 }
+
+/** Glob helper adapters may reuse (same semantics as globs in architecture.yml). */
+export { matchesAny } from '../glob.js';

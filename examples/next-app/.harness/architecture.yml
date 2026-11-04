@@ -1,0 +1,19 @@
+version: 1
+adapter: js
+preset: next-app
+
+layers:
+  - { name: app,        paths: ["src/app/**"] }
+  - { name: features,   paths: ["src/features/**"] }
+  - { name: components, paths: ["src/components/**"] }
+  - { name: shared,     paths: ["src/lib/**"] }
+
+domains:
+  orders:  { paths: ["src/features/orders/**"],  public_api: ["src/features/orders/index.ts"] }
+  billing: { paths: ["src/features/billing/**"], public_api: ["src/features/billing/index.ts"] }
+
+rules:
+  - { id: layer-direction,    severity: error, ignore_kinds: [type] }
+  - { id: domain-boundary,    severity: error, ignore_kinds: [type] }
+  - { id: no-cycles,          severity: error, ignore_kinds: [type] }
+  - { id: next-server-client, severity: error }

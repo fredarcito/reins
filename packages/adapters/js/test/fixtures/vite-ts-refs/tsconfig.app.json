@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    /* aliases live here in the Vite TS template */
+    "paths": {
+      "@/*": ["src/*"], // trailing comment
+      "@config": ["src/config.ts"],
+    },
+  },
+  "include": ["src"],
+}

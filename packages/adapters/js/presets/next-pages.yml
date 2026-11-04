@@ -1,0 +1,18 @@
+# Preset for Next with the pages router (plain JS/JSX or TypeScript, with or without src/).
+# Every file under pages/ is a route, so all of them are entries.
+description: Next.js, pages router
+
+layers:
+  - { name: pages,      paths: ["pages/**", "src/pages/**"] }
+  - { name: features,   paths: ["features/**", "src/features/**", "modules/**", "src/modules/**"] }
+  - { name: components, paths: ["components/**", "src/components/**", "ui/**", "src/ui/**"] }
+  - { name: shared,     paths: ["{lib,hooks,utils,services,types}/**", "src/{lib,hooks,utils,services,types}/**"] }
+
+domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
+
+entries:
+  - "{,src/}pages/**"
+  - "{,src/}{middleware,instrumentation}.{js,ts}"
+  - "next.config.*"
+  - "**/*.{test,spec}.{js,jsx,ts,tsx}"
+  - "**/*.stories.{js,jsx,ts,tsx}"
