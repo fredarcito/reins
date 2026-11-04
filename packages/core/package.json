@@ -1,0 +1,14 @@
+{
+  "name": "@harness/core",
+  "version": "0.0.0",
+  "description": "Framework-agnostic core of the harness: architecture check, doctor, reports and the adapter contract.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./contract": "./src/contract/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["src"],
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test" }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@harness/cli",
+  "version": "0.0.0",
+  "description": "Command line for the harness: init, check, doctor, sync and friends.",
+  "type": "module",
+  "bin": { "harness": "./src/bin.js" },
+  "exports": {
+    ".": "./src/main.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["src"],
+  "engines": { "node": ">=22" },
+  "dependencies": { "@harness/core": "workspace:^" },
+  "scripts": { "test": "node --test" }
+}

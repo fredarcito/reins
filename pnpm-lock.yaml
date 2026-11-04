@@ -1,0 +1,23 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/adapters/js:
+    devDependencies:
+      '@harness/core':
+        specifier: workspace:^
+        version: link:../../core
+
+  packages/cli:
+    dependencies:
+      '@harness/core':
+        specifier: workspace:^
+        version: link:../core
+
+  packages/core: {}

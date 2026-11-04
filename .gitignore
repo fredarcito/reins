@@ -1,0 +1,7 @@
+node_modules/
+*.tgz
+coverage/
+.DS_Store
+# local harness state (outside git by design)
+.harness/backlog/
+.harness/progress/

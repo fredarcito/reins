@@ -1,0 +1,15 @@
+{
+  "name": "harness-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Harness for coding agents: deterministic architecture check + portable markdown content.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "pnpm -r test && node --test scripts/*.test.mjs",
+    "lint": "node scripts/lint.mjs",
+    "rename-scope": "node scripts/rename-scope.mjs"
+  }
+}

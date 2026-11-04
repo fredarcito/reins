@@ -1,0 +1,17 @@
+{
+  "name": "@harness/adapter-js",
+  "version": "0.0.0",
+  "description": "Harness language adapter for JavaScript/TypeScript projects (Vite + React, Next).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "presets", "rules"],
+  "keywords": ["harness-adapter"],
+  "harness": { "contract": 1 },
+  "engines": { "node": ">=22" },
+  "peerDependencies": { "@harness/core": "workspace:^" },
+  "devDependencies": { "@harness/core": "workspace:^" },
+  "scripts": { "test": "node --test" }
+}
