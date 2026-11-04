@@ -6,3 +6,7 @@ export { BASELINE_VERSION, createBaseline, serializeBaseline, parseBaseline, emp
 export { compareIntegrity, checkIntegrity } from './check/integrity.js';
 export { REPORT_SCHEMA, formatText, formatJson } from './report/index.js';
 export { globToRegExp, matchesAny } from './glob.js';
+export {
+  DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, scopeSignals, suggestLevel,
+  parseNotebook, formatProblems, notebookFile, MARKERS,
+} from './doctor/index.js';

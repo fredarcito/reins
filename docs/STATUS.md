@@ -17,7 +17,7 @@ Nothing here is measured. The design is a design, not a proven product.
 | `next-server-client` rule (optional, Next) | adapters/js | stable | Yes (phase 3), tested |
 | CLI `check`, `init`, adapter resolution | cli | stable | Yes (phase 4), tested; installed from tarballs with npm and pnpm |
 | Git pre-commit hook and CI job running `check` | templates | stable | No (phase 8) |
-| `doctor` | core + cli | experimental | Not started (after the validation gate) |
+| `doctor` | core + cli | experimental | Yes (phase 5), tested with simulated logs, notebooks and diffs |
 | `sync`, `notes`, `scope` | cli | experimental | Not started |
 | Templates: AGENTS.md, policies, notebook, skills, agents | templates | experimental | Not started |
 | Notes delivered by `PreToolUse` hook | templates | experimental | Not started; hook behavior partially verified (P1) |

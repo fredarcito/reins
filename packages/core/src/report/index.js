@@ -7,8 +7,9 @@ const ICON = { error: '✖', warn: '!' };
 
 /**
  * @param {import('../check/index.js').CheckResult} result
- * @param {{ verbose?: boolean, title?: string, warnings?: string[] }} [opts]
- *   verbose: also list violations already in the baseline; warnings: problems reading the code (e.g. from the adapter)
+ * @param {{ verbose?: boolean, title?: string, warnings?: string[], baseline?: boolean }} [opts]
+ *   verbose: also list violations already in the baseline; warnings: problems reading the code (e.g. from the adapter);
+ *   baseline: false for reports without a baseline (doctor): plain counts, no pass/fail line
  * @returns {string}
  */
 export function formatText(result, opts = {}) {
@@ -26,8 +27,14 @@ export function formatText(result, opts = {}) {
   }
 
   const s = result.summary;
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  if (opts.baseline === false) {
+    // doctor: no baseline, no "new"
+    lines.push(`${title}: ${s.new === 0 ? 'nothing to report' : `${plural(s.newErrors, 'error')}, ${plural(s.newWarnings, 'warning')}`}`);
+    return lines.join('\n');
+  }
   const parts = [
-    s.new === 0 ? 'no new violations' : `${s.new} new (${s.newErrors} error${s.newErrors === 1 ? '' : 's'}, ${s.newWarnings} warning${s.newWarnings === 1 ? '' : 's'})`,
+    s.new === 0 ? 'no new violations' : `${s.new} new (${plural(s.newErrors, 'error')}, ${plural(s.newWarnings, 'warning')})`,
     `${s.baseline} in baseline`,
   ];
   if (!result.partial) parts.push(`${s.stale} fixed`);

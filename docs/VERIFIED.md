@@ -153,6 +153,12 @@ Details that affect the design:
 - **Symlinked working folders — bug found and fixed.** `git rev-parse --show-toplevel` returns the real path; macOS temp folders are symlinks (`/var` → `/private/var`), so `--files` produced wrong paths. The CLI now resolves real paths.
 - **Unverified:** yarn (classic and berry/PnP), `init`/`check` duration on large repos (the examples take well under a second; the whole graph is computed even with `--files`), Windows paths.
 
+## Phase 5 notes
+
+- **The validation gate was skipped** (the author said "continue" without results from a real repo). Phases 5+ are experimental, and `init`/`check` remain unverified on a real repo.
+- **Unverified:** that CI providers set `CI` (GitHub Actions does, from memory; not tested). If not, `doctor` would run in CI but still exit 0 without `--strict`.
+- **Unverified:** that agents actually write `triage.log` lines and keep the notebook format. Without those files, most doctor rules have nothing to compare (design risk).
+
 ## Unverified (pending)
 
 - Session start hook (`SessionStart`) to load the progress notebook: not tested.

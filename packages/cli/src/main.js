@@ -4,6 +4,7 @@ import { CliError, findRepoRoot } from './context.js';
 import { pkg, SCOPE } from './scope.js';
 import * as checkCmd from './commands/check.js';
 import * as initCmd from './commands/init.js';
+import * as doctorCmd from './commands/doctor.js';
 
 export { SCOPE };
 
@@ -11,16 +12,18 @@ export { SCOPE };
 const COMMANDS = {
   check: { run: checkCmd.check, options: checkCmd.options, help: checkCmd.help },
   init: { run: initCmd.init, options: initCmd.options, help: initCmd.help },
+  doctor: { run: doctorCmd.doctor, options: doctorCmd.options, help: doctorCmd.help },
 };
 
 /** Commands planned in docs/DESIGN.md, wired in later phases. */
-export const PLANNED_COMMANDS = ['doctor', 'notes', 'scope', 'sync', 'audit', 'progress', 'review', 'install'];
+export const PLANNED_COMMANDS = ['notes', 'scope', 'sync', 'audit', 'progress', 'review', 'install'];
 
 const HELP = `Usage: harness <command> [options]
 
 Commands:
   check    Check the architecture rules (git hook and CI)
   init     Draft .harness/architecture.yml and baseline.json from the code
+  doctor   Local workflow checks: triage log, AGENTS.md size, progress notebook (experimental)
 
 Not implemented yet: ${PLANNED_COMMANDS.join(', ')}
 

@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress.** Phase **4 of 9** is done: `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. Next is the **validation gate**: trying them on a real team repo before building anything else. The agent-facing pieces (doctor, notes, skills, hooks) don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress.** Phase **5 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `harness doctor` exists but is **experimental**: from phase 5 on, everything is built without results from a real repo yet. Notes, skills, hooks and `install` don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -268,7 +268,7 @@ shared       ─┘
 | `next-server-client` rule | stable | ✅ optional |
 | CLI `check` and `init` | stable | ✅ tested; installed from tarballs with npm and pnpm |
 | Git hook + CI job | stable | ❌ phase 8 |
-| `doctor` | experimental | ❌ |
+| `doctor` | experimental | ✅ tested with simulated logs and diffs |
 | `sync`, `notes`, `scope` | experimental | ❌ |
 | Templates (AGENTS.md, policies, skills, agents) | experimental | ❌ |
 | `audit`, `progress`, `review` | experimental | ❌ |
@@ -311,6 +311,62 @@ If the adapter is missing, it prints the install command for your package manage
 
 Exit codes: **0** no new errors · **1** new errors · **2** could not run (config, adapter, options).
 
+### `harness doctor` (experimental)
+
+Local, informational checks of **how the work is going**, not of the code. It reads files the agent writes, so it only sees what the agent wrote.
+
+|  | `harness check` | `harness doctor` |
+| --- | --- | --- |
+| Guarantees | What enters git follows the rules | How the local workflow is going |
+| Looks at | The code (import graph) | `triage.log`, the progress notebook, `AGENTS.md`, the local diff |
+| Result | Blocks on new errors | Warnings only; exit 0 unless `--strict` |
+| Runs in | Git hook and CI | Your machine, when the agent closes a task. **Never in CI** (skipped when `CI` is set) |
+| Baseline / adapter | Yes / yes | No / no |
+
+```mermaid
+flowchart LR
+    log["triage.log<br/>2026-11-04 | feat/x | small | fix button"] --> cmp{"declared level<br/>vs. diff"}
+    diff["git diff of the branch<br/>files · domains · public API"] --> cmp
+    cmp -- "diff needs more" --> mismatch["triage-mismatch"]
+    cmp -- "no line for the branch" --> missing["triage-missing"]
+    nb["progress/&lt;branch&gt;.md"] --> fmt["progress-format<br/>progress-hot-size<br/>progress-closed"]
+    agents["AGENTS.md"] --> size["agents-size"]
+```
+
+| Rule | Warns when |
+| --- | --- |
+| `triage-missing` | The branch has changes but no line in `triage.log` (or a line can't be read) |
+| `triage-mismatch` | The diff exceeds the declared level: `small` = ≤ 3 files in 1 domain; `medium` = 1 domain; more domains, a public API or `architecture.yml` = `large` |
+| `agents-size` | `AGENTS.md` is longer than 30 lines |
+| `progress-hot-size` | The hot notebook is longer than 40 lines |
+| `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
+| `progress-closed` | `status: closed` with done criteria not checked |
+
+Thresholds are uncalibrated starting values in `.harness/doctor.yml`:
+
+```yaml
+triage:
+  small:  { max_files: 3, max_domains: 1 }
+  medium: { max_domains: 1 }
+agents_md: { max_lines: 30 }
+progress:  { hot_max_lines: 40 }
+```
+
+Notebook format (`.harness/progress/<branch>.md`, local, outside git):
+
+```markdown
+# feat/discounts · status: open · updated: 2026-11-04
+**Goal:** apply discounts in the cart.
+**Done criteria:**
+- [ ] discount applied to the total
+- [ ] `harness check` without new violations
+**Subtasks:**
+- [x] model            (written, not tested)
+- [~] UI               (in progress: only one)
+- [-] coupons — out of scope, ticket 42
+**Next step:** wire the UI.
+```
+
 ## Installation
 
 > [!NOTE]
@@ -341,12 +397,12 @@ Supported projects: Vite + React and Next (app and pages router), in **plain JS/
 flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
     p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
-    p4 --> gate{{"Validation gate<br/>real repo"}}
-    gate --> p5["5 · doctor"] --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
+    p4 --> gate{{"Validation gate<br/>real repo: pending"}}
+    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
 ```
 
-After phase 4, `init` and `check` are tried on a real team repo. Phases 5 onwards are only built if that goes well, and they ship as **experimental**.
+After phase 4, `init` and `check` are tried on a real team repo. That trial is still pending: phases 5 onwards were built anyway and ship as **experimental**.
 
 ## Developing this repo
 
