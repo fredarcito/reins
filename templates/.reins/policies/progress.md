@@ -19,7 +19,7 @@ Read this for medium and large tasks. The notebook is local (`.reins/progress/`,
 - Markers: `[ ]` pending, `[~]` in progress (only one), `[x]` written but not tested, `[-]` discarded with a reason (`- [-] task — reason`). Never delete discarded items: they stop the idea from coming back.
 - What is needed to finish goes in the notebook. An improvement found on the way goes to the backlog (`npx reins audit add`), not into this task.
 - The header says `status: open|closed`. Only the person closes it. What lasts beyond the task (decisions with their why, traps, how the module works) goes to the module note in `.reins/notes/` when closing; then the notebook can be deleted.
-- Prefer `npx reins progress done|add|next` to rewriting the file (keeps the format valid).
+- Create it with `npx reins progress new` (`--hot` for large tasks): it uses the templates in `.reins/templates/`. Prefer `npx reins progress done|add|next` to rewriting the file (keeps the format valid).
 
 ## Verification (once, at the end)
 

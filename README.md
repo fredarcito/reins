@@ -570,7 +570,7 @@ flowchart LR
 
 | Command | Effect |
 | --- | --- |
-| `progress new [--hot]` | Notebook from the template (mini; `--hot` adds the cold folder) |
+| `progress new [--hot]` | Notebook from `.reins/templates/` (mini; `--hot` adds the cold folder). Adapt those templates to your team; a missing one falls back to the packaged default |
 | `progress show` | Numbered items |
 | `progress add <text> [--criteria]` | `- [ ]` in Subtasks (or Done criteria) |
 | `progress start <n>` | `[~]`; any other `[~]` goes back to `[ ]` |

@@ -101,3 +101,23 @@ test('review: long diffs are truncated with a notice', () => {
   const p = buildReviewPrompt({ diff: 'x'.repeat(5000), files: ['a'], checklist: '- [ ] ok', notes: [], base: 'main', maxBytes: 1000 });
   assert.match(p, /x{1000}\n… \[diff truncated at 1000 bytes; review the rest file by file\]/);
 });
+
+test('progress new uses the repo templates in .reins/templates/ first, and refuses one that is not a notebook', async () => {
+  const dir = exampleRepo('vite-react');
+  git(dir, 'checkout', '-q', '-b', 'feat/ticket');
+  mkdirSync(path.join(dir, '.reins/templates/progress-cold'), { recursive: true });
+  writeFileSync(path.join(dir, '.reins/templates/progress-mini.md'), '# <branch> · status: open · updated: YYYY-MM-DD\n**Ticket:** ...\n**Goal:** ...\n**Done criteria:**\n- [ ] ...\n**Subtasks:**\n- [ ] ...\n**Next step:** ...\n');
+  assert.equal((await cli(dir, ['progress', 'new'])).code, 0);
+  assert.match(readFileSync(path.join(dir, '.reins/progress/feat-ticket.md'), 'utf8'), /^# feat\/ticket · status: open · updated: 2026-11-04\n\*\*Ticket:\*\* \.\.\./);
+
+  writeFileSync(path.join(dir, '.reins/templates/progress-cold/decisions.md'), '# <branch> · our decisions\n');
+  await cli(dir, ['progress', 'new', '--hot', '--branch', 'feat/big']);
+  assert.equal(readFileSync(path.join(dir, '.reins/progress/feat-big/decisions.md'), 'utf8'), '# feat/big · our decisions\n');
+  assert.ok(existsSync(path.join(dir, '.reins/progress/feat-big/verification.md')), 'missing cold templates come from the package');
+
+  writeFileSync(path.join(dir, '.reins/templates/progress-mini.md'), 'just some text\n');
+  const bad = await cli(dir, ['progress', 'new', '--branch', 'feat/other']);
+  assert.equal(bad.code, 2);
+  assert.match(bad.stderr, /^\.reins\/templates\/progress-mini\.md doesn't produce a valid notebook:\n {2}- missing header/);
+  assert.equal(existsSync(path.join(dir, '.reins/progress/feat-other.md')), false);
+});

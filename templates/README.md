@@ -11,7 +11,7 @@ They ship inside `reins` (copied at pack time).
 | `.reins/policies/triage.md` | Task levels, overrides, escalation, `triage.log` | When announcing a level |
 | `.reins/policies/progress.md` | Notebook rules and verification | Medium and large tasks |
 | `.reins/policies/multiagent.md` | Leader, implementers, reviewer; one report file per agent | Large tasks with subagents |
-| `.reins/templates/progress-*.md` | Notebook templates: mini (medium), hot + cold folder (large) | When starting a notebook |
+| `.reins/templates/progress-*.md` | Notebook templates: mini (medium), hot + cold folder (large). Adapt them to your team; `reins progress new` uses them | When starting a notebook |
 | `.reins/review/checklist.md` | Short review checklist | Reviewer agent, `reins review` |
 | `.reins/notes/_template.md` | Shape of a module note (files starting with `_` are not notes) | — |
 | `.reins/skills/{audit,close-task}/` | Skill sources → `.claude/skills/reins-*` | On demand, by description |

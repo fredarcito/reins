@@ -11,6 +11,15 @@ import { CliError } from '../context.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
 
+/**
+ * A notebook template: the repo's own copy in .reins/templates/ (so a team can adapt it), or the packaged one.
+ * @returns {{ text: string, source: string }}
+ */
+function notebookTemplate(root, rel) {
+  const own = readText(root, rel);
+  return own === null ? { text: readTemplate(rel), source: `the packaged ${rel}` } : { text: own, source: rel };
+}
+
 export const options = {
   branch: { type: 'string' },
   criteria: { type: 'boolean' },
@@ -19,7 +28,7 @@ export const options = {
 };
 
 export const help = `Usage:
-  reins progress new [--hot]            Create the notebook from the template (mini; --hot for large tasks)
+  reins progress new [--hot]            Create the notebook from .reins/templates/ (mini; --hot for large tasks)
   reins progress show [--json]          Print the items, numbered
   reins progress add <text> [--criteria]  Add a pending item to Subtasks (or Done criteria)
   reins progress start <n>              Mark item n in progress [~] (only one at a time)
@@ -62,15 +71,21 @@ export async function progress(ctx) {
 
   if (action === 'new') {
     if (existsSync(abs)) throw new CliError(`${file} already exists. Use \`reins progress show\`.`);
+    const tpl = notebookTemplate(root, `.reins/templates/progress-${values.hot ? 'hot' : 'mini'}.md`);
+    const text = newNotebook(tpl.text, branch, date);
+    const problems = formatProblems(parseNotebook(text));
+    if (problems.length) {
+      throw new CliError(`${tpl.source} doesn't produce a valid notebook:\n${problems.map((pr) => `  - ${pr}`).join('\n')}\nFix the template (keep the header \`# <branch> · status: open · updated: YYYY-MM-DD\`), or delete it to use the default one.`);
+    }
     mkdirSync(path.dirname(abs), { recursive: true });
-    writeFileSync(abs, newNotebook(readTemplate(`.reins/templates/progress-${values.hot ? 'hot' : 'mini'}.md`), branch, date));
+    writeFileSync(abs, text);
     out(`Created ${file}${values.hot ? '' : ' (mini)'}. Fill in the goal and the done criteria before editing code.`);
     if (values.hot) {
       const cold = abs.replace(/\.md$/, '');
       mkdirSync(cold, { recursive: true });
       for (const f of ['decisions', 'verification', 'delivery']) {
         const target = path.join(cold, `${f}.md`);
-        if (!existsSync(target)) writeFileSync(target, newNotebook(readTemplate(`.reins/templates/progress-cold/${f}.md`), branch, date));
+        if (!existsSync(target)) writeFileSync(target, newNotebook(notebookTemplate(root, `.reins/templates/progress-cold/${f}.md`).text, branch, date));
       }
       out(`Created the cold folder ${file.replace(/\.md$/, '/')}.`);
     }

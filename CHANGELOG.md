@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-- **Renamed to reins.** packages `@agentreins/cli` (command `reins`: `npx reins check`, no `--no-install` needed), `@agentreins/core`, `@agentreins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`. Entries below use the new names.
+- `reins progress new` uses the repo's notebook templates in `.reins/templates/` first (so a team can adapt them), falling back to the packaged ones, and refuses a template that doesn't produce a valid notebook.
 
-### Experimental (guidance for agents)
+## 0.1.0 · 2026-11-04
+
+First version, on npm: `npm install -D @agentreins/cli @agentreins/adapter-js`. Without a registry: [`docs/team-install.md`](docs/team-install.md).
+
+- **Name: reins** (called harness during development). Packages `@agentreins/cli` (command `reins`: `npx reins check`, no `--no-install` needed), `@agentreins/core`, `@agentreins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`.
+
+### Context between sessions (experimental)
 
 - Context between sessions: module notes with a fixed shape (Purpose, Map, How it works, Decisions, Traps); `reins notes new <domain|folder>` drafts one from the import graph; `reins resume` prints the branch notebook, the changed files and their notes.
 - Claude Code: `reins sync` adds a `SessionStart` hook (`startup`, `compact`, `clear`) running `reins resume --hook`, so the notebook and the module notes come back after a compaction.
@@ -13,9 +19,6 @@
 - `close-task` updates the module notes as part of closing.
 - `reins init` drafts a module note per domain that has none; `reins install` appends the notes index block to an existing `AGENTS.md`; `reins notes new --name`.
 
-## 0.1.0 · 2026-11-04 (not published)
-
-First version, for the team pilot. Install from tarballs: [`docs/team-install.md`](docs/team-install.md).
 
 ### Stable (enforced by tools)
 
