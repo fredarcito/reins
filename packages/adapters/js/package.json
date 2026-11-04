@@ -1,5 +1,5 @@
 {
-  "name": "@harness/adapter-js",
+  "name": "@reins/adapter-js",
   "version": "0.1.0",
   "license": "MIT",
   "files": [
@@ -8,31 +8,32 @@
     "rules",
     "LICENSE"
   ],
-  "description": "Harness language adapter for JavaScript/TypeScript projects (Vite + React, Next).",
+  "description": "JavaScript/TypeScript language adapter for reins (Vite + React, Next).",
   "type": "module",
   "exports": {
     ".": "./src/index.js",
     "./package.json": "./package.json"
   },
   "keywords": [
-    "harness-adapter"
+    "reins-adapter"
   ],
-  "harness": {
+  "reins": {
     "contract": 1
   },
   "engines": {
     "node": ">=22"
   },
   "peerDependencies": {
-    "@harness/core": "workspace:^",
+    "@reins/core": "workspace:^",
     "typescript": ">=4"
   },
   "devDependencies": {
-    "@harness/core": "workspace:^",
+    "@reins/core": "workspace:^",
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "prepack": "node -e \"require('fs').copyFileSync('../../../LICENSE','LICENSE')\""
   },
   "dependencies": {
     "dependency-cruiser": "^18.7.2",
@@ -42,5 +43,17 @@
     "typescript": {
       "optional": true
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fredarcito/harness.git",
+    "directory": "packages/adapters/js"
+  },
+  "homepage": "https://github.com/fredarcito/harness#readme",
+  "bugs": {
+    "url": "https://github.com/fredarcito/harness/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

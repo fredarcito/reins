@@ -1,5 +1,7 @@
 # What is verified
 
+> Recorded before the rename to **reins** (2026-11-04): commands, packages and paths below use the old names (`harness`, `@harness/*`, `.harness/`). They are kept as they were run.
+
 Record of what we assume about external tools (Claude Code, pnpm, dependency-cruiser, npm) and whether it has been checked. Anything not marked **pass** here is not taken as true.
 
 Test environment (2026-11-04): macOS (Darwin 25.6), Node 22.21.1 (minimum supported since phase 1: Node 22), Claude Code 2.1.318, pnpm 12.11.2 (and 11.22.0, see P7), dependency-cruiser 18.7.2, typescript 5.

@@ -20,7 +20,7 @@ test('serverOnlyImport: server-only and next/headers', () => {
 });
 
 function repo(files) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'harness-nsc-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-nsc-'));
   for (const [f, c] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
     writeFileSync(path.join(dir, f), c);

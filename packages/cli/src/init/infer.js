@@ -1,6 +1,6 @@
-// Pure inference for `harness init`: layers, domains and orphans from the files and edges of a repo.
+// Pure inference for `reins init`: layers, domains and orphans from the files and edges of a repo.
 // The code says what exists, not what should exist: these are drafts for a person to review.
-import { matchesAny } from '@harness/core';
+import { matchesAny } from '@reins/core';
 
 const SOURCE = /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/;
 const TEST = /\.(test|spec|stories)\.[^/]+$|(^|\/)(__tests__|__mocks__|test|tests|e2e)\//;

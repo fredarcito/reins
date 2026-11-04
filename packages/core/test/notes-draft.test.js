@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { draftNote, summarizeModule, parseNote, NOTE_TODO_RE } from '@harness/core';
+import { draftNote, summarizeModule, parseNote, NOTE_TODO_RE } from '@reins/core';
 
 const edges = [
   { from: 'src/app/page.js', to: 'src/features/cart/index.js' },
@@ -24,9 +24,9 @@ test('summarizeModule: own files, most imported first, who uses it and what it d
 test('draftNote: a valid note with the graph facts filled in and TODO lines for the rest', () => {
   const summary = summarizeModule({ paths: ['src/features/cart/**'], files, edges, label });
   const text = draftNote({ name: 'cart', paths: ['src/features/cart/**'], publicApi: ['src/features/cart/index.js'], summary, date: '2026-11-04' });
-  const { note } = parseNote('.harness/notes/cart.md', text);
+  const { note } = parseNote('.reins/notes/cart.md', text);
   assert.deepEqual(note.paths, ['src/features/cart/**']);
-  assert.match(text, /^# cart\n<!-- Drafted by harness notes new on 2026-11-04\./m);
+  assert.match(text, /^# cart\n<!-- Drafted by reins notes new on 2026-11-04\./m);
   assert.match(text, /- Public API: `src\/features\/cart\/index\.js`\n- Files: 4\. Most imported: `src\/features\/cart\/index\.js`, `src\/features\/cart\/store\.js`/);
   assert.match(text, /- Used by: src\/app \(2\), domain catalog \(1\)\n- Depends on: src\/lib \(1\)/);
   for (const h of ['Purpose', 'Map', 'How it works', 'Decisions', 'Traps']) assert.match(text, new RegExp(`^## ${h}$`, 'm'));

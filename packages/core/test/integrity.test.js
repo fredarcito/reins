@@ -4,9 +4,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { compareIntegrity, checkIntegrity } from '@harness/core';
+import { compareIntegrity, checkIntegrity } from '@reins/core';
 
-const files = { architecture: '.harness/architecture.yml', baseline: '.harness/baseline.json' };
+const files = { architecture: '.reins/architecture.yml', baseline: '.reins/baseline.json' };
 const bl = (...keys) => JSON.stringify({ version: 1, violations: keys.map((key) => ({ rule: 'no-cycles', key, from: 'a' })) });
 const compare = (base, head) => compareIntegrity({ base, head, files, baseLabel: 'origin/main', severity: 'warn' });
 
@@ -16,14 +16,14 @@ test('unchanged files produce no findings', () => {
 
 test('a changed or deleted architecture.yml is reported', () => {
   const [v] = compare({ architecture: 'a: 1', baseline: null }, { architecture: 'a: 2', baseline: null });
-  assert.equal(v.message, '.harness/architecture.yml changed compared to origin/main.');
+  assert.equal(v.message, '.reins/architecture.yml changed compared to origin/main.');
   assert.match(v.fix, /decided by a person/);
   assert.equal(compare({ architecture: 'a: 1', baseline: null }, { architecture: null, baseline: null }).length, 1);
 });
 
 test('a baseline that grows is reported; one that shrinks is not', () => {
   const [v] = compare({ architecture: null, baseline: bl('k1') }, { architecture: null, baseline: bl('k1', 'k2', 'k3') });
-  assert.equal(v.message, '.harness/baseline.json gained 2 violation(s) compared to origin/main: k2; k3.');
+  assert.equal(v.message, '.reins/baseline.json gained 2 violation(s) compared to origin/main: k2; k3.');
   assert.deepEqual(compare({ architecture: null, baseline: bl('k1', 'k2') }, { architecture: null, baseline: bl('k1') }), []);
 });
 
@@ -37,12 +37,12 @@ test('an invalid baseline is reported', () => {
 });
 
 function repo() {
-  const dir = mkdtempSync(path.join(tmpdir(), 'harness-integrity-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-integrity-'));
   const g = (...args) => execFileSync('git', args, { cwd: dir, stdio: 'pipe' });
   g('init', '-q', '-b', 'main');
   g('config', 'user.email', 't@t');
   g('config', 'user.name', 't');
-  mkdirSync(path.join(dir, '.harness'));
+  mkdirSync(path.join(dir, '.reins'));
   writeFileSync(path.join(dir, files.architecture), 'version: 1\n');
   writeFileSync(path.join(dir, files.baseline), bl('k1'));
   g('add', '-A');

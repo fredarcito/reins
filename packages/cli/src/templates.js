@@ -12,10 +12,10 @@ export function templatesDir() {
     const dir = fileURLToPath(url);
     if (existsSync(path.join(dir, 'AGENTS.md'))) return dir;
   }
-  throw new Error('harness: templates folder not found (broken install?).');
+  throw new Error('reins: templates folder not found (broken install?).');
 }
 
-/** Text of one template, e.g. "AGENTS.md" or ".harness/policies/triage.md". */
+/** Text of one template, e.g. "AGENTS.md" or ".reins/policies/triage.md". */
 export const readTemplate = (rel) => readFileSync(path.join(templatesDir(), rel), 'utf8');
 
 /**

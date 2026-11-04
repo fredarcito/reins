@@ -1,9 +1,9 @@
-// harness resume: what an agent needs to pick a task up again (after a compaction, a /clear or a new session):
+// reins resume: what an agent needs to pick a task up again (after a compaction, a /clear or a new session):
 // the branch's progress notebook, the files changed on the branch and the module notes of those files.
-// --hook is the Claude Code SessionStart hook that harness sync installs (matcher startup|compact|clear).
+// --hook is the Claude Code SessionStart hook that reins sync installs (matcher startup|compact|clear).
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { notebookFile, notesFor } from '@harness/core';
+import { notebookFile, notesFor } from '@reins/core';
 import { isGitRepo } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { loadNotes, readText } from '../project.js';
@@ -16,12 +16,12 @@ const MAX_NOTES = 6;
 
 export const options = { hook: { type: 'boolean' }, json: { type: 'boolean' } };
 
-export const help = `Usage: harness resume [--json]
-       harness resume --hook
+export const help = `Usage: reins resume [--json]
+       reins resume --hook
 
 Prints what is needed to resume the task of the current branch: its progress notebook, the files changed on the
 branch, and the module notes of those files. Run it at the start of a session or after the context was compacted.
---hook is for the Claude Code SessionStart hook that harness sync installs: the same text arrives as context
+--hook is for the Claude Code SessionStart hook that reins sync installs: the same text arrives as context
 when a session starts, after /clear and after a compaction (prints nothing when there is nothing to resume).`;
 
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -57,9 +57,9 @@ export function gather(root, env) {
 /** The text an agent reads. Null when there is nothing to resume. */
 export function render(g, notes = g.notes) {
   if (!g.branch || (!g.notebook && !g.files.length)) return null;
-  const parts = [`Context to resume the work on branch ${g.branch} (from harness resume). Read it before continuing.`];
+  const parts = [`Context to resume the work on branch ${g.branch} (from reins resume). Read it before continuing.`];
   if (g.notebook) {
-    parts.push(`## Progress notebook ${g.notebook.file}\nResume from its "Next step"; keep it updated with \`npx --no-install harness progress\`.\n\n${g.notebook.text}`);
+    parts.push(`## Progress notebook ${g.notebook.file}\nResume from its "Next step"; keep it updated with \`npx reins progress\`.\n\n${g.notebook.text}`);
     if (g.coldDir) parts.push(`Decisions, verification and reports of this task: ${g.coldDir}/ (read them when needed).`);
   } else {
     parts.push('No progress notebook for this branch (fine for a small task).');

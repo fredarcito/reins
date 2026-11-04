@@ -8,14 +8,14 @@ Thanks for helping! This repo is small on purpose: a core that knows no framewor
 pnpm install          # Node >= 22
 pnpm lint             # syntax, import boundaries, AGENTS.md rules, mermaid diagrams, package metadata
 pnpm test             # every package + repo scripts (node:test)
-pnpm self-check       # this repo's own architecture: dependency-cruiser alone + harness check from source
+pnpm self-check       # this repo's own architecture: dependency-cruiser alone + reins check from source
 ```
 
 Run all three before opening a PR; CI runs them on Node 22 and 24.
 
 ## Ground rules
 
-- **Dependency direction:** `cli` → `adapters` → `core`. `core` never imports the CLI or an adapter, and knows no framework (no `if (next)` in the core). Adapters import the core only through `@harness/core/contract`. `pnpm self-check` enforces it.
+- **Dependency direction:** `cli` → `adapters` → `core`. `core` never imports the CLI or an adapter, and knows no framework (no `if (next)` in the core). Adapters import the core only through `@reins/core/contract`. `pnpm self-check` enforces it.
 - **Plain JavaScript with JSDoc types**, ESM, no build step. Tests use `node:test` and live in each package's `test/` (`*.test.js`; anything else there is a fixture).
 - **Every new dependency** is justified in [`docs/DECISIONS.md`](docs/DECISIONS.md). Heavy ones belong to an adapter, never to the core or the CLI.
 - **Everything in English**: code, comments, docs, templates, CLI messages.
@@ -30,8 +30,8 @@ Run all three before opening a PR; CI runs them on Node 22 and 24.
 
 ## Adding a language adapter
 
-Read [`docs/adapter-contract.md`](docs/adapter-contract.md). An adapter is a package (`@harness/adapter-<name>` in this repo, or `harness-adapter-<name>` in yours) with `harness.contract` in its `package.json`, `@harness/core` as a peer dependency, and `detect` + `graph`. Ship an example repo with one intentional violation per rule and integration tests against it, like `examples/` and `packages/adapters/js/test/examples.test.js`.
+Read [`docs/adapter-contract.md`](docs/adapter-contract.md). An adapter is a package (`@reins/adapter-<name>` in this repo, or `reins-adapter-<name>` in yours) with `reins.contract` in its `package.json`, `@reins/core` as a peer dependency, and `detect` + `graph`. Ship an example repo with one intentional violation per rule and integration tests against it, like `examples/` and `packages/adapters/js/test/examples.test.js`.
 
 ## Releasing (maintainers)
 
-Not published to npm yet. Bump the versions in the three packages, update [`CHANGELOG.md`](CHANGELOG.md), `pnpm pack:all`, and share the tarballs ([`docs/team-install.md`](docs/team-install.md)). The npm scope `@harness` is a placeholder: `pnpm rename-scope @new-scope` changes it everywhere.
+Not published to npm yet. Bump the versions in the three packages, update [`CHANGELOG.md`](CHANGELOG.md), `pnpm pack:all`, and share the tarballs ([`docs/team-install.md`](docs/team-install.md)). The npm scope `@reins` is a placeholder: `pnpm rename-scope @new-scope` changes it everywhere.

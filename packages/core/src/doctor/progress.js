@@ -1,4 +1,4 @@
-// The progress notebook: .harness/progress/<branch>.md (local, outside git). Format:
+// The progress notebook: .reins/progress/<branch>.md (local, outside git). Format:
 //
 //   # <branch> · status: open · updated: YYYY-MM-DD
 //   **Goal:** …
@@ -10,7 +10,7 @@
 //   - [-] … — reason   discarded, with a reason (never deleted)
 //   **Next step:** …
 //
-// Shared by `doctor` (warnings) and `harness progress` (edits that must keep the format valid).
+// Shared by `doctor` (warnings) and `reins progress` (edits that must keep the format valid).
 
 export const MARKERS = Object.freeze({ ' ': 'pending', '~': 'in progress', x: 'done', '-': 'discarded' });
 export const HEADER_RE = /^#\s+(.+?)\s+[·|]\s+status:\s*(\S+)\s+[·|]\s+updated:\s*(\S+)\s*$/;
@@ -19,7 +19,7 @@ const SECTION_RE = /^(?:\*\*(.+?):?\*\*|#{2,6}\s+(.+?)):?\s*(.*)$/;
 const REASON_RE = /(—|--|\breason:)\s*\S/i;
 
 /** Notebook file for a branch (slashes and other unsafe characters become "-"). */
-export const notebookFile = (branch) => `.harness/progress/${branch.replace(/[^\w.-]+/g, '-')}.md`;
+export const notebookFile = (branch) => `.reins/progress/${branch.replace(/[^\w.-]+/g, '-')}.md`;
 
 /**
  * @typedef {{ line: number, marker: string, text: string, section: string }} NotebookItem
@@ -92,7 +92,7 @@ export function checkNotebook({ file, text, maxLines }) {
   const problems = formatProblems(nb);
   if (problems.length) {
     add('progress-format', `${file} is not in the notebook format: ${problems.join('; ')}.`,
-      'Fix those lines by hand; afterwards prefer `harness progress` edits, which keep the format valid.');
+      'Fix those lines by hand; afterwards prefer `reins progress` edits, which keep the format valid.');
   }
   if (nb.header?.status === 'closed') {
     const criteria = nb.items.filter((it) => it.section.startsWith('done criteria'));

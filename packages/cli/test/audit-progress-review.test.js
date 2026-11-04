@@ -10,7 +10,7 @@ const write = (dir, f, text) => {
   mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
   writeFileSync(path.join(dir, f), text);
 };
-const BACKLOG = '.harness/backlog/optimizations.md';
+const BACKLOG = '.reins/backlog/optimizations.md';
 
 test('audit: add, list, recheck, set with reason; the backlog stays readable markdown', async () => {
   const dir = exampleRepo('vite-react');
@@ -39,9 +39,9 @@ test('audit: add, list, recheck, set with reason; the backlog stays readable mar
 test('progress: new, show, add, start, done, drop, next — always valid', async () => {
   const dir = exampleRepo('vite-react');
   git(dir, 'checkout', '-q', '-b', 'feat/discounts');
-  const file = '.harness/progress/feat-discounts.md';
-  assert.match((await cli(dir, ['progress', 'show'])).stderr, /doesn't exist\. Create it with `harness progress new`/);
-  assert.match((await cli(dir, ['progress', 'new'])).stdout, /Created \.harness\/progress\/feat-discounts\.md \(mini\)/);
+  const file = '.reins/progress/feat-discounts.md';
+  assert.match((await cli(dir, ['progress', 'show'])).stderr, /doesn't exist\. Create it with `reins progress new`/);
+  assert.match((await cli(dir, ['progress', 'new'])).stdout, /Created \.reins\/progress\/feat-discounts\.md \(mini\)/);
   assert.equal((await cli(dir, ['progress', 'new'])).code, 2, 'never overwrites');
 
   await cli(dir, ['progress', 'add', 'apply', 'the', 'discount']);
@@ -49,26 +49,26 @@ test('progress: new, show, add, start, done, drop, next — always valid', async
   assert.match((await cli(dir, ['progress', 'start', '6'])).stdout, /Item 6 is in progress\. Item 4 went back to pending\./);
   await cli(dir, ['progress', 'done', '6']);
   await cli(dir, ['progress', 'drop', '5', 'covered', 'by', 'item', '6']);
-  await cli(dir, ['progress', 'next', 'run', 'harness check']);
+  await cli(dir, ['progress', 'next', 'run', 'reins check']);
   const show = await cli(dir, ['progress', 'show']);
-  assert.match(show.stdout, /done criteria:\n {3}1\. \[ \] \.\.\.\n {3}2\. \[ \] `harness check` without new violations\n {3}3\. \[ \] total shows the discount\nsubtasks:/);
+  assert.match(show.stdout, /done criteria:\n {3}1\. \[ \] \.\.\.\n {3}2\. \[ \] `reins check` without new violations\n {3}3\. \[ \] total shows the discount\nsubtasks:/);
   assert.match(show.stdout, / 6\. \[x\] apply the discount/);
-  assert.match(show.stdout, /Next step: run harness check$/m);
+  assert.match(show.stdout, /Next step: run reins check$/m);
 
   const before = read(dir, file);
   const bad = await cli(dir, ['progress', 'done', '42']);
   assert.equal(bad.code, 2);
   assert.equal(read(dir, file), before, 'a refused edit writes nothing');
-  assert.match((await cli(dir, ['doctor'])).stdout, /harness doctor: nothing to report/, 'the edited notebook passes the doctor (and local files are not part of the diff)');
+  assert.match((await cli(dir, ['doctor'])).stdout, /reins doctor: nothing to report/, 'the edited notebook passes the doctor (and local files are not part of the diff)');
 });
 
 test('progress: an invalid notebook is refused, --hot creates the cold folder, --branch picks another notebook', async () => {
   const dir = exampleRepo('vite-react');
   await cli(dir, ['progress', 'new', '--hot', '--branch', 'feat/big']);
   for (const f of ['feat-big.md', 'feat-big/decisions.md', 'feat-big/verification.md', 'feat-big/delivery.md']) {
-    assert.ok(existsSync(path.join(dir, '.harness/progress', f)), f);
+    assert.ok(existsSync(path.join(dir, '.reins/progress', f)), f);
   }
-  write(dir, '.harness/progress/feat-big.md', '# feat/big · status: open · updated: 2026-11-04\n- [~] a\n- [~] b\n');
+  write(dir, '.reins/progress/feat-big.md', '# feat/big · status: open · updated: 2026-11-04\n- [~] a\n- [~] b\n');
   const r = await cli(dir, ['progress', 'done', '1', '--branch', 'feat/big']);
   assert.equal(r.code, 2);
   assert.match(r.stderr, /not valid; fix it first:\n {2}- lines 2, 3: 2 items in progress/);
@@ -79,16 +79,16 @@ test('review: prompt with checklist, notes, changed and untracked files; no chan
   const dir = exampleRepo('vite-react');
   assert.match((await cli(dir, ['review'])).stdout, /No changes compared to main: nothing to review\./);
   git(dir, 'checkout', '-q', '-b', 'feat/x');
-  write(dir, '.harness/notes/cart.md', '---\npaths: ["src/features/cart/**"]\n---\n- totals are cents.\n');
+  write(dir, '.reins/notes/cart.md', '---\npaths: ["src/features/cart/**"]\n---\n- totals are cents.\n');
   write(dir, 'src/features/cart/cartStore.js', 'export function useCart() {\n  return { total: 2500 };\n}\n');
   write(dir, 'src/features/cart/discount.js', 'export const discount = 0.1;\n');
-  write(dir, '.harness/progress/feat-x.md', 'local notebook, never reviewed\n');
+  write(dir, '.reins/progress/feat-x.md', 'local notebook, never reviewed\n');
   const r = await cli(dir, ['review']);
   assert.equal(r.code, 0);
   assert.match(r.stdout, /^# Code review request\n/);
-  assert.match(r.stdout, /## Files changed \(3, compared to main\)\n\n- \.harness\/notes\/cart\.md\n- src\/features\/cart\/cartStore\.js\n- src\/features\/cart\/discount\.js\n/);
+  assert.match(r.stdout, /## Files changed \(3, compared to main\)\n\n- \.reins\/notes\/cart\.md\n- src\/features\/cart\/cartStore\.js\n- src\/features\/cart\/discount\.js\n/);
   assert.match(r.stdout, /## Checklist\n\n# Review checklist/);
-  assert.match(r.stdout, /## Module notes for these paths\n\n### \.harness\/notes\/cart\.md\n\n- totals are cents\./);
+  assert.match(r.stdout, /## Module notes for these paths\n\n### \.reins\/notes\/cart\.md\n\n- totals are cents\./);
   assert.match(r.stdout, /-  return \{ total: 2400 \};\n\+  return \{ total: 2500 \};/);
   assert.match(r.stdout, /\+export const discount = 0\.1;/, 'untracked files are in the diff');
   assert.doesNotMatch(r.stdout, /local notebook/);

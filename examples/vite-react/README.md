@@ -1,9 +1,9 @@
 # Example: Vite + React (plain JS/JSX)
 
-Minimal app used by the harness integration tests. It is never built or installed: only its imports matter.
+Minimal app used by reins integration tests. It is never built or installed: only its imports matter.
 
 - Aliases: `@/` → `src/`, declared in both `vite.config.js` and `jsconfig.json`.
-- Plan: [`.harness/architecture.yml`](.harness/architecture.yml).
+- Plan: [`.reins/architecture.yml`](.reins/architecture.yml).
 
 Intentional violations, one per rule:
 

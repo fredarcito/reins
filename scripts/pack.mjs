@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Packs every harness package into .tarballs/ (gitignored) so the team can install them without publishing.
+// Packs every reins package into .tarballs/ (gitignored) so the team can install them without publishing.
 // pnpm pack turns "workspace:^" into real version ranges.
 // Usage: pnpm pack:all
 import { execFileSync } from 'node:child_process';

@@ -8,15 +8,15 @@ importers:
 
   .:
     devDependencies:
-      '@harness/adapter-js':
+      '@reins/adapter-js':
         specifier: workspace:*
         version: link:packages/adapters/js
-      '@harness/cli':
-        specifier: workspace:*
-        version: link:packages/cli
       husky:
         specifier: ^9.1.7
         version: 9.1.7
+      reins:
+        specifier: workspace:*
+        version: link:packages/cli
 
   packages/adapters/js:
     dependencies:
@@ -27,7 +27,7 @@ importers:
         specifier: ^2.9.1
         version: 2.9.1
     devDependencies:
-      '@harness/core':
+      '@reins/core':
         specifier: workspace:^
         version: link:../../core
       typescript:
@@ -36,14 +36,14 @@ importers:
 
   packages/cli:
     dependencies:
-      '@harness/core':
+      '@reins/core':
         specifier: workspace:^
         version: link:../core
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
     devDependencies:
-      '@harness/adapter-js':
+      '@reins/adapter-js':
         specifier: workspace:^
         version: link:../adapters/js
 

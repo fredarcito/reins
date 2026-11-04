@@ -1,5 +1,5 @@
 # Preset for Next with the app router (plain JS/JSX or TypeScript, with or without src/).
-# `harness init` uses `layers` as a starting point and keeps only the folders that exist.
+# `reins init` uses `layers` as a starting point and keeps only the folders that exist.
 # `entries` are Next's special files: Next loads them by convention, so they are never orphans.
 description: Next.js, app router
 
@@ -11,7 +11,7 @@ layers:
 
 domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
 
-# adapter rules `harness init` proposes for this preset
+# adapter rules `reins init` proposes for this preset
 default_rules: [next-server-client]
 
 entries:

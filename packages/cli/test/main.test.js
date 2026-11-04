@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { run, SCOPE } from '@harness/cli';
+import { run, SCOPE } from 'reins';
 import { readFile } from 'node:fs/promises';
 
 const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -19,7 +19,7 @@ test('--version prints the package version', async () => {
 test('no command prints help and exits 0', async () => {
   const c = capture();
   assert.equal(await run([], c), 0);
-  assert.match(c.io.stdout, /Usage: harness/);
+  assert.match(c.io.stdout, /Usage: reins/);
 });
 
 test('unknown command exits non-zero', async () => {
@@ -28,6 +28,6 @@ test('unknown command exits non-zero', async () => {
   assert.match(c.io.stderr, /Unknown command: nope/);
 });
 
-test('scope is derived from the package name', () => {
-  assert.equal(`${SCOPE}/cli`, pkg.name);
+test('scope is derived from the dependency on <scope>/core', () => {
+  assert.ok(pkg.dependencies[`${SCOPE}/core`]);
 });

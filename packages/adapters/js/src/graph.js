@@ -2,13 +2,13 @@
 import { readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { cruise, getAvailableTranspilers } from 'dependency-cruiser';
-import { matchesAny } from '@harness/core/contract';
+import { matchesAny } from '@reins/core/contract';
 import { readAliases } from './aliases.js';
 import { detectFramework } from './detect.js';
 import { loadPreset } from './presets.js';
 
 /** Folders never scanned. */
-export const IGNORED_DIRS = ['node_modules', '.git', '.next', '.harness', 'dist', 'build', 'out', 'coverage', '.turbo', '.vercel', '.cache', 'storybook-static'];
+export const IGNORED_DIRS = ['node_modules', '.git', '.next', '.reins', 'dist', 'build', 'out', 'coverage', '.turbo', '.vercel', '.cache', 'storybook-static'];
 const EXCLUDE = `(^|/)(${IGNORED_DIRS.map((d) => d.replace(/\./g, '\\.')).join('|')})(/|$)`;
 const TS_FILE = /\.(ts|tsx|mts|cts)$/;
 
@@ -66,7 +66,7 @@ function kindOf(dependencyTypes) {
 /**
  * @param {string} repoPath
  * @param {{ preset?: string, ignore?: string[] }} [config] the parsed architecture.yml (uses `preset` and `ignore`)
- * @returns {Promise<{ edges: import('@harness/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
+ * @returns {Promise<{ edges: import('@reins/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
  */
 export async function graph(repoPath, config = {}) {
   // Real path: symlinked workspaces resolve to real paths, which must stay inside the root (macOS /var -> /private/var).

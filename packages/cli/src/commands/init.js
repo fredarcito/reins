@@ -1,11 +1,11 @@
-// harness init: scans the repo and drafts .harness/architecture.yml, .harness/baseline.json, a review report and
+// reins init: scans the repo and drafts .reins/architecture.yml, .reins/baseline.json, a review report and
 // one module note per inferred domain that has none.
 // Never overwrites existing files without confirmation (or --force).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, NOTES_DIR } from '@harness/core';
+import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, NOTES_DIR } from '@reins/core';
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
-import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, HARNESS_DIR, INIT_REPORT_FILE } from '../context.js';
+import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
 import { inferLayers, inferDomains, findOrphans, hasTypeScript } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
@@ -19,11 +19,11 @@ export const options = {
   force: { type: 'boolean' },
 };
 
-export const help = `Usage: harness init [options]
+export const help = `Usage: reins init [options]
 
-Scans the repo and drafts .harness/architecture.yml and .harness/baseline.json, plus a report
-(.harness/init-report.md) with the inferred layers, domains, cycles, doubtful dependencies and orphans.
-It also drafts a module note (.harness/notes/<domain>.md) for each domain that has none, with TODO lines
+Scans the repo and drafts .reins/architecture.yml and .reins/baseline.json, plus a report
+(.reins/init-report.md) with the inferred layers, domains, cycles, doubtful dependencies and orphans.
+It also drafts a module note (.reins/notes/<domain>.md) for each domain that has none, with TODO lines
 for your agent to fill in. Existing notes are never touched.
 The draft describes what exists; review it before committing.
 
@@ -105,12 +105,12 @@ export async function init(ctx) {
       return 0;
     }
   }
-  mkdirSync(path.join(root, HARNESS_DIR), { recursive: true });
+  mkdirSync(path.join(root, REINS_DIR), { recursive: true });
   writeFileSync(path.join(root, ARCHITECTURE_FILE), yml);
   writeFileSync(path.join(root, BASELINE_FILE), baseline);
   writeFileSync(path.join(root, INIT_REPORT_FILE), report);
   const drafted = toDraft.map((d) => writeNoteDraft(root, { name: d.name, paths: d.paths, publicApi: d.publicApi }, analysis.graph, [], domains, date).file);
-  // once harness install has run, keep the AGENTS.md notes index in step with the new notes
+  // once reins install has run, keep the AGENTS.md notes index in step with the new notes
   if (drafted.length && existsSync(path.join(root, MANIFEST_FILE))) runSync(root);
 
   const s = result.violations.length;
@@ -120,7 +120,7 @@ export async function init(ctx) {
       `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains: ${domains.map((x) => x.name).join(', ') || 'none'}`,
       ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines.`] : []),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
-      `Next: review ${INIT_REPORT_FILE}, adjust ${ARCHITECTURE_FILE}, run \`harness check --update-baseline\`, then \`harness check\`.`,
+      `Next: review ${INIT_REPORT_FILE}, adjust ${ARCHITECTURE_FILE}, run \`reins check --update-baseline\`, then \`reins check\`.`,
     ].join('\n'),
   );
   return 0;

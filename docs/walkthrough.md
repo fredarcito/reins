@@ -1,11 +1,11 @@
-# Walkthrough: install the harness in an app and use it
+# Walkthrough: install reins in an app and use it
 
 A full tour on `examples/vite-react` (Vite + React, plain JS/JSX), from an empty repo to a blocked commit. Every output below is real, from [`scripts/verify/e2e-install.sh`](../scripts/verify/e2e-install.sh), which replays this tour automatically (`notes new` and `resume`: [`scripts/verify/cc-resume.sh`](../scripts/verify/cc-resume.sh); the notebook text is shortened). About 10 minutes by hand.
 
 ```mermaid
 flowchart LR
-    a["1 · Install<br/>packages"] --> b["2 · harness install"]
-    b --> c["3 · harness init"]
+    a["1 · Install<br/>packages"] --> b["2 · reins install"]
+    b --> c["3 · reins init"]
     c --> d["4 · Review<br/>and freeze"]
     d --> e["5 · Commit"]
     e --> f["6 · A bad commit<br/>is blocked"]
@@ -15,46 +15,46 @@ flowchart LR
 ## 1. Get the packages into the repo
 
 ```bash
-cp -R examples/vite-react /tmp/shop && cd /tmp/shop && rm -rf .harness
+cp -R examples/vite-react /tmp/shop && cd /tmp/shop && rm -rf .reins
 git init -b main && printf 'node_modules/\n' > .gitignore && git add -A && git commit -m "app"
 
-mkdir -p vendor/harness && cp /path/to/harness/.tarballs/*.tgz vendor/harness/
-npm install -D ./vendor/harness/*.tgz husky@9
+mkdir -p vendor/reins && cp /path/to/reins/.tarballs/*.tgz vendor/reins/
+npm install -D ./vendor/reins/*.tgz husky@9
 npx husky init && : > .husky/pre-commit     # this repo already uses Husky; start with an empty hook
 ```
 
 ## 2. Wire it
 
 ```console
-$ npx --no-install harness install
-harness install:
-  - .harness/ sources: 16 file(s) added
-  - .gitignore: added .harness/backlog/, .harness/progress/, .harness/init-report.md
-  - package.json: added script "harness:check": "harness check"
+$ npx reins install
+reins install:
+  - .reins/ sources: 16 file(s) added
+  - .gitignore: added .reins/backlog/, .reins/progress/, .reins/init-report.md
+  - package.json: added script "reins:check": "reins check"
   - pre-commit hook: appended to .husky/pre-commit (Husky)
-  - CI workflow: wrote .github/workflows/harness.yml (npm)
-  - harness sync: 7 change(s)
+  - CI workflow: wrote .github/workflows/reins.yml (npm)
+  - reins sync: 7 change(s)
 
 Next:
-  - No .harness/architecture.yml yet: run `npx --no-install harness init` to draft the architecture plan and the baseline.
-  - In GitHub, protect the main branch: require a PR with an approval and the "harness" check to pass. That is the real guarantee.
+  - No .reins/architecture.yml yet: run `npx reins init` to draft the architecture plan and the baseline.
+  - In GitHub, protect the main branch: require a PR with an approval and the "reins" check to pass. That is the real guarantee.
 ```
 
 ## 3. Draft the architecture
 
 ```console
-$ npx --no-install harness init
-Wrote .harness/architecture.yml (draft), .harness/baseline.json (3 existing violations frozen) and .harness/init-report.md.
+$ npx reins init
+Wrote .reins/architecture.yml (draft), .reins/baseline.json (3 existing violations frozen) and .reins/init-report.md.
 Layers: app > features > components > shared · Domains: cart, catalog
-Module notes drafted from the code: .harness/notes/cart.md, .harness/notes/catalog.md. Ask your agent to fill in their TODO lines.
-Next: review .harness/init-report.md, adjust .harness/architecture.yml, run `harness check --update-baseline`, then `harness check`.
+Module notes drafted from the code: .reins/notes/cart.md, .reins/notes/catalog.md. Ask your agent to fill in their TODO lines.
+Next: review .reins/init-report.md, adjust .reins/architecture.yml, run `reins check --update-baseline`, then `reins check`.
 ```
 
-From `.harness/init-report.md`:
+From `.reins/init-report.md`:
 
 ```markdown
 ## Summary
-- Adapter: `@harness/adapter-js`, preset `vite-react` (detected)
+- Adapter: `@reins/adapter-js`, preset `vite-react` (detected)
 - Scanned: 14 files, 16 internal imports
 - Existing violations frozen in `baseline.json`: **3** (layer-direction: 1, domain-boundary: 1, no-cycles: 1)
 
@@ -75,21 +75,21 @@ That "mixed" pair is the example's intentional violation (`Button.jsx` imports f
 
 ## 4. Review and freeze
 
-Adjust `.harness/architecture.yml` if needed (layers, domains, `allow:` with reasons), then:
+Adjust `.reins/architecture.yml` if needed (layers, domains, `allow:` with reasons), then:
 
 ```console
-$ npx --no-install harness check --update-baseline
-.harness/baseline.json updated: 3 violation(s) (+0 frozen, -0 fixed).
+$ npx reins check --update-baseline
+.reins/baseline.json updated: 3 violation(s) (+0 frozen, -0 fixed).
 
-$ npx --no-install harness check
-harness check: no new violations · 3 in baseline · 0 fixed
+$ npx reins check
+reins check: no new violations · 3 in baseline · 0 fixed
 Result: pass
 ```
 
 ## 5. Commit
 
 ```bash
-git add -A && git commit -m "adopt harness"     # the hook runs `harness check` on the staged files: green
+git add -A && git commit -m "adopt reins"     # the hook runs `reins check` on the staged files: green
 ```
 
 ## 6. A bad commit is blocked
@@ -106,33 +106,33 @@ git add src/lib/money.js && git commit -m "money helper"
     Why: src/lib/money.js (shared) imports src/features/cart/index.js (features), but features is above shared.
     Fix: Move what src/lib/money.js needs from features down to shared or a lower layer, or invert the dependency (pass it in as props or callbacks).
 
-harness check: 1 new (1 error, 0 warnings) · 0 in baseline (touched files only)
+reins check: 1 new (1 error, 0 warnings) · 0 in baseline (touched files only)
 Result: FAIL (new errors)
 husky - pre-commit script failed (code 1)
 ```
 
-The message is written for the agent too: it says the rule, the reason and the fix. If someone commits without hooks, the CI job (`.github/workflows/harness.yml`) fails the PR with the same message.
+The message is written for the agent too: it says the rule, the reason and the fix. If someone commits without hooks, the CI job (`.github/workflows/reins.yml`) fails the PR with the same message.
 
 ## 7. The agent side
 
-**A module note** that reaches Claude Code before it edits (through the hook `harness sync` installed) and any agent through the index in `AGENTS.md`:
+**A module note** that reaches Claude Code before it edits (through the hook `reins sync` installed) and any agent through the index in `AGENTS.md`:
 
 ```console
-$ printf -- '---\npaths: ["src/features/cart/**"]\n---\n- 2026-11-04: totals are integer cents.\n' > .harness/notes/cart.md
-$ npx --no-install harness sync
-harness sync: 1 change(s):
+$ printf -- '---\npaths: ["src/features/cart/**"]\n---\n- 2026-11-04: totals are integer cents.\n' > .reins/notes/cart.md
+$ npx reins sync
+reins sync: 1 change(s):
   - updated the notes index in AGENTS.md
 
-$ npx --no-install harness notes src/features/cart/cartStore.js
-Note .harness/notes/cart.md (applies to src/features/cart/**) for src/features/cart/cartStore.js:
+$ npx reins notes src/features/cart/cartStore.js
+Note .reins/notes/cart.md (applies to src/features/cart/**) for src/features/cart/cartStore.js:
 - 2026-11-04: totals are integer cents.
 ```
 
-**Module notes.** `init` already drafted one per domain (step 3). For any other folder, `notes new` drafts one; the import graph fills in the map, and the agent (or you) replaces the `TODO` lines with what the code can't say. Ask your agent: *"fill in the TODO lines of the notes in .harness/notes/"*.
+**Module notes.** `init` already drafted one per domain (step 3). For any other folder, `notes new` drafts one; the import graph fills in the map, and the agent (or you) replaces the `TODO` lines with what the code can't say. Ask your agent: *"fill in the TODO lines of the notes in .reins/notes/"*.
 
 ```console
-$ npx --no-install harness notes new src/lib --name shared
-Drafted .harness/notes/shared.md. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run `harness sync` to add it to the AGENTS.md index.
+$ npx reins notes new src/lib --name shared
+Drafted .reins/notes/shared.md. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run `reins sync` to add it to the AGENTS.md index.
 ```
 
 What `init` drafted for `cart`:
@@ -148,11 +148,11 @@ What `init` drafted for `cart`:
 **Resuming a task** in a new session, or after the conversation was compacted. Claude Code receives this on its own through the `SessionStart` hook; any other agent runs the command:
 
 ```console
-$ npx --no-install harness resume
-Context to resume the work on branch feat/coupons (from harness resume). Read it before continuing.
+$ npx reins resume
+Context to resume the work on branch feat/coupons (from reins resume). Read it before continuing.
 
-## Progress notebook .harness/progress/feat-coupons.md
-Resume from its "Next step"; keep it updated with `npx --no-install harness progress`.
+## Progress notebook .reins/progress/feat-coupons.md
+Resume from its "Next step"; keep it updated with `npx reins progress`.
 
 # feat/coupons · status: open · updated: 2026-11-04
 **Goal:** coupons in the cart.
@@ -162,43 +162,43 @@ Resume from its "Next step"; keep it updated with `npx --no-install harness prog
 - src/features/cart/cartStore.js
 
 ## Module notes for those files (follow them)
-### .harness/notes/cart.md (applies to src/features/cart/**)
+### .reins/notes/cart.md (applies to src/features/cart/**)
 ...
 ```
 
 **Sizing a task** before starting:
 
 ```console
-$ npx --no-install harness scope src/features/cart
+$ npx reins scope src/features/cart
 Files: 3
 Domains: cart
 Public API touched: src/features/cart/index.js
 architecture.yml touched: no
-Notes to read: .harness/notes/cart.md
+Notes to read: .reins/notes/cart.md
 Minimum level: large (touches a public API (src/features/cart/index.js))
 ```
 
-**Triage vs. reality** (`harness doctor`, local only): the agent declared `small` in `.harness/progress/triage.log` but touched four code files.
+**Triage vs. reality** (`reins doctor`, local only): the agent declared `small` in `.reins/progress/triage.log` but touched four code files.
 
 ```console
-$ npx --no-install harness doctor
-! warn  triage-mismatch  .harness/progress/triage.log
+$ npx reins doctor
+! warn  triage-mismatch  .reins/progress/triage.log
     Why: Declared small (line 1: "add a discount constant"), but the diff looks medium: 4 files (small allows 3).
-    Fix: If the task grew, say so and append a new line with level medium. If the thresholds are wrong for this repo, tune .harness/doctor.yml.
+    Fix: If the task grew, say so and append a new line with level medium. If the thresholds are wrong for this repo, tune .reins/doctor.yml.
 
-harness doctor: 0 errors, 1 warning
+reins doctor: 0 errors, 1 warning
 ```
 
 **The notebook** for a medium task, edited one line at a time:
 
 ```console
-$ npx --no-install harness progress new
-Created .harness/progress/feat-discounts.md (mini). Fill in the goal and the done criteria before editing code.
-$ npx --no-install harness progress show
-.harness/progress/feat-discounts.md · open · updated 2026-11-04
+$ npx reins progress new
+Created .reins/progress/feat-discounts.md (mini). Fill in the goal and the done criteria before editing code.
+$ npx reins progress show
+.reins/progress/feat-discounts.md · open · updated 2026-11-04
 done criteria:
    1. [ ] ...
-   2. [ ] `harness check` without new violations
+   2. [ ] `reins check` without new violations
 subtasks:
    3. [~] ...
    4. [ ] ...

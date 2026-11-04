@@ -1,4 +1,4 @@
-// .harness/doctor.yml: thresholds of the doctor. They are uncalibrated starting values, kept apart from
+// .reins/doctor.yml: thresholds of the doctor. They are uncalibrated starting values, kept apart from
 // architecture.yml so they can move without touching the architecture plan.
 import { parseDocument } from 'yaml';
 import { ConfigError } from '../config/index.js';

@@ -4,18 +4,18 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { run } from '@harness/cli';
+import { run } from 'reins';
 
 export const cliDir = fileURLToPath(new URL('..', import.meta.url));
 export const examplesDir = fileURLToPath(new URL('../../../examples/', import.meta.url));
 
 export const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf8' });
 
-/** Copy of an example in a fresh git repo with one commit on main. keepHarness: keep its .harness/ folder. */
-export function exampleRepo(name, { keepHarness = true } = {}) {
-  const dir = mkdtempSync(path.join(tmpdir(), `harness-cli-${name}-`));
+/** Copy of an example in a fresh git repo with one commit on main. keepReins: keep its .reins/ folder. */
+export function exampleRepo(name, { keepReins = true } = {}) {
+  const dir = mkdtempSync(path.join(tmpdir(), `reins-${name}-`));
   cpSync(path.join(examplesDir, name), dir, { recursive: true });
-  if (!keepHarness) rmSync(path.join(dir, '.harness'), { recursive: true, force: true });
+  if (!keepReins) rmSync(path.join(dir, '.reins'), { recursive: true, force: true });
   git(dir, 'init', '-q', '-b', 'main');
   git(dir, 'config', 'user.email', 't@t');
   git(dir, 'config', 'user.name', 't');
@@ -26,7 +26,7 @@ export function exampleRepo(name, { keepHarness = true } = {}) {
 
 /** Temp folder with the given files. */
 export function tempDir(files = {}) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'harness-cli-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-'));
   for (const [f, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
     writeFileSync(path.join(dir, f), typeof content === 'string' ? content : JSON.stringify(content));

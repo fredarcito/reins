@@ -1,7 +1,7 @@
-// Drafting module notes from the import graph, shared by `harness notes new` and `harness init`.
+// Drafting module notes from the import graph, shared by `reins notes new` and `reins init`.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { draftNote, matchesAny, NOTES_DIR, summarizeModule } from '@harness/core';
+import { draftNote, matchesAny, NOTES_DIR, summarizeModule } from '@reins/core';
 
 /** The group a file outside the module is shown under: its domain, or its first two folders. */
 export const labeler = (domains) => (f) => {
@@ -12,7 +12,7 @@ export const labeler = (domains) => (f) => {
 };
 
 /**
- * Writes .harness/notes/<name>.md unless it exists (or `force`).
+ * Writes .reins/notes/<name>.md unless it exists (or `force`).
  * @param {string} root
  * @param {object} m
  * @param {string} m.name

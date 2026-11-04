@@ -1,12 +1,12 @@
 {
-  "name": "@harness/core",
+  "name": "@reins/core",
   "version": "0.1.0",
   "license": "MIT",
   "files": [
     "src",
     "LICENSE"
   ],
-  "description": "Framework-agnostic core of the harness: architecture check, doctor, reports and the adapter contract.",
+  "description": "Framework-agnostic core of reins: architecture check, doctor, reports and the adapter contract.",
   "type": "module",
   "exports": {
     ".": "./src/index.js",
@@ -17,9 +17,22 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "prepack": "node -e \"require('fs').copyFileSync('../../LICENSE','LICENSE')\""
   },
   "dependencies": {
     "yaml": "^2.9.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fredarcito/harness.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/fredarcito/harness#readme",
+  "bugs": {
+    "url": "https://github.com/fredarcito/harness/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

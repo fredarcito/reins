@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 import {
   BACKLOG_HEADER, parseBacklog, addFinding, setStatus, markRecheck,
   parseNotebook, formatProblems, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, NotebookError,
-} from '@harness/core';
+} from '@reins/core';
 
 const D = '2026-11-04';
-const template = (name) => readFileSync(new URL(`../../../templates/.harness/templates/${name}`, import.meta.url), 'utf8');
+const template = (name) => readFileSync(new URL(`../../../templates/.reins/templates/${name}`, import.meta.url), 'utf8');
 
 // ---------------- backlog ----------------
 
@@ -69,7 +69,7 @@ test('notebook: add, start (only one [~]), done, drop with reason, next; date up
   t = setNext(t, 'write the tests', D);
   assert.deepEqual(formatProblems(parseNotebook(t)), []);
   assert.match(t, /updated: 2026-11-04/);
-  assert.match(t, /\*\*Done criteria:\*\*\n- \[ \] \.\.\.\n- \[ \] `harness check` without new violations\n- \[ \] discount shown in the cart\n/);
+  assert.match(t, /\*\*Done criteria:\*\*\n- \[ \] \.\.\.\n- \[ \] `reins check` without new violations\n- \[ \] discount shown in the cart\n/);
   assert.match(t, /- \[-\] \.\.\. — not needed after all/);
   assert.match(t, /\*\*Next step:\*\* write the tests\n$/);
 });

@@ -4,14 +4,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import adapter from '@harness/adapter-js';
-import { parseConfig, runCheck, emptyBaseline, createBaseline, validateAdapter, validateEdges, normalizeGraph, CORE_RULES } from '@harness/core';
+import adapter from '@reins/adapter-js';
+import { parseConfig, runCheck, emptyBaseline, createBaseline, validateAdapter, validateEdges, normalizeGraph, CORE_RULES } from '@reins/core';
 
 const examples = fileURLToPath(new URL('../../../../examples/', import.meta.url));
 
 async function check(name) {
   const repo = path.join(examples, name);
-  const config = parseConfig(readFileSync(path.join(repo, '.harness/architecture.yml'), 'utf8'), { knownRules: [...CORE_RULES, ...adapter.rules] });
+  const config = parseConfig(readFileSync(path.join(repo, '.reins/architecture.yml'), 'utf8'), { knownRules: [...CORE_RULES, ...adapter.rules] });
   const g = normalizeGraph(await adapter.graph(repo, config));
   const extra = await adapter.evaluate(repo, config, g);
   return { repo, config, g, extra, result: runCheck({ edges: g.edges, config, baseline: emptyBaseline(), extra }) };

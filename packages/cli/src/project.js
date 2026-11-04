@@ -1,10 +1,10 @@
-// Reading the harness files of a consumer repo, shared by several commands. None of this needs the adapter.
+// Reading reins files of a consumer repo, shared by several commands. None of this needs the adapter.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR } from '@harness/core';
-import { ARCHITECTURE_FILE, CliError, HARNESS_DIR } from './context.js';
+import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR } from '@reins/core';
+import { ARCHITECTURE_FILE, CliError, REINS_DIR } from './context.js';
 
-export const DOCTOR_FILE = `${HARNESS_DIR}/doctor.yml`;
+export const DOCTOR_FILE = `${REINS_DIR}/doctor.yml`;
 
 /** Text of a repo file, or null. */
 export const readText = (root, f) => (existsSync(path.join(root, f)) ? readFileSync(path.join(root, f), 'utf8') : null);
@@ -24,7 +24,7 @@ export function readDomains(root, notes) {
   try {
     return parseConfig(text, { file: ARCHITECTURE_FILE, knownRules: [...new Set([...CORE_RULES, ...ids])] }).domains;
   } catch {
-    notes.push(`${ARCHITECTURE_FILE} is not valid, so domains are unknown (run \`harness check\` to see why).`);
+    notes.push(`${ARCHITECTURE_FILE} is not valid, so domains are unknown (run \`reins check\` to see why).`);
     return [];
   }
 }
@@ -40,8 +40,8 @@ export function readDoctorConfig(root) {
 }
 
 /**
- * Every module note in .harness/notes/, sorted by file name.
- * @returns {{ notes: import('@harness/core').Note[], problems: string[] }}
+ * Every module note in .reins/notes/, sorted by file name.
+ * @returns {{ notes: import('@reins/core').Note[], problems: string[] }}
  */
 export function loadNotes(root) {
   const dir = path.join(root, NOTES_DIR);

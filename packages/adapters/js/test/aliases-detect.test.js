@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readAliases, parseJsonc, detectFramework, loadPreset, PRESETS } from '@harness/adapter-js';
+import { readAliases, parseJsonc, detectFramework, loadPreset, PRESETS } from '@reins/adapter-js';
 
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const examples = fileURLToPath(new URL('../../../../examples/', import.meta.url));
@@ -22,7 +22,7 @@ function relAliases(repo) {
 }
 
 function tempRepo(files) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'harness-adapter-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-adapter-'));
   for (const [f, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
     writeFileSync(path.join(dir, f), content);

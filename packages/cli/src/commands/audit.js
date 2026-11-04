@@ -1,7 +1,7 @@
-// harness audit: the local audit backlog (.harness/backlog/optimizations.md), edited one finding at a time.
+// reins audit: the local audit backlog (.reins/backlog/optimizations.md), edited one finding at a time.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { BACKLOG_FILE, STATUSES, parseBacklog, addFinding, setStatus, markRecheck, renderFinding } from '@harness/core';
+import { BACKLOG_FILE, STATUSES, parseBacklog, addFinding, setStatus, markRecheck, renderFinding } from '@reins/core';
 import { CliError } from '../context.js';
 import { readText } from '../project.js';
 
@@ -12,10 +12,10 @@ export const options = {
 };
 
 export const help = `Usage:
-  harness audit list [--status open|done|wontfix|all] [--recheck] [--json]
-  harness audit add <path> <finding>
-  harness audit set <id> <open|done|wontfix> <reason>
-  harness audit recheck <id…> | open
+  reins audit list [--status open|done|wontfix|all] [--recheck] [--json]
+  reins audit add <path> <finding>
+  reins audit set <id> <open|done|wontfix> <reason>
+  reins audit recheck <id…> | open
 
 Manages ${BACKLOG_FILE} (local, outside git): findings of audits with status open, done or wontfix
 (done and wontfix need a reason). "recheck" flags findings to verify again against the current code;
@@ -59,7 +59,7 @@ export async function audit(ctx) {
       return 0;
     }
     case 'add': {
-      if (args.length !== 2) throw new CliError(`harness audit add <path> <finding>\n\n${help}`);
+      if (args.length !== 2) throw new CliError(`reins audit add <path> <finding>\n\n${help}`);
       const r = guard(() => addFinding(text, { path: args[0], finding: args[1], date: today(ctx) }));
       save(r.text);
       out(`Added ${r.id}.`);
@@ -67,15 +67,15 @@ export async function audit(ctx) {
     }
     case 'set': {
       const [id, status, ...rest] = args;
-      if (!id || !status) throw new CliError(`harness audit set <id> <open|done|wontfix> <reason>\n\n${help}`);
+      if (!id || !status) throw new CliError(`reins audit set <id> <open|done|wontfix> <reason>\n\n${help}`);
       if (text === null) throw new CliError(`${BACKLOG_FILE} doesn't exist yet.`);
       save(guard(() => setStatus(text, { id, status, reason: rest.join(' '), date: today(ctx) })));
       out(`${id} is now ${status}.`);
-      if (status === 'wontfix') out('If the reason is durable, add it to the module note in .harness/notes/ so nobody proposes it again.');
+      if (status === 'wontfix') out('If the reason is durable, add it to the module note in .reins/notes/ so nobody proposes it again.');
       return 0;
     }
     case 'recheck': {
-      if (!args.length) throw new CliError(`harness audit recheck <id…> | open\n\n${help}`);
+      if (!args.length) throw new CliError(`reins audit recheck <id…> | open\n\n${help}`);
       if (text === null) throw new CliError(`${BACKLOG_FILE} doesn't exist yet.`);
       const r = guard(() => markRecheck(text, args.length === 1 && args[0] === 'open' ? 'open' : args));
       save(r.text);

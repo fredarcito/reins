@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import {
   parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, scopeSignals, suggestLevel, runDoctor,
   parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES,
-} from '@harness/core';
+} from '@reins/core';
 
 const domains = [
   { name: 'billing', paths: ['src/features/billing/**'], publicApi: ['src/features/billing/index.js'] },
   { name: 'search', paths: ['src/features/search/**'], publicApi: ['src/features/search/index.js'] },
 ];
-const ARCH = '.harness/architecture.yml';
-const LOG = '.harness/progress/triage.log';
+const ARCH = '.reins/architecture.yml';
+const LOG = '.reins/progress/triage.log';
 
 /** Runs the doctor with sensible empty inputs, overridden by `over`. */
 const doctor = (over = {}) =>
@@ -44,7 +44,7 @@ test('triage.log: entries, comments and malformed lines', () => {
   assert.deepEqual(log.malformed.map((m) => m.line), [3, 4]);
 });
 
-test('suggested level: the thresholds of `harness scope`', () => {
+test('suggested level: the thresholds of `reins scope`', () => {
   const t = DOCTOR_DEFAULTS.triage;
   const level = (files) => suggestLevel(scopeSignals(files, domains, ARCH), t).level;
   assert.equal(level(['src/features/billing/a.js', 'src/features/billing/b.js']), 'small');
@@ -82,12 +82,12 @@ test('malformed triage lines are reported even without a diff', () => {
   assert.deepEqual(rules(doctor({ triageLog: { file: LOG, text: 'oops\n' } })), ['triage-missing']);
 });
 
-test('harness and agent files do not count as task files; architecture.yml still does', () => {
-  const harnessOnly = ['AGENTS.md', '.harness/notes/cart.md', '.harness/.generated.json', '.claude/skills/harness-audit/SKILL.md'];
-  assert.deepEqual(rules(doctor({ changedFiles: harnessOnly })), [], 'only notes and generated files: no triage needed');
-  const r = doctor({ changedFiles: [...harnessOnly, 'src/a.js'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | one file\n' } });
+test('reins and agent files do not count as task files; architecture.yml still does', () => {
+  const reinsOnly = ['AGENTS.md', '.reins/notes/cart.md', '.reins/.generated.json', '.claude/skills/reins-audit/SKILL.md'];
+  assert.deepEqual(rules(doctor({ changedFiles: reinsOnly })), [], 'only notes and generated files: no triage needed');
+  const r = doctor({ changedFiles: [...reinsOnly, 'src/a.js'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | one file\n' } });
   assert.deepEqual(rules(r), [], '1 code file is small, whatever else changed');
-  assert.equal(scopeSignals([...harnessOnly, ARCH], domains, ARCH).architecture, true);
+  assert.equal(scopeSignals([...reinsOnly, ARCH], domains, ARCH).architecture, true);
   assert.deepEqual(rules(doctor({ changedFiles: [ARCH] })), ['triage-missing']);
 });
 
@@ -100,7 +100,7 @@ test('agents-size', () => {
 const notebook = (body, status = 'open') => `# feat/x · status: ${status} · updated: 2026-11-04
 **Goal:** add discounts.
 **Done criteria:**
-${body.criteria ?? '- [x] discount applied\n- [x] `harness check` without new violations'}
+${body.criteria ?? '- [x] discount applied\n- [x] `reins check` without new violations'}
 **Subtasks:**
 ${body.subtasks ?? '- [x] model\n- [~] UI\n- [-] coupons — out of scope, ticket 42'}
 **Next step:** wire the UI.
@@ -108,7 +108,7 @@ ${body.subtasks ?? '- [x] model\n- [~] UI\n- [-] coupons — out of scope, ticke
 const nb = (text) => doctor({ notebooks: [{ file: notebookFile('feat/x'), text }] });
 
 test('a valid notebook produces nothing', () => {
-  assert.equal(notebookFile('feat/x'), '.harness/progress/feat-x.md');
+  assert.equal(notebookFile('feat/x'), '.reins/progress/feat-x.md');
   assert.deepEqual(rules(nb(notebook({}))), []);
   assert.deepEqual(formatProblems(parseNotebook(notebook({}))), []);
 });
@@ -144,10 +144,10 @@ test('every doctor finding is a warning with rule, why and fix; the result never
   assert.deepEqual(rules(r).sort(), ['agents-size', 'progress-closed', 'progress-format', 'progress-hot-size', 'triage-missing']);
   assert.ok(r.violations.every((v) => v.severity === 'warn' && v.message && v.fix && DOCTOR_RULES.includes(v.rule)));
   assert.equal(r.ok, true);
-  const text = formatText(r, { title: 'harness doctor', baseline: false });
-  assert.match(text, /harness doctor: 0 errors, 5 warnings$/);
+  const text = formatText(r, { title: 'reins doctor', baseline: false });
+  assert.match(text, /reins doctor: 0 errors, 5 warnings$/);
   assert.doesNotMatch(text, /baseline|Result:/);
-  assert.equal(formatText(doctor(), { title: 'harness doctor', baseline: false }), 'harness doctor: nothing to report');
+  assert.equal(formatText(doctor(), { title: 'reins doctor', baseline: false }), 'reins doctor: nothing to report');
 });
 
 const note = (file, paths, body = '## Purpose\nBilling totals.\n') => ({ file, paths, body });
@@ -162,25 +162,25 @@ test('note-missing and note-outdated: only for medium and large diffs', () => {
   assert.deepEqual(rules(missing), ['note-missing']);
   assert.equal(missing.violations[0].from, 'billing');
   assert.match(missing.violations[0].message, /Domain billing changed \(4 file\(s\)\) and has no module note/);
-  assert.match(missing.violations[0].fix, /npx --no-install harness notes new billing/);
+  assert.match(missing.violations[0].fix, /npx reins notes new billing/);
 
-  const notes = [note('.harness/notes/billing.md', ['src/features/billing/**'])];
+  const notes = [note('.reins/notes/billing.md', ['src/features/billing/**'])];
   const outdated = doctor({ changedFiles: billingFiles, triageLog: medium, notes });
   assert.deepEqual(rules(outdated), ['note-outdated']);
   assert.match(outdated.violations[0].message, /^4 file\(s\) of this module changed \(src\/features\/billing\/a\.js, src\/features\/billing\/b\.js, src\/features\/billing\/c\.js, …\), but its note did not\./);
 
-  const updated = doctor({ changedFiles: [...billingFiles, '.harness/notes/billing.md'], triageLog: medium, notes });
+  const updated = doctor({ changedFiles: [...billingFiles, '.reins/notes/billing.md'], triageLog: medium, notes });
   assert.deepEqual(rules(updated), [], 'the note changed with the code');
 });
 
 test('note-draft and note-size: for the notes of what the branch touched', () => {
-  const draft = note('.harness/notes/billing.md', ['src/features/billing/**'], '## Purpose\nTODO: what it does.\n## Decisions\n- TODO YYYY-MM-DD: x\n');
-  const long = note('.harness/notes/search.md', ['src/features/search/**'], Array.from({ length: 61 }, (_, i) => `- ${i}`).join('\n'));
-  const untouched = note('.harness/notes/other.md', ['src/other/**'], 'TODO: x');
-  const r = doctor({ changedFiles: ['src/features/billing/a.js', '.harness/notes/search.md'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | x\n' }, notes: [draft, long, untouched] });
+  const draft = note('.reins/notes/billing.md', ['src/features/billing/**'], '## Purpose\nTODO: what it does.\n## Decisions\n- TODO YYYY-MM-DD: x\n');
+  const long = note('.reins/notes/search.md', ['src/features/search/**'], Array.from({ length: 61 }, (_, i) => `- ${i}`).join('\n'));
+  const untouched = note('.reins/notes/other.md', ['src/other/**'], 'TODO: x');
+  const r = doctor({ changedFiles: ['src/features/billing/a.js', '.reins/notes/search.md'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | x\n' }, notes: [draft, long, untouched] });
   assert.deepEqual(rules(r), ['note-draft', 'note-size']);
   assert.match(r.violations[1].message, /The note has 61 lines; the limit is 60/);
-  const tuned = doctor({ config: parseDoctorConfig('notes: { max_lines: 100 }\n'), changedFiles: ['.harness/notes/search.md'], notes: [long] });
+  const tuned = doctor({ config: parseDoctorConfig('notes: { max_lines: 100 }\n'), changedFiles: ['.reins/notes/search.md'], notes: [long] });
   assert.deepEqual(rules(tuned), []);
   assert.ok(DOCTOR_RULES.includes('note-outdated'));
 });

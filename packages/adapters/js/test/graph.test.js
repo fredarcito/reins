@@ -4,9 +4,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { graph } from '@harness/adapter-js';
+import { graph } from '@reins/adapter-js';
 import { typeScriptProblem } from '../src/graph.js';
-import { validateEdges } from '@harness/core/contract';
+import { validateEdges } from '@reins/core/contract';
 
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const edgesOf = (r) => r.edges.map((e) => `${e.kind} ${e.from} -> ${e.to}`).sort();
@@ -42,11 +42,11 @@ test('unresolved local imports are reported, npm packages are not', async () => 
 });
 
 test('TypeScript files without the typescript package fail loudly instead of being skipped', () => {
-  const ts = mkdtempSync(path.join(tmpdir(), 'harness-ts-'));
+  const ts = mkdtempSync(path.join(tmpdir(), 'reins-ts-'));
   writeFileSync(path.join(ts, 'a.ts'), 'export const a = 1;');
   assert.match(typeScriptProblem(ts, false), /has TypeScript files, but the "typescript" package is not available/);
   assert.equal(typeScriptProblem(ts, true), null);
-  const js = mkdtempSync(path.join(tmpdir(), 'harness-js-'));
+  const js = mkdtempSync(path.join(tmpdir(), 'reins-js-'));
   writeFileSync(path.join(js, 'a.jsx'), 'export const a = 1;');
   writeFileSync(path.join(js, 'types.d.ts'), 'export {};');
   assert.equal(typeScriptProblem(js, false), null, 'plain JS projects (even with .d.ts files) need no TypeScript');
@@ -54,7 +54,7 @@ test('TypeScript files without the typescript package fail loudly instead of bei
 
 test('monorepo workspaces: imports of "exports"-only packages resolve to their real path (regression)', async () => {
   const { mkdirSync, symlinkSync } = await import('node:fs');
-  const ws = mkdtempSync(path.join(tmpdir(), 'harness-ws-'));
+  const ws = mkdtempSync(path.join(tmpdir(), 'reins-ws-'));
   const w = (f, t) => {
     mkdirSync(path.dirname(path.join(ws, f)), { recursive: true });
     writeFileSync(path.join(ws, f), t);

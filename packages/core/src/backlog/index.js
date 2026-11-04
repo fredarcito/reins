@@ -1,4 +1,4 @@
-// Audit backlog: .harness/backlog/optimizations.md (local, outside git). One finding per line, so audits
+// Audit backlog: .reins/backlog/optimizations.md (local, outside git). One finding per line, so audits
 // don't start from zero and discarded ideas aren't proposed again:
 //
 //   - [open] A1 · 2026-11-04 · `src/features/cart/` · Memoize the cart totals.
@@ -8,7 +8,7 @@
 //
 // Edits are line-based: lines that are not findings (headings, notes) are kept as they are.
 
-export const BACKLOG_FILE = '.harness/backlog/optimizations.md';
+export const BACKLOG_FILE = '.reins/backlog/optimizations.md';
 export const STATUSES = Object.freeze(['open', 'done', 'wontfix']);
 
 const ITEM_RE = /^- \[(\w+)\]( \[recheck\])? (A\d+) · (\d{4}-\d{2}-\d{2}) · `([^`]*)` · (.+?)(?: — (open|done|wontfix) (\d{4}-\d{2}-\d{2}): (.+))?$/;
@@ -16,7 +16,7 @@ const LOOKS_LIKE_ITEM = /^- \[/;
 
 export const BACKLOG_HEADER = `# Optimization backlog
 
-<!-- Managed by \`harness audit\` (local, outside git). Format: - [open|done|wontfix] [recheck]? A<n> · date · \`path\` · finding — status date: reason -->
+<!-- Managed by \`reins audit\` (local, outside git). Format: - [open|done|wontfix] [recheck]? A<n> · date · \`path\` · finding — status date: reason -->
 `;
 
 /**

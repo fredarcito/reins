@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { parseConfig, runCheck, evaluate, createBaseline, emptyBaseline, serializeBaseline, parseBaseline } from '@harness/core';
+import { parseConfig, runCheck, evaluate, createBaseline, emptyBaseline, serializeBaseline, parseBaseline } from '@reins/core';
 import { edges } from './fixtures/edges.js';
 
 const yml = await readFile(new URL('./fixtures/architecture.yml', import.meta.url), 'utf8');

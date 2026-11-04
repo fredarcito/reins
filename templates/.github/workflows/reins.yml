@@ -1,0 +1,20 @@
+# reins: architecture check on every PR and on pushes to the main branch.
+# This is the real guarantee (the pre-commit hook can be skipped with --no-verify). Make the "reins" job
+# required in branch protection, together with a human approval.
+name: reins
+
+on:
+  pull_request:
+  push:
+    branches: [{{branch}}]
+
+jobs:
+  reins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the integrity rule compares with the base branch
+{{setup}}
+      - run: {{install}}
+      - run: npx reins check

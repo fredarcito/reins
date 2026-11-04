@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Renames the npm scope of every harness package (e.g. @harness -> @acme).
+// Renames the npm scope of every reins package (e.g. @reins -> @acme).
 // The current scope is read from packages/core/package.json, which is the single source of truth.
 // Runtime code never hardcodes the scope except in import specifiers, which this script rewrites.
 //
@@ -47,7 +47,7 @@ export function renameScope(root, next, opts = {}) {
   if (!SCOPE_RE.test(next)) throw new Error(`Invalid scope "${next}". Expected something like @acme.`);
   const from = currentScope(root);
   if (from === next) return { from, to: next, files: [] };
-  // "<scope>/" with the slash, so a longer scope like "@harness-x/" is not touched.
+  // "<scope>/" with the slash, so a longer scope like "@reins-x/" is not touched.
   const re = new RegExp(`${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g');
   const files = [];
   for (const file of walk(root, root)) {

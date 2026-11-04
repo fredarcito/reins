@@ -1,8 +1,8 @@
-// harness scope <paths…>: domains, notes and the minimum task level suggested by the objective signals
-// (same thresholds as the doctor's triage-mismatch, from .harness/doctor.yml).
+// reins scope <paths…>: domains, notes and the minimum task level suggested by the objective signals
+// (same thresholds as the doctor's triage-mismatch, from .reins/doctor.yml).
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, scopeSignals, suggestLevel } from '@harness/core';
+import { notesFor, scopeSignals, suggestLevel } from '@reins/core';
 import { ARCHITECTURE_FILE, toRepoPath } from '../context.js';
 import { loadNotes, readDoctorConfig, readDomains } from '../project.js';
 
@@ -11,13 +11,13 @@ const SKIP = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'out', '
 export const options = { json: { type: 'boolean' } };
 export const positionals = true;
 
-export const help = `Usage: harness scope <path…> [--json]
+export const help = `Usage: reins scope <path…> [--json]
 
 For the files (or folders) a task will touch: the domains involved, public APIs, the notes to read, and the
 minimum task level the objective signals suggest:
   small  = 1 domain and ≤ 3 files;  medium = 1 domain, more files;
   large  = 2+ domains, a public API, or architecture.yml.
-Thresholds come from .harness/doctor.yml.`;
+Thresholds come from .reins/doctor.yml.`;
 
 /** Expands folders into the files they contain (repo-relative). */
 function expand(root, rel) {

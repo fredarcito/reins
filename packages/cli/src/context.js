@@ -3,10 +3,10 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-export const HARNESS_DIR = '.harness';
-export const ARCHITECTURE_FILE = `${HARNESS_DIR}/architecture.yml`;
-export const BASELINE_FILE = `${HARNESS_DIR}/baseline.json`;
-export const INIT_REPORT_FILE = `${HARNESS_DIR}/init-report.md`;
+export const REINS_DIR = '.reins';
+export const ARCHITECTURE_FILE = `${REINS_DIR}/architecture.yml`;
+export const BASELINE_FILE = `${REINS_DIR}/baseline.json`;
+export const INIT_REPORT_FILE = `${REINS_DIR}/init-report.md`;
 
 /** Git root of `cwd`, or `cwd` itself when it is not inside a git repo. */
 export function findRepoRoot(cwd) {

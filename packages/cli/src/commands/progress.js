@@ -1,4 +1,4 @@
-// harness progress: mechanical edits of the current branch's notebook (.harness/progress/<branch>.md),
+// reins progress: mechanical edits of the current branch's notebook (.reins/progress/<branch>.md),
 // so the agent doesn't rewrite the file. Every edit validates the format before and after.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   NotebookError, notebookFile, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook,
   parseNotebook, formatProblems,
-} from '@harness/core';
+} from '@reins/core';
 import { CliError } from '../context.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
@@ -19,15 +19,15 @@ export const options = {
 };
 
 export const help = `Usage:
-  harness progress new [--hot]            Create the notebook from the template (mini; --hot for large tasks)
-  harness progress show [--json]          Print the items, numbered
-  harness progress add <text> [--criteria]  Add a pending item to Subtasks (or Done criteria)
-  harness progress start <n>              Mark item n in progress [~] (only one at a time)
-  harness progress done <n>               Mark item n done [x]
-  harness progress drop <n> <reason>      Discard item n [-] with a reason (it stays in the list)
-  harness progress next <text>            Set the "Next step" line
+  reins progress new [--hot]            Create the notebook from the template (mini; --hot for large tasks)
+  reins progress show [--json]          Print the items, numbered
+  reins progress add <text> [--criteria]  Add a pending item to Subtasks (or Done criteria)
+  reins progress start <n>              Mark item n in progress [~] (only one at a time)
+  reins progress done <n>               Mark item n done [x]
+  reins progress drop <n> <reason>      Discard item n [-] with a reason (it stays in the list)
+  reins progress next <text>            Set the "Next step" line
 
-Edits .harness/progress/<branch>.md of the current branch (--branch to choose another). Every edit keeps the
+Edits .reins/progress/<branch>.md of the current branch (--branch to choose another). Every edit keeps the
 notebook valid and updates its date; a notebook that is already invalid is refused with the problems to fix.
 Closing (status: closed) is left to the person.`;
 
@@ -43,7 +43,7 @@ function currentBranch(root) {
 
 const num = (s) => {
   const n = Number(s);
-  if (!Number.isInteger(n) || n < 1) throw new CliError(`Expected an item number, got "${s ?? ''}". Run \`harness progress show\`.`);
+  if (!Number.isInteger(n) || n < 1) throw new CliError(`Expected an item number, got "${s ?? ''}". Run \`reins progress show\`.`);
   return n;
 };
 
@@ -61,16 +61,16 @@ export async function progress(ctx) {
   const date = today(ctx);
 
   if (action === 'new') {
-    if (existsSync(abs)) throw new CliError(`${file} already exists. Use \`harness progress show\`.`);
+    if (existsSync(abs)) throw new CliError(`${file} already exists. Use \`reins progress show\`.`);
     mkdirSync(path.dirname(abs), { recursive: true });
-    writeFileSync(abs, newNotebook(readTemplate(`.harness/templates/progress-${values.hot ? 'hot' : 'mini'}.md`), branch, date));
+    writeFileSync(abs, newNotebook(readTemplate(`.reins/templates/progress-${values.hot ? 'hot' : 'mini'}.md`), branch, date));
     out(`Created ${file}${values.hot ? '' : ' (mini)'}. Fill in the goal and the done criteria before editing code.`);
     if (values.hot) {
       const cold = abs.replace(/\.md$/, '');
       mkdirSync(cold, { recursive: true });
       for (const f of ['decisions', 'verification', 'delivery']) {
         const target = path.join(cold, `${f}.md`);
-        if (!existsSync(target)) writeFileSync(target, newNotebook(readTemplate(`.harness/templates/progress-cold/${f}.md`), branch, date));
+        if (!existsSync(target)) writeFileSync(target, newNotebook(readTemplate(`.reins/templates/progress-cold/${f}.md`), branch, date));
       }
       out(`Created the cold folder ${file.replace(/\.md$/, '/')}.`);
     }
@@ -78,7 +78,7 @@ export async function progress(ctx) {
   }
 
   const text = readText(root, file);
-  if (text === null) throw new CliError(`${file} doesn't exist. Create it with \`harness progress new\` (medium) or \`harness progress new --hot\` (large).`);
+  if (text === null) throw new CliError(`${file} doesn't exist. Create it with \`reins progress new\` (medium) or \`reins progress new --hot\` (large).`);
   const write = (t, msg) => {
     writeFileSync(abs, t);
     out(msg);

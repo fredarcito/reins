@@ -20,7 +20,7 @@ const MESSAGES = {
   },
   baselineInvalid: {
     message: '{file} is not a valid baseline: {error}',
-    fix: 'Restore it from {base} or regenerate it with `harness check --update-baseline` and review the diff.',
+    fix: 'Restore it from {base} or regenerate it with `reins check --update-baseline` and review the diff.',
   },
   noBase: {
     message: 'Could not compare with {base}: the ref was not found.',

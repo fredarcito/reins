@@ -1,4 +1,4 @@
-// Module notes: .harness/notes/<module>.md with the paths they apply to in the frontmatter.
+// Module notes: .reins/notes/<module>.md with the paths they apply to in the frontmatter.
 //
 //   ---
 //   paths: ["src/features/billing/**"]
@@ -9,7 +9,7 @@
 import { parse } from 'yaml';
 import { matchesAny } from '../glob.js';
 
-export const NOTES_DIR = '.harness/notes';
+export const NOTES_DIR = '.reins/notes';
 
 /**
  * @typedef {{ file: string, paths: string[], body: string }} Note
@@ -51,7 +51,7 @@ export function parseNote(file, text) {
   return { note: { file, paths, body: body.trim() }, problem: null };
 }
 
-/** Is this file under .harness/notes a note (not a template)? */
+/** Is this file under .reins/notes a note (not a template)? */
 export const isNoteFile = (name) => name.endsWith('.md') && !name.startsWith('_');
 
 /**

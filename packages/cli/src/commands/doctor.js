@@ -1,12 +1,12 @@
-// harness doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
+// reins doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { runDoctor, notebookFile, formatText, formatJson } from '@harness/core';
-import { ARCHITECTURE_FILE, CliError, HARNESS_DIR, isGitRepo } from '../context.js';
+import { runDoctor, notebookFile, formatText, formatJson } from '@reins/core';
+import { ARCHITECTURE_FILE, CliError, REINS_DIR, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { pickBaseRef } from './check.js';
-export const TRIAGE_LOG = `${HARNESS_DIR}/progress/triage.log`;
-const LOCAL_DIRS = [`${HARNESS_DIR}/progress/`, `${HARNESS_DIR}/backlog/`];
+export const TRIAGE_LOG = `${REINS_DIR}/progress/triage.log`;
+const LOCAL_DIRS = [`${REINS_DIR}/progress/`, `${REINS_DIR}/backlog/`];
 
 export const options = {
   strict: { type: 'boolean' },
@@ -14,7 +14,7 @@ export const options = {
   base: { type: 'string' },
 };
 
-export const help = `Usage: harness doctor [options]
+export const help = `Usage: reins doctor [options]
 
 Local, informational checks of the workflow: triage log vs. the diff, AGENTS.md size, progress notebook
 format, and the module notes of what the branch touched (missing, not updated, still a draft, too long). Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
@@ -23,7 +23,7 @@ Thresholds: ${DOCTOR_FILE}.
 Options:
   --strict      Exit 1 when there is any warning
   --json        JSON output
-  --base <ref>  Base branch to compute the diff of this branch (default: as in harness check)`;
+  --base <ref>  Base branch to compute the diff of this branch (default: as in reins check)`;
 
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 
@@ -43,7 +43,7 @@ export async function doctor(ctx) {
   const { root, values, out } = ctx;
   const env = ctx.env ?? process.env;
   if (env.CI) {
-    out('harness doctor is local-only and was skipped because CI is set. Use `harness check` in CI.');
+    out('reins doctor is local-only and was skipped because CI is set. Use `reins check` in CI.');
     return 0;
   }
 
@@ -82,6 +82,6 @@ export async function doctor(ctx) {
   });
 
   if (values.json) out(formatJson(result, { warnings: notes }));
-  else out(formatText(result, { title: 'harness doctor', warnings: notes, baseline: false }));
+  else out(formatText(result, { title: 'reins doctor', warnings: notes, baseline: false }));
   return values.strict && result.violations.length ? 1 : 0;
 }

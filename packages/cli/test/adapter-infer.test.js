@@ -6,28 +6,28 @@ import { tempDir } from './helpers.js';
 
 const fakeAdapter = (pkgName, { contract = 1, exportsPkg = true, body } = {}) => ({
   [`node_modules/${pkgName}/package.json`]: {
-    name: pkgName, version: '9.9.9', type: 'module', harness: { contract },
+    name: pkgName, version: '9.9.9', type: 'module', reins: { contract },
     exports: exportsPkg ? { '.': './index.js', './package.json': './package.json' } : { '.': './index.js' },
   },
   [`node_modules/${pkgName}/index.js`]: body ?? 'export default { name: "x", contract: 1, detect() { return true; }, graph() { return []; } };',
 });
 
-test('adapter: official scoped name first, then harness-adapter-<name>', async () => {
-  assert.deepEqual(candidates('ruby'), ['@harness/adapter-ruby', 'harness-adapter-ruby']);
-  const dir = tempDir(fakeAdapter('harness-adapter-x', { exportsPkg: false }));
+test('adapter: official scoped name first, then reins-adapter-<name>', async () => {
+  assert.deepEqual(candidates('ruby'), ['@reins/adapter-ruby', 'reins-adapter-ruby']);
+  const dir = tempDir(fakeAdapter('reins-adapter-x', { exportsPkg: false }));
   const r = await resolveAdapter(dir, 'x');
-  assert.equal(r.packageName, 'harness-adapter-x');
+  assert.equal(r.packageName, 'reins-adapter-x');
   assert.equal(r.version, '9.9.9');
 });
 
 test('adapter: a different contract version is refused with the fix', async () => {
-  const dir = tempDir(fakeAdapter('harness-adapter-x', { contract: 2 }));
-  await assert.rejects(resolveAdapter(dir, 'x'), /implements adapter contract 2, but this harness needs contract 1/);
+  const dir = tempDir(fakeAdapter('reins-adapter-x', { contract: 2 }));
+  await assert.rejects(resolveAdapter(dir, 'x'), /implements adapter contract 2, but this version of reins needs contract 1/);
 });
 
 test('adapter: an invalid module is refused with every problem', async () => {
-  const dir = tempDir(fakeAdapter('harness-adapter-x', { body: 'export default { name: "x", contract: 1 };' }));
-  await assert.rejects(resolveAdapter(dir, 'x'), /not a valid harness adapter:\n {2}- "detect" must be a function\n {2}- "graph" must be a function/);
+  const dir = tempDir(fakeAdapter('reins-adapter-x', { body: 'export default { name: "x", contract: 1 };' }));
+  await assert.rejects(resolveAdapter(dir, 'x'), /not a valid reins adapter:\n {2}- "detect" must be a function\n {2}- "graph" must be a function/);
 });
 
 const edge = (from, to, kind = 'static') => ({ from, to, kind });

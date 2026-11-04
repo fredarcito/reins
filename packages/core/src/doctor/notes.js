@@ -3,7 +3,7 @@
 // fix doesn't have to write anything.
 import { matchesAny } from '../glob.js';
 import { NOTE_TODO_RE } from '../notes/draft.js';
-import { isHarnessFile } from './triage.js';
+import { isReinsFile } from './triage.js';
 
 const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {const} */ ('warn'), key: `${rule}|${from}`, from, message, fix });
 
@@ -17,7 +17,7 @@ const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {cons
  * @param {number} input.maxLines
  */
 export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
-  const code = changedFiles.filter((f) => !isHarnessFile(f));
+  const code = changedFiles.filter((f) => !isReinsFile(f));
   const changed = new Set(changedFiles);
   const findings = [];
   const touching = notes.filter((n) => code.some((f) => matchesAny(f, n.paths)) || changed.has(n.file));
@@ -41,7 +41,7 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
         finding(
           'note-missing', d.name,
           `Domain ${d.name} changed (${files.length} file(s)) and has no module note, so the next session will have to rediscover it from the code.`,
-          `Create one: \`npx --no-install harness notes new ${d.name}\`, then fill in Purpose, How it works, Decisions and Traps.`,
+          `Create one: \`npx reins notes new ${d.name}\`, then fill in Purpose, How it works, Decisions and Traps.`,
         ),
       );
     }

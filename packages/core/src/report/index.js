@@ -13,7 +13,7 @@ const ICON = { error: '✖', warn: '!' };
  * @returns {string}
  */
 export function formatText(result, opts = {}) {
-  const title = opts.title ?? 'harness check';
+  const title = opts.title ?? 'reins check';
   const lines = [];
   for (const w of opts.warnings ?? []) lines.push(`! warning  ${w}`, '');
   const shown = result.violations.filter((v) => v.status === 'new' || opts.verbose);
@@ -40,7 +40,7 @@ export function formatText(result, opts = {}) {
   if (!result.partial) parts.push(`${s.stale} fixed`);
   lines.push(`${title}: ${parts.join(' · ')}${result.partial ? ' (touched files only)' : ''}`);
   if (s.stale > 0) {
-    lines.push(`${s.stale} baseline entr${s.stale === 1 ? 'y no longer occurs' : 'ies no longer occur'}. Remove ${s.stale === 1 ? 'it' : 'them'} with \`harness check --update-baseline\` and commit the smaller baseline.`);
+    lines.push(`${s.stale} baseline entr${s.stale === 1 ? 'y no longer occurs' : 'ies no longer occur'}. Remove ${s.stale === 1 ? 'it' : 'them'} with \`reins check --update-baseline\` and commit the smaller baseline.`);
   }
   lines.push(result.ok ? 'Result: pass' : 'Result: FAIL (new errors)');
   return lines.join('\n');

@@ -1,11 +1,11 @@
 // Which module notes each Claude Code session already received, so the hooks deliver each note once per
-// session. After a compaction the session keeps its id but loses the notes from its context, so `harness
+// session. After a compaction the session keeps its id but loses the notes from its context, so `reins
 // resume --hook` forgets that session's record and the notes are delivered again.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { HARNESS_DIR } from './context.js';
+import { REINS_DIR } from './context.js';
 
-export const SEEN_FILE = `${HARNESS_DIR}/progress/.notes-seen.json`;
+export const SEEN_FILE = `${REINS_DIR}/progress/.notes-seen.json`;
 const MAX_SESSIONS = 50;
 
 /** @returns {Record<string, string[]>} */

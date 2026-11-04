@@ -186,7 +186,7 @@ export async function loadConfig(path, opts = {}) {
     text = await readFile(path, 'utf8');
   } catch (e) {
     if (/** @type {NodeJS.ErrnoException} */ (e).code === 'ENOENT') {
-      throw new ConfigError(path, ['file not found. Run `harness init` to draft one.']);
+      throw new ConfigError(path, ['file not found. Run `reins init` to draft one.']);
     }
     throw e;
   }

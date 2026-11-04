@@ -1,14 +1,14 @@
 # Try `init` and `check` on a real repo
 
-How to **try** `init` and `check` on one of your repos, on a throwaway branch, without wiring anything else. Nothing is installed globally and nothing is committed for you. To adopt the harness for real (hook, CI, agent files), follow [`team-install.md`](team-install.md) and `harness install` instead.
+How to **try** `init` and `check` on one of your repos, on a throwaway branch, without wiring anything else. Nothing is installed globally and nothing is committed for you. To adopt reins for real (hook, CI, agent files), follow [`team-install.md`](team-install.md) and `reins install` instead.
 
 ```mermaid
 flowchart LR
-    a["1 · Pack<br/>(harness repo)"] --> b["2 · Install tarballs<br/>(your repo, a branch)"]
-    b --> c["3 · harness init<br/>draft + report"]
+    a["1 · Pack<br/>(reins repo)"] --> b["2 · Install tarballs<br/>(your repo, a branch)"]
+    b --> c["3 · reins init<br/>draft + report"]
     c --> d["4 · Review and edit<br/>architecture.yml"]
     d --> e["5 · check<br/>--update-baseline"]
-    e --> f["6 · harness check<br/>green"]
+    e --> f["6 · reins check<br/>green"]
     f --> g["7 · Break a rule<br/>on purpose"]
 ```
 
@@ -16,7 +16,7 @@ flowchart LR
 
 ```bash
 pnpm install
-pnpm pack:all          # writes .tarballs/harness-{core,cli,adapter-js}-<version>.tgz
+pnpm pack:all          # writes .tarballs/reins-{core,cli,adapter-js}-<version>.tgz
 ```
 
 ## 2. Install them in your repo (on a throwaway branch)
@@ -26,22 +26,22 @@ Use the absolute path to `.tarballs/` printed by the previous step.
 **npm** (verified):
 
 ```bash
-git switch -c try-harness
-npm install -D /path/to/harness/.tarballs/harness-core-0.1.0.tgz \
-               /path/to/harness/.tarballs/harness-cli-0.1.0.tgz \
-               /path/to/harness/.tarballs/harness-adapter-js-0.1.0.tgz
+git switch -c try-reins
+npm install -D /path/to/reins/.tarballs/reins-core-0.1.0.tgz \
+               /path/to/reins/.tarballs/reins-0.1.0.tgz \
+               /path/to/reins/.tarballs/reins-adapter-js-0.1.0.tgz
 ```
 
-**pnpm** (verified): pnpm would look for `@harness/core` in the npm registry, where it doesn't exist. Point it to the tarball with an override in `pnpm-workspace.yaml` (create the file if the repo doesn't have one; pnpm 10+ ignores the `pnpm` field of `package.json`):
+**pnpm** (verified): pnpm would look for `@reins/core` in the npm registry, where it doesn't exist. Point it to the tarball with an override in `pnpm-workspace.yaml` (create the file if the repo doesn't have one; pnpm 10+ ignores the `pnpm` field of `package.json`):
 
 ```yaml
 overrides:
-  "@harness/core": "file:/path/to/harness/.tarballs/harness-core-0.1.0.tgz"
+  "@reins/core": "file:/path/to/reins/.tarballs/reins-core-0.1.0.tgz"
 ```
 
 ```bash
-git switch -c try-harness
-pnpm add -D /path/to/harness/.tarballs/harness-cli-0.1.0.tgz /path/to/harness/.tarballs/harness-adapter-js-0.1.0.tgz
+git switch -c try-reins
+pnpm add -D /path/to/reins/.tarballs/reins-0.1.0.tgz /path/to/reins/.tarballs/reins-adapter-js-0.1.0.tgz
 ```
 
 **yarn**: not tested yet.
@@ -51,20 +51,20 @@ TypeScript repos need `typescript` installed (they already have it). Plain JS re
 ## 3. Draft the plan
 
 ```bash
-npx --no-install harness init          # or: pnpm exec harness init
+npx reins init          # or: pnpm exec reins init
 ```
 
 It writes three files and never overwrites existing ones without asking (`--dry-run` to preview, `--force` to overwrite):
 
 | File | What | Commit it? |
 | --- | --- | --- |
-| `.harness/architecture.yml` | Draft plan: layers, domains, rules | Yes, after review |
-| `.harness/baseline.json` | Violations that exist today, frozen | Yes |
-| `.harness/init-report.md` | Review report | No (delete it or add it to `.gitignore`) |
+| `.reins/architecture.yml` | Draft plan: layers, domains, rules | Yes, after review |
+| `.reins/baseline.json` | Violations that exist today, frozen | Yes |
+| `.reins/init-report.md` | Review report | No (delete it or add it to `.gitignore`) |
 
 ## 4. Review the report and fix the plan
 
-Open `.harness/init-report.md`. It shows:
+Open `.reins/init-report.md`. It shows:
 
 - **Layers** found and their order, with the evidence (imports going down vs. up). Mixed pairs are marked: check that order.
 - **Folders outside every layer**: add them to a layer in `architecture.yml`, or leave them unchecked.
@@ -77,14 +77,14 @@ The draft describes what exists. If the repo is messy, the draft is messy: **you
 ## 5. Freeze the violations of your final plan
 
 ```bash
-npx --no-install harness check --update-baseline
+npx reins check --update-baseline
 ```
 
 ## 6. Check
 
 ```bash
-npx --no-install harness check         # must say "no new violations" and exit 0
-npx --no-install harness check --json  # what an agent would read
+npx reins check         # must say "no new violations" and exit 0
+npx reins check --json  # what an agent would read
 ```
 
 ## 7. Break a rule on purpose
@@ -92,7 +92,7 @@ npx --no-install harness check --json  # what an agent would read
 Add an import that goes upwards (e.g. a component importing from a feature), then:
 
 ```bash
-npx --no-install harness check --files src/components/Whatever.jsx   # what the pre-commit hook will run
+npx reins check --files src/components/Whatever.jsx   # what the pre-commit hook will run
 ```
 
 It must fail with the rule, the reason and the fix. Undo the change.

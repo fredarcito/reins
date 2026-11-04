@@ -1,4 +1,4 @@
-// harness check: architecture rules + adapter rules + integrity, compared with the baseline.
+// reins check: architecture rules + adapter rules + integrity, compared with the baseline.
 // Exit codes: 0 = no new errors, 1 = new errors, 2 = could not run (config, adapter, usage).
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   CORE_RULES, parseConfig, ConfigError, runCheck, normalizeGraph, validateEdges,
   parseBaseline, emptyBaseline, createBaseline, serializeBaseline, checkIntegrity, formatText, formatJson,
-} from '@harness/core';
+} from '@reins/core';
 import { resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
@@ -19,10 +19,10 @@ export const options = {
   verbose: { type: 'boolean' },
 };
 
-export const help = `Usage: harness check [options]
+export const help = `Usage: reins check [options]
 
-Checks the architecture rules of .harness/architecture.yml. Only violations that are not in
-.harness/baseline.json fail (exit code 1).
+Checks the architecture rules of .reins/architecture.yml. Only violations that are not in
+.reins/baseline.json fail (exit code 1).
 
 Options:
   --files <a,b>        Only report violations involving these files (pre-commit hook). Repeatable
@@ -33,7 +33,7 @@ Options:
 
 /** First base ref that exists. */
 export function pickBaseRef(root, explicit, env = process.env) {
-  const list = [explicit, env.HARNESS_BASE, env.GITHUB_BASE_REF && `origin/${env.GITHUB_BASE_REF}`, 'origin/HEAD', 'origin/main', 'origin/master', 'main', 'master'];
+  const list = [explicit, env.REINS_BASE, env.GITHUB_BASE_REF && `origin/${env.GITHUB_BASE_REF}`, 'origin/HEAD', 'origin/main', 'origin/master', 'main', 'master'];
   for (const ref of list.filter(Boolean)) {
     try {
       execFileSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root, stdio: 'ignore' });
@@ -54,7 +54,7 @@ export function pickBaseRef(root, explicit, env = process.env) {
 export async function analyze(root, adapterOpts, over = {}) {
   const file = path.join(root, ARCHITECTURE_FILE);
   if (over.configText === undefined && !existsSync(file)) {
-    throw new CliError(`${ARCHITECTURE_FILE} not found. Run \`harness init\` to draft it.`);
+    throw new CliError(`${ARCHITECTURE_FILE} not found. Run \`reins init\` to draft it.`);
   }
   const text = over.configText ?? readFileSync(file, 'utf8');
   const adapterName = /^adapter:\s*["']?([\w-]+)/m.exec(text)?.[1];
@@ -119,7 +119,7 @@ export async function check(ctx) {
   }
 
   const { baseline, missing } = readBaseline(root);
-  if (missing) warnings.push(`${BASELINE_FILE} not found: every violation counts as new. Run \`harness init\` or \`harness check --update-baseline\`.`);
+  if (missing) warnings.push(`${BASELINE_FILE} not found: every violation counts as new. Run \`reins init\` or \`reins check --update-baseline\`.`);
 
   const integrityRule = config.rules.integrity;
   const integrity = [];
@@ -132,14 +132,14 @@ export async function check(ctx) {
     }
   }
 
-  // integrity of generated files: only once harness sync has been adopted (a manifest exists)
+  // integrity of generated files: only once reins sync has been adopted (a manifest exists)
   if (integrityRule && integrityRule.severity !== 'off' && existsSync(path.join(root, MANIFEST_FILE))) {
     const { divergences } = runSync(root, { check: true });
     for (const d of divergences) {
       integrity.push({
         rule: 'integrity', severity: /** @type {'error'|'warn'} */ (integrityRule.severity), key: `integrity|generated|${d}`, from: MANIFEST_FILE,
         message: `Generated file out of sync: ${d}.`,
-        fix: 'Run `harness sync` and commit the result. Edit the sources in .harness/, not the generated files.',
+        fix: 'Run `reins sync` and commit the result. Edit the sources in .reins/, not the generated files.',
       });
     }
   }

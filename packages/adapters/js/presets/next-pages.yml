@@ -10,7 +10,7 @@ layers:
 
 domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
 
-# adapter rules `harness init` proposes for this preset
+# adapter rules `reins init` proposes for this preset
 default_rules: [next-server-client]
 
 entries:

@@ -48,9 +48,9 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * @property {string[]} [rules] extra rule ids the adapter implements (e.g. "next-server-client")
  * @property {(repoPath: string, config: object, graph: { edges: Edge[], files: string[], entries: string[] }) => AdapterViolation[] | Promise<AdapterViolation[]>} [evaluate]
  *   runs the adapter's own rules on the normalized graph; required when `rules` is not empty
- * @property {string[]} [presets] preset names (used by `harness init`)
+ * @property {string[]} [presets] preset names (used by `reins init`)
  * @property {(repoPath: string) => string | null} [suggestPreset] best preset for the repo, or null
- * @property {(name: string) => Preset} [loadPreset] starting point for `harness init`
+ * @property {(name: string) => Preset} [loadPreset] starting point for `reins init`
  */
 
 /**

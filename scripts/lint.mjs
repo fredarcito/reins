@@ -4,7 +4,7 @@
 //   import-boundary core never imports cli/adapters; adapter code (not its tests) only imports core through "<scope>/core/contract"
 //   agents-md       AGENTS.md has at most 30 lines; AGENTS.md/CLAUDE.md only at the root, templates/ or examples/<name>/
 //   diagrams        mermaid blocks in markdown without HTML entities, quotes/<>/| in labels or reserved node ids
-//   packages        every workspace package is ESM and uses the same npm scope; adapters declare core as peer + harness.contract
+//   packages        every workspace package is ESM and uses the same npm scope; adapters declare core as peer + reins.contract
 // The real architecture check of this repo (phase 9) will replace import-boundary.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
@@ -55,16 +55,23 @@ export function lint(root) {
   const pkgs = pkgDirs.map((dir) => ({ dir, json: JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')) }));
   const core = pkgs.find((p) => p.dir.endsWith(path.join('packages', 'core')));
   const scope = core?.json.name.split('/')[0];
+  const cliName = pkgs.find((p) => p.dir.endsWith(path.join('packages', 'cli')))?.json.name ?? `${scope}/cli`;
+  const isCliImport = (s) => s === cliName || s.startsWith(`${cliName}/`);
   if (!scope?.startsWith('@')) report('packages', path.join(root, 'packages/core/package.json'), 'core package name must be scoped (@scope/core)');
   for (const p of pkgs) {
     const file = path.join(p.dir, 'package.json');
-    if (scope && !p.json.name.startsWith(`${scope}/`)) report('packages', file, `name "${p.json.name}" does not use scope ${scope}`);
+    const isCli = p.dir.endsWith(path.join('packages', 'cli'));
+    if (isCli) {
+      // the CLI is unscoped and named like its command, so `npx <command>` can only ever find this package
+      const bins = Object.keys(p.json.bin ?? {});
+      if (bins.length !== 1 || bins[0] !== p.json.name) report('packages', file, `the CLI package must be unscoped and have one bin with its own name (name "${p.json.name}", bin ${bins.join(', ') || 'none'})`);
+    } else if (scope && !p.json.name.startsWith(`${scope}/`)) report('packages', file, `name "${p.json.name}" does not use scope ${scope}`);
     // Also required for the syntax check: without it, `node --check` accepts broken ESM in .js files (Node 22).
     if (p.json.type !== 'module') report('packages', file, 'package must declare "type": "module"');
     if (p.dir.includes(path.join('packages', 'adapters'))) {
       if (!p.json.peerDependencies?.[`${scope}/core`]) report('packages', file, `adapter must declare ${scope}/core as a peerDependency`);
       if (p.json.dependencies?.[`${scope}/core`]) report('packages', file, `adapter must not list ${scope}/core in dependencies`);
-      if (!Number.isInteger(p.json.harness?.contract)) report('packages', file, 'adapter must declare "harness": { "contract": <n> }');
+      if (!Number.isInteger(p.json.reins?.contract)) report('packages', file, 'adapter must declare "reins": { "contract": <n> }');
     }
   }
 
@@ -82,14 +89,14 @@ export function lint(root) {
     const specs = importSpecifiers(readFileSync(file, 'utf8'));
     if (r.startsWith('packages/core/')) {
       for (const s of specs) {
-        if (s.startsWith(`${scope}/cli`) || s.startsWith(`${scope}/adapter-`) || /(^|\/)(cli|adapters)\//.test(s) && s.startsWith('.')) {
+        if (isCliImport(s) || s.startsWith(`${scope}/adapter-`) || /(^|\/)(cli|adapters)\//.test(s) && s.startsWith('.')) {
           report('import-boundary', file, `core must not import from cli or adapters ("${s}")`);
         }
       }
     }
     if (r.startsWith('packages/adapters/') && !r.split('/').includes('test')) {
       for (const s of specs) {
-        if (s.startsWith(`${scope}/cli`)) report('import-boundary', file, `adapters must not import the cli ("${s}")`);
+        if (isCliImport(s)) report('import-boundary', file, `adapters must not import the cli ("${s}")`);
         if (s.startsWith(`${scope}/core`) && s !== `${scope}/core/contract`) {
           report('import-boundary', file, `adapters may only import ${scope}/core/contract ("${s}")`);
         }

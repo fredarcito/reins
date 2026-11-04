@@ -1,13 +1,13 @@
-// harness install: wires the harness into a consumer repo. Additive and idempotent: it never overwrites
+// reins install: wires reins into a consumer repo. Additive and idempotent: it never overwrites
 // files that already exist (except with --force for the CI workflow), and it never installs packages.
 //
-//   1. .harness/ sources from the templates (policies, notebook templates, skills, agents, hook, doctor.yml)
+//   1. .reins/ sources from the templates (policies, notebook templates, skills, agents, hook, doctor.yml)
 //   2. .gitignore entries for local state
 //   3. a package.json script
 //   4. the pre-commit hook through the hook manager the repo already uses (Husky or lefthook)
-//   5. .github/workflows/harness.yml running only `harness check`
+//   5. .github/workflows/reins.yml running only `reins check`
 //   6. the notes index block at the end of an existing AGENTS.md that has none
-//   7. harness sync (AGENTS.md, CLAUDE.md, .claude/)
+//   7. reins sync (AGENTS.md, CLAUDE.md, .claude/)
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -24,27 +24,27 @@ export const options = {
   'skip-ci': { type: 'boolean' },
 };
 
-export const help = `Usage: harness install [--dry-run] [--force] [--skip-hook] [--skip-ci]
+export const help = `Usage: reins install [--dry-run] [--force] [--skip-hook] [--skip-ci]
 
-Wires the harness into this repo, additively (existing files are never overwritten):
-  - .harness/ sources (policies, templates, skills, agents, pre-commit script, doctor.yml)
-  - .gitignore entries for .harness/backlog/, .harness/progress/ and .harness/init-report.md
-  - a "harness:check" script in package.json
+Wires reins into this repo, additively (existing files are never overwritten):
+  - .reins/ sources (policies, templates, skills, agents, pre-commit script, doctor.yml)
+  - .gitignore entries for .reins/backlog/, .reins/progress/ and .reins/init-report.md
+  - a "reins:check" script in package.json
   - the pre-commit hook in Husky (.husky/pre-commit) or lefthook (lefthook.yml), whichever the repo uses
-  - .github/workflows/harness.yml running only \`harness check\` (--force overwrites it)
+  - .github/workflows/reins.yml running only \`reins check\` (--force overwrites it)
   - the module notes index block at the end of an existing AGENTS.md that has none
-  - harness sync (AGENTS.md, CLAUDE.md, .claude/)
-It never installs packages. Run \`harness init\` afterwards if there is no architecture.yml yet.`;
+  - reins sync (AGENTS.md, CLAUDE.md, .claude/)
+It never installs packages. Run \`reins init\` afterwards if there is no architecture.yml yet.`;
 
-export const HOOK_LINE = 'sh .harness/hooks/pre-commit.sh';
-export const GITIGNORE_LINES = ['.harness/backlog/', '.harness/progress/', '.harness/init-report.md'];
-export const WORKFLOW_FILE = '.github/workflows/harness.yml';
-export const SCRIPT = { name: 'harness:check', command: 'harness check' };
+export const HOOK_LINE = 'sh .reins/hooks/pre-commit.sh';
+export const GITIGNORE_LINES = ['.reins/backlog/', '.reins/progress/', '.reins/init-report.md'];
+export const WORKFLOW_FILE = '.github/workflows/reins.yml';
+export const SCRIPT = { name: 'reins:check', command: 'reins check' };
 const deps = (pkg) => ({ ...pkg.dependencies, ...pkg.devDependencies });
 const LEFTHOOK_FILES = ['lefthook.yml', 'lefthook.yaml', '.lefthook.yml', '.lefthook.yaml'];
 
-/** Every template file under templates/.harness, as repo-relative paths. */
-function harnessSources() {
+/** Every template file under templates/.reins, as repo-relative paths. */
+function reinsSources() {
   const base = templatesDir();
   const out = [];
   const walk = (rel) => {
@@ -54,7 +54,7 @@ function harnessSources() {
       else out.push(r);
     }
   };
-  walk('.harness');
+  walk('.reins');
   return out;
 }
 
@@ -117,7 +117,7 @@ export function installInto(root, opts = {}) {
     if (mode) chmodSync(path.join(root, rel), mode);
   };
   const pkgText = readText(root, 'package.json');
-  if (pkgText === null) throw new CliError('No package.json here. Run harness install at the root of a JavaScript project.');
+  if (pkgText === null) throw new CliError('No package.json here. Run reins install at the root of a JavaScript project.');
   let pkg;
   try {
     pkg = JSON.parse(pkgText);
@@ -128,7 +128,7 @@ export function installInto(root, opts = {}) {
   // 1. sources
   let copied = 0;
   let kept = 0;
-  for (const rel of harnessSources()) {
+  for (const rel of reinsSources()) {
     if (existsSync(path.join(root, rel))) {
       kept++;
       continue;
@@ -136,16 +136,16 @@ export function installInto(root, opts = {}) {
     write(rel, readTemplate(rel), rel.endsWith('.sh') ? 0o755 : undefined);
     copied++;
   }
-  actions.push(`.harness/ sources: ${copied} file(s) added${kept ? `, ${kept} already there (kept)` : ''}`);
+  actions.push(`.reins/ sources: ${copied} file(s) added${kept ? `, ${kept} already there (kept)` : ''}`);
 
   // 2. .gitignore
   const gi = readText(root, '.gitignore') ?? '';
   const have = new Set(gi.split(/\r?\n/).map((l) => l.trim()));
   const missing = GITIGNORE_LINES.filter((l) => !have.has(l) && !have.has(`/${l}`));
   if (missing.length) {
-    write('.gitignore', `${gi}${gi && !gi.endsWith('\n') ? '\n' : ''}${gi ? '\n' : ''}# harness: local state (not shared)\n${missing.join('\n')}\n`);
+    write('.gitignore', `${gi}${gi && !gi.endsWith('\n') ? '\n' : ''}${gi ? '\n' : ''}# reins: local state (not shared)\n${missing.join('\n')}\n`);
     actions.push(`.gitignore: added ${missing.join(', ')}`);
-  } else actions.push('.gitignore: already ignores the local harness folders');
+  } else actions.push('.gitignore: already ignores the local reins folders');
 
   // 3. package.json script
   if (pkg.scripts?.[SCRIPT.name]) actions.push(`package.json: script "${SCRIPT.name}" already exists (kept)`);
@@ -164,18 +164,18 @@ export function installInto(root, opts = {}) {
     if (lefthook || declared.lefthook) {
       const file = lefthook ?? 'lefthook.yml';
       const doc = parseDocument(readText(root, file) ?? '');
-      if (doc.errors.length) notes.push(`${file} is not valid YAML; add the hook by hand: pre-commit → commands → harness → run: ${HOOK_LINE}`);
-      else if (doc.getIn(['pre-commit', 'commands', 'harness', 'run'])) actions.push(`pre-commit hook: ${file} already runs harness`);
+      if (doc.errors.length) notes.push(`${file} is not valid YAML; add the hook by hand: pre-commit → commands → reins → run: ${HOOK_LINE}`);
+      else if (doc.getIn(['pre-commit', 'commands', 'reins', 'run'])) actions.push(`pre-commit hook: ${file} already runs reins`);
       else {
         if (!doc.contents) doc.contents = doc.createNode({});
-        doc.setIn(['pre-commit', 'commands', 'harness', 'run'], HOOK_LINE);
+        doc.setIn(['pre-commit', 'commands', 'reins', 'run'], HOOK_LINE);
         write(file, String(doc));
-        actions.push(`pre-commit hook: added "harness" to ${file} (lefthook)`);
+        actions.push(`pre-commit hook: added "reins" to ${file} (lefthook)`);
       }
     } else if (existsSync(path.join(root, '.husky')) || declared.husky) {
       const file = '.husky/pre-commit';
       const current = readText(root, file);
-      if (current?.includes(HOOK_LINE)) actions.push(`pre-commit hook: ${file} already runs harness`);
+      if (current?.includes(HOOK_LINE)) actions.push(`pre-commit hook: ${file} already runs reins`);
       else {
         write(file, current === null ? `${HOOK_LINE}\n` : `${current}${current.endsWith('\n') ? '' : '\n'}${HOOK_LINE}\n`, 0o755);
         actions.push(`pre-commit hook: ${current === null ? 'created' : 'appended to'} ${file} (Husky)`);
@@ -183,7 +183,7 @@ export function installInto(root, opts = {}) {
       }
     } else {
       notes.push(
-        `No Husky or lefthook found, so no git hook was added (harness doesn't install packages). Install one, e.g. \`npx husky init\`, then re-run \`harness install\`; or call \`${HOOK_LINE}\` from your own pre-commit hook. CI still enforces the check.`,
+        `No Husky or lefthook found, so no git hook was added (reins doesn't install packages). Install one, e.g. \`npx husky init\`, then re-run \`reins install\`; or call \`${HOOK_LINE}\` from your own pre-commit hook. CI still enforces the check.`,
       );
     }
   }
@@ -206,16 +206,16 @@ export function installInto(root, opts = {}) {
   }
 
   // 7. sync
-  if (dry) actions.push('harness sync: would generate AGENTS.md (if missing), CLAUDE.md (if missing) and .claude/');
+  if (dry) actions.push('reins sync: would generate AGENTS.md (if missing), CLAUDE.md (if missing) and .claude/');
   else {
     const r = runSync(root);
-    actions.push(`harness sync: ${r.changes.length ? r.changes.length + ' change(s)' : 'nothing to do'}`);
+    actions.push(`reins sync: ${r.changes.length ? r.changes.length + ' change(s)' : 'nothing to do'}`);
     notes.push(...r.warnings);
   }
 
-  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx --no-install harness init\` to draft the architecture plan and the baseline.`);
-  if (!deps(pkg)['@harness/cli']) notes.push('@harness/cli is not in package.json: install it as a dev dependency so the hook and CI can run it.');
-  notes.push('In GitHub, protect the main branch: require a PR with an approval and the "harness" check to pass. That is the real guarantee.');
+  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx reins init\` to draft the architecture plan and the baseline.`);
+  if (!deps(pkg)['reins']) notes.push('reins is not in package.json: install it as a dev dependency so the hook and CI can run it.');
+  notes.push('In GitHub, protect the main branch: require a PR with an approval and the "reins" check to pass. That is the real guarantee.');
   return { actions, notes };
 }
 
@@ -224,7 +224,7 @@ export function installInto(root, opts = {}) {
 export async function install(ctx) {
   const { root, values, out } = ctx;
   const r = installInto(root, { dryRun: values['dry-run'], force: values.force, skipHook: values['skip-hook'], skipCi: values['skip-ci'] });
-  out(values['dry-run'] ? 'harness install (dry run, nothing written):' : 'harness install:');
+  out(values['dry-run'] ? 'reins install (dry run, nothing written):' : 'reins install:');
   for (const a of r.actions) out(`  - ${a}`);
   if (r.notes.length) {
     out('\nNext:');

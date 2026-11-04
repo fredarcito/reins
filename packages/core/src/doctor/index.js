@@ -1,4 +1,4 @@
-// harness doctor: process rules, local and informational. Unlike `check`, it looks at files the agent writes
+// reins doctor: process rules, local and informational. Unlike `check`, it looks at files the agent writes
 // (triage.log, the progress notebook) and at the local diff. It never blocks (warn only), never uses the
 // baseline or a language adapter, and must not run in CI or in the git hook.
 // Pure: the caller reads the files and git state and passes them in.

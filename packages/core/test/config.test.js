@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES } from '@harness/core';
+import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES } from '@reins/core';
 
 const minimal = 'version: 1\nadapter: js\n';
 
@@ -67,8 +67,8 @@ allow:
 });
 
 test('the error message lists the problems under the file name', () => {
-  assert.throws(() => parseConfig('version: 1\n', { file: '.harness/architecture.yml' }), {
-    message: '.harness/architecture.yml is not valid:\n  - adapter: required, e.g. "adapter: js"',
+  assert.throws(() => parseConfig('version: 1\n', { file: '.reins/architecture.yml' }), {
+    message: '.reins/architecture.yml is not valid:\n  - adapter: required, e.g. "adapter: js"',
   });
 });
 
@@ -89,8 +89,8 @@ test('validateConfig rejects non-mappings', () => {
 });
 
 test('loadConfig reads the file and explains a missing one', async () => {
-  const dir = mkdtempSync(path.join(tmpdir(), 'harness-config-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-config-'));
   writeFileSync(path.join(dir, 'architecture.yml'), minimal);
   assert.equal((await loadConfig(path.join(dir, 'architecture.yml'))).adapter, 'js');
-  await assert.rejects(loadConfig(path.join(dir, 'missing.yml')), { name: 'ConfigError', message: /Run `harness init`/ });
+  await assert.rejects(loadConfig(path.join(dir, 'missing.yml')), { name: 'ConfigError', message: /Run `reins init`/ });
 });

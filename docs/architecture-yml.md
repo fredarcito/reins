@@ -1,8 +1,8 @@
 # `architecture.yml` reference
 
-The plan of your architecture. `harness check` enforces whatever this file says, even a bad plan: **a person decides it**, `harness init` only drafts it from what exists.
+The plan of your architecture. `reins check` enforces whatever this file says, even a bad plan: **a person decides it**, `reins init` only drafts it from what exists.
 
-Location in a consumer repo: `.harness/architecture.yml`.
+Location in a consumer repo: `.reins/architecture.yml`.
 
 ## Full example
 
@@ -38,7 +38,7 @@ allow:
 | Key | Required | What it is |
 | --- | --- | --- |
 | `version` | yes | Format version. Must be `1` |
-| `adapter` | yes | Adapter name. The CLI looks for `@harness/adapter-<name>`, then `harness-adapter-<name>` |
+| `adapter` | yes | Adapter name. The CLI looks for `@reins/adapter-<name>`, then `reins-adapter-<name>` |
 | `preset` | no | Preset of the adapter |
 | `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |

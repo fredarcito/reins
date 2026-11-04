@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Self-check of this repo's architecture, in two independent ways (the chicken-and-egg problem: a broken harness
+// Self-check of this repo's architecture, in two independent ways (the chicken-and-egg problem: a broken reins
 // can't be trusted to validate itself):
-//   1. dependency-cruiser alone, with plain forbidden rules (no harness code involved);
-//   2. the harness's own `harness check`, run from source, plus a guard that it actually sees cross-package edges.
+//   1. dependency-cruiser alone, with plain forbidden rules (no reins code involved);
+//   2. this repo's own `reins check`, run from source, plus a guard that it actually sees cross-package edges.
 // Usage: pnpm self-check
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -42,20 +42,20 @@ if (crossPackage === 0) {
 }
 console.log(`1. dependency-cruiser: ${out.summary.totalCruised} modules, ${out.summary.error} errors, ${crossPackage} cli → core imports seen.`);
 
-// 2. harness check from source, and a guard against an empty graph
+// 2. reins check from source, and a guard against an empty graph
 const adapter = (await import(pathToFileURL(path.join(adapterDir, 'src/index.js')).href)).default;
 const graph = await adapter.graph(root, { ignore: ['examples/**', 'packages/*/test/fixtures/**', 'packages/adapters/*/test/fixtures/**'] });
-const harnessCross = graph.edges.filter((e) => e.from.startsWith('packages/cli/src/') && e.to.startsWith('packages/core/src/')).length;
-if (harnessCross === 0) {
+const reinsCross = graph.edges.filter((e) => e.from.startsWith('packages/cli/src/') && e.to.startsWith('packages/core/src/')).length;
+if (reinsCross === 0) {
   failed = true;
-  console.error('✖ The harness adapter sees no cli → core imports: it would pass without checking anything.');
+  console.error('✖ Reins adapter sees no cli → core imports: it would pass without checking anything.');
 }
 try {
   const text = execFileSync(process.execPath, [path.join(root, 'packages/cli/src/bin.js'), 'check'], { cwd: root, encoding: 'utf8' });
-  console.log(`2. harness check: ${text.trim().split('\n').slice(-2).join(' · ')} (${harnessCross} cli → core imports seen)`);
+  console.log(`2. reins check: ${text.trim().split('\n').slice(-2).join(' · ')} (${reinsCross} cli → core imports seen)`);
 } catch (e) {
   failed = true;
-  console.error(`✖ harness check failed:\n${e.stdout ?? ''}${e.stderr ?? ''}`);
+  console.error(`✖ reins check failed:\n${e.stdout ?? ''}${e.stderr ?? ''}`);
 }
 
 console.log(failed ? 'self-check: FAIL' : 'self-check: pass');

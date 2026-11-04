@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, git, tempDir } from './helpers.js';
 
-const BASELINE = '.harness/baseline.json';
+const BASELINE = '.reins/baseline.json';
 
 test('without a baseline every violation is new: exit 1, with rule, why and fix', async () => {
   const dir = exampleRepo('vite-react');
@@ -57,17 +57,17 @@ test('integrity: a branch that grows the baseline is flagged (warn by default, e
   const dir = exampleRepo('vite-react');
   await cli(dir, ['check', '--update-baseline']);
   git(dir, 'add', '-A');
-  git(dir, 'commit', '-qm', 'adopt harness');
+  git(dir, 'commit', '-qm', 'adopt reins');
   git(dir, 'checkout', '-q', '-b', 'feature');
   writeFileSync(path.join(dir, 'src/lib/money.js'), "import { CartSummary } from '@/features/cart';\nexport const m = CartSummary;\n");
   await cli(dir, ['check', '--update-baseline']);
 
   const warn = await cli(dir, ['check', '--base', 'main']);
   assert.equal(warn.code, 0);
-  assert.match(warn.stdout, /! warn {2}integrity {2}\.harness\/baseline\.json/);
+  assert.match(warn.stdout, /! warn {2}integrity {2}\.reins\/baseline\.json/);
   assert.match(warn.stdout, /gained 1 violation\(s\) compared to main/);
 
-  const yml = path.join(dir, '.harness/architecture.yml');
+  const yml = path.join(dir, '.reins/architecture.yml');
   writeFileSync(yml, readFileSync(yml, 'utf8').replace('  - { id: no-cycles,       severity: error }', '  - { id: no-cycles,       severity: error }\n  - { id: integrity, severity: error }'));
   const error = await cli(dir, ['check', '--base', 'main']);
   assert.equal(error.code, 1);
@@ -85,9 +85,9 @@ test('exit 2 with a clear message: no architecture.yml, invalid config, bad opti
   const empty = tempDir({ 'package.json': '{}' });
   const none = await cli(empty, ['check']);
   assert.equal(none.code, 2);
-  assert.match(none.stderr, /architecture\.yml not found\. Run `harness init`/);
+  assert.match(none.stderr, /architecture\.yml not found\. Run `reins init`/);
 
-  const bad = tempDir({ 'package.json': '{}', '.harness/architecture.yml': 'version: 1\nadapter: js\nlayers: oops\n' });
+  const bad = tempDir({ 'package.json': '{}', '.reins/architecture.yml': 'version: 1\nadapter: js\nlayers: oops\n' });
   const invalid = await cli(bad, ['check']);
   assert.equal(invalid.code, 2);
   assert.match(invalid.stderr, /layers: must be a list/);

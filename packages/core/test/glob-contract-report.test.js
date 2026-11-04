@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import {
   matchesAny, validateAdapter, validateEdges, CONTRACT_VERSION,
   parseConfig, runCheck, emptyBaseline, createBaseline, evaluate, formatText, formatJson, REPORT_SCHEMA,
-} from '@harness/core';
+} from '@reins/core';
 import { edges } from './fixtures/edges.js';
 
 test('glob: *, **, ?, {a,b}', () => {
@@ -56,7 +56,7 @@ test('report text: rule, why and fix for each new violation, and a summary', () 
   assert.match(text, /^✖ error layer-direction {2}src\/components\/PriceTag\.js → src\/features\/billing\/index\.js$/m);
   assert.match(text, /^ {4}Why: .+$/m);
   assert.match(text, /^ {4}Fix: .+$/m);
-  assert.match(text, /harness check: 3 new \(3 errors, 0 warnings\) · 0 in baseline · 0 fixed/);
+  assert.match(text, /reins check: 3 new \(3 errors, 0 warnings\) · 0 in baseline · 0 fixed/);
   assert.match(text, /Result: FAIL/);
 });
 
@@ -67,7 +67,7 @@ test('report text: baseline violations are hidden unless verbose; stale entries 
   const text = formatText(r);
   assert.doesNotMatch(text, /Why:/);
   assert.match(text, /no new violations · 2 in baseline · 1 fixed/);
-  assert.match(text, /1 baseline entry no longer occurs\. Remove it with `harness check --update-baseline`/);
+  assert.match(text, /1 baseline entry no longer occurs\. Remove it with `reins check --update-baseline`/);
   assert.match(text, /Result: pass/);
   assert.match(formatText(r, { verbose: true }), /\(in baseline\)/);
 });

@@ -37,14 +37,14 @@ const clean = (s, what) => {
   return t;
 };
 
-/** Numbered items (1-based, file order), for `harness progress show` and the other commands. */
+/** Numbered items (1-based, file order), for `reins progress show` and the other commands. */
 export function listItems(text) {
   return valid(text).items.map((it, i) => ({ n: i + 1, ...it }));
 }
 
 function itemAt(nb, n) {
   const it = nb.items[n - 1];
-  if (!Number.isInteger(n) || !it) throw new NotebookError(`No item ${n} (the notebook has ${nb.items.length}). Run \`harness progress show\`.`);
+  if (!Number.isInteger(n) || !it) throw new NotebookError(`No item ${n} (the notebook has ${nb.items.length}). Run \`reins progress show\`.`);
   return it;
 }
 

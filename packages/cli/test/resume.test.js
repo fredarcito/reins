@@ -14,12 +14,12 @@ const write = (dir, f, text) => {
 /** A branch with a notebook, a code change and a note covering it. */
 function repo() {
   const dir = exampleRepo('next-app');
-  write(dir, '.harness/notes/orders.md', '---\npaths: ["src/features/orders/**"]\n---\n## Purpose\nOrders list.\n## Decisions\n- 2026-11-01: queries run on the server only.\n');
+  write(dir, '.reins/notes/orders.md', '---\npaths: ["src/features/orders/**"]\n---\n## Purpose\nOrders list.\n## Decisions\n- 2026-11-01: queries run on the server only.\n');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-qm', 'note');
   git(dir, 'switch', '-qc', 'feat/filters');
   write(dir, 'src/features/orders/queries.ts', `${readFileSync(path.join(dir, 'src/features/orders/queries.ts'), 'utf8')}\nexport const byStatus = 1;\n`);
-  write(dir, '.harness/progress/feat-filters.md', '# feat/filters · status: open · updated: 2026-11-04\n**Goal:** filter orders by status.\n**Next step:** add the select to OrderList.\n');
+  write(dir, '.reins/progress/feat-filters.md', '# feat/filters · status: open · updated: 2026-11-04\n**Goal:** filter orders by status.\n**Next step:** add the select to OrderList.\n');
   return dir;
 }
 
@@ -28,12 +28,12 @@ test('resume: notebook, changed files and their notes', async () => {
   const r = await cli(dir, ['resume'], { env: { GITHUB_BASE_REF: 'main' } });
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /^Context to resume the work on branch feat\/filters/);
-  assert.match(r.stdout, /## Progress notebook \.harness\/progress\/feat-filters\.md\n.+\n\n# feat\/filters · status: open/);
+  assert.match(r.stdout, /## Progress notebook \.reins\/progress\/feat-filters\.md\n.+\n\n# feat\/filters · status: open/);
   assert.match(r.stdout, /\*\*Next step:\*\* add the select to OrderList\./);
   assert.match(r.stdout, /## Files changed on this branch \(1\)\n- src\/features\/orders\/queries\.ts/);
-  assert.match(r.stdout, /### \.harness\/notes\/orders\.md \(applies to src\/features\/orders\/\*\*\)\n## Purpose\nOrders list\./);
+  assert.match(r.stdout, /### \.reins\/notes\/orders\.md \(applies to src\/features\/orders\/\*\*\)\n## Purpose\nOrders list\./);
   const json = JSON.parse((await cli(dir, ['resume', '--json'], { env: { GITHUB_BASE_REF: 'main' } })).stdout);
-  assert.deepEqual([json.branch, json.files, json.notes.map((n) => n.file)], ['feat/filters', ['src/features/orders/queries.ts'], ['.harness/notes/orders.md']]);
+  assert.deepEqual([json.branch, json.files, json.notes.map((n) => n.file)], ['feat/filters', ['src/features/orders/queries.ts'], ['.reins/notes/orders.md']]);
 });
 
 test('resume: nothing to resume on a clean branch; the hook then prints nothing', async () => {
@@ -61,7 +61,7 @@ test('resume --hook: after a compaction the notes are delivered again, by both h
   assert.match(compacted.hookSpecificOutput.additionalContext, /queries run on the server only/, 'notes come back after a compaction');
   assert.equal(read('s1'), null, 'and the read hook does not repeat them right after');
 
-  write(dir, '.harness/progress/.notes-seen.json', JSON.stringify({ s1: ['.harness/notes/orders.md'] }));
+  write(dir, '.reins/progress/.notes-seen.json', JSON.stringify({ s1: ['.reins/notes/orders.md'] }));
   const notesOnlyByRead = JSON.parse(hookResponse(dir, { session_id: 's1', source: 'compact' }, env)).hookSpecificOutput.additionalContext;
   assert.match(notesOnlyByRead, /queries run on the server only/, 'a note first seen through a Read also comes back after a compaction');
 });

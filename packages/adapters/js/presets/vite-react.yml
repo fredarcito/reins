@@ -1,5 +1,5 @@
 # Preset for a Vite + React app (plain JS/JSX or TypeScript).
-# `harness init` uses `layers` as a starting point and keeps only the folders that exist.
+# `reins init` uses `layers` as a starting point and keeps only the folders that exist.
 # `entries` are entry points by convention: never reported as orphans.
 description: Vite + React single page app
 

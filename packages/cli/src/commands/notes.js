@@ -1,9 +1,9 @@
-// harness notes <path…>: prints the module notes that apply to a path.
-// harness notes --hook: the same, as a Claude Code PreToolUse hook (JSON in on stdin, JSON out), at most once
+// reins notes <path…>: prints the module notes that apply to a path.
+// reins notes --hook: the same, as a Claude Code PreToolUse hook (JSON in on stdin, JSON out), at most once
 // per note and session. It never blocks the agent: any problem means "no note".
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, NOTES_DIR } from '@harness/core';
+import { notesFor, NOTES_DIR } from '@reins/core';
 import { CliError, toRepoPath } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
@@ -21,17 +21,17 @@ export const options = {
 };
 export const positionals = true;
 
-export const help = `Usage: harness notes <path…> [--json]
-       harness notes new <domain|folder> [--name <name>] [--paths <glob,…>] [--force]
-       harness notes --hook
+export const help = `Usage: reins notes <path…> [--json]
+       reins notes new <domain|folder> [--name <name>] [--paths <glob,…>] [--force]
+       reins notes --hook
 
-Prints the module notes (.harness/notes/*.md) whose "paths" match each path.
+Prints the module notes (.reins/notes/*.md) whose "paths" match each path.
 
-new     Drafts .harness/notes/<name>.md for a domain of architecture.yml or a folder: the import graph fills in
+new     Drafts .reins/notes/<name>.md for a domain of architecture.yml or a folder: the import graph fills in
         the public API, the most imported files, who uses the module and what it depends on; the rest are TODO
         lines for the agent or a person to fill in. --name sets the file name (default: the domain or the
         folder name), --paths overrides the globs, --force overwrites.
---hook  For the Claude Code PreToolUse hook that harness sync installs: reads the tool call from stdin and
+--hook  For the Claude Code PreToolUse hook that reins sync installs: reads the tool call from stdin and
         returns the notes as additional context, once per note and session.`;
 
 const SKIP = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'out', 'coverage']);
@@ -48,7 +48,7 @@ function walk(root, rel = '') {
   return out;
 }
 
-/** harness notes new <domain|folder> */
+/** reins notes new <domain|folder> */
 async function newNote(ctx, target) {
   const { root, cwd, values, out } = ctx;
   const info = [];
@@ -93,7 +93,7 @@ async function newNote(ctx, target) {
   const date = ctx.today ?? new Date().toISOString().slice(0, 10);
   const r = writeNoteDraft(root, { name, paths, publicApi: api }, graph, files, domains, date, { force: true });
   if (r.empty) out(`! warning  No file matches ${paths.join(', ')}.`);
-  out(`Drafted ${file}. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run \`harness sync\` to add it to the AGENTS.md index.`);
+  out(`Drafted ${file}. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run \`reins sync\` to add it to the AGENTS.md index.`);
   return 0;
 }
 
@@ -138,7 +138,7 @@ export function hookResponse(root, input) {
   return JSON.stringify({
     hookSpecificOutput: {
       hookEventName: input.hook_event_name ?? 'PreToolUse',
-      additionalContext: `Module notes for ${file} (from .harness/notes; follow them):\n\n${render(file, unseen)}`,
+      additionalContext: `Module notes for ${file} (from .reins/notes; follow them):\n\n${render(file, unseen)}`,
     },
   });
 }

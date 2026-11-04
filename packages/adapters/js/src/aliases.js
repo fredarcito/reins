@@ -174,7 +174,7 @@ function viteAliases(repoPath, alias, warnings, sources) {
   if (!m) return;
   const open = m.index + m[0].length;
   if (text[open] !== '{' && text[open] !== '[') {
-    warnings.push(`${file}: resolve.alias is not a literal object or array; set the same aliases in jsconfig.json/tsconfig.json "paths" so harness can read them.`);
+    warnings.push(`${file}: resolve.alias is not a literal object or array; set the same aliases in jsconfig.json/tsconfig.json "paths" so reins can read them.`);
     return;
   }
   const end = closing(text, open);

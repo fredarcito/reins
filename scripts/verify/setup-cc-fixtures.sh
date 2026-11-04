@@ -40,17 +40,17 @@ printf '# Proyecto\nPalabra clave del proyecto: PEPINO-7\n' > t3b/AGENTS.md
 gi t3a; gi t3b
 
 # T4 "read X on demand" line
-mkdir -p t4/src/billing t4/.harness/notes
+mkdir -p t4/src/billing t4/.reins/notes
 echo 'export const price = (n) => n;' > t4/src/billing/price.js
 cat > t4/AGENTS.md <<'EOF'
 # Tienda
 Comandos: `npm test`
 
 ## Bajo demanda
-- Antes de tocar estas rutas, lee su nota: `src/billing/**` → `.harness/notes/billing.md`
+- Antes de tocar estas rutas, lee su nota: `src/billing/**` → `.reins/notes/billing.md`
 EOF
 echo '@AGENTS.md' > t4/CLAUDE.md
-cat > t4/.harness/notes/billing.md <<'EOF'
+cat > t4/.reins/notes/billing.md <<'EOF'
 ---
 paths: ["src/billing/**"]
 ---
@@ -59,10 +59,10 @@ EOF
 gi t4
 
 # T5 skill in .claude/skills/<name>/SKILL.md
-mkdir -p t5/.claude/skills/harness-close-task && echo x > t5/a.txt
-cat > t5/.claude/skills/harness-close-task/SKILL.md <<'EOF'
+mkdir -p t5/.claude/skills/reins-close-task && echo x > t5/a.txt
+cat > t5/.claude/skills/reins-close-task/SKILL.md <<'EOF'
 ---
-name: harness-close-task
+name: reins-close-task
 description: Cierra una tarea de código. Úsala cuando la persona diga que la tarea está terminada o pida cerrarla.
 ---
 Pasos para cerrar:

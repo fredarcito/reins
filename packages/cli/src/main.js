@@ -31,23 +31,23 @@ const COMMANDS = {
   install: { run: installCmd.install, options: installCmd.options, help: installCmd.help },
 };
 
-const HELP = `Usage: harness <command> [options]
+const HELP = `Usage: reins <command> [options]
 
 Commands:
   check    Check the architecture rules (git hook and CI)
-  init     Draft .harness/architecture.yml and baseline.json from the code
+  init     Draft .reins/architecture.yml and baseline.json from the code
   doctor   Local workflow checks: triage log, notebook, module notes, AGENTS.md size (experimental)
-  sync     Generate .claude/ and the AGENTS.md notes index from .harness/ (experimental)
+  sync     Generate .claude/ and the AGENTS.md notes index from .reins/ (experimental)
   notes    Print the module notes for a path; "notes new" drafts one; --hook for Claude Code (experimental)
   scope    Domains, notes and minimum task level for some paths (experimental)
   resume   Notebook, changed files and notes to resume a task; --hook for Claude Code (experimental)
   audit    Local audit backlog: list, add, set status, recheck (experimental)
   progress Edit the branch notebook without rewriting it (experimental)
   review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
-  install  Wire the harness into this repo: sources, hook, CI, .gitignore, sync (experimental)
+  install  Wire reins into this repo: sources, hook, CI, .gitignore, sync (experimental)
 
 Options:
-  -h, --help     Show help (also: harness <command> --help)
+  -h, --help     Show help (also: reins <command> --help)
   -v, --version  Show the version`;
 
 /** Asks a yes/no question on the terminal; undefined when there is no terminal (CI, hooks, agents). */

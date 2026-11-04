@@ -1,4 +1,4 @@
-// Triage: the agent declares a task level (small | medium | large) in .harness/progress/triage.log,
+// Triage: the agent declares a task level (small | medium | large) in .reins/progress/triage.log,
 // one line per task: `YYYY-MM-DD | branch | level | reason`. The doctor compares it with the diff.
 import { matchesAny } from '../glob.js';
 
@@ -32,10 +32,10 @@ export function parseTriageLog(text) {
 }
 
 /** Agent instructions and generated tool files: they change with the work but are not "files of the task". */
-export const isHarnessFile = (f) => /^(\.harness|\.claude)\//.test(f) || f === 'AGENTS.md' || f === 'CLAUDE.md';
+export const isReinsFile = (f) => /^(\.reins|\.claude)\//.test(f) || f === 'AGENTS.md' || f === 'CLAUDE.md';
 
 /**
- * Objective signals of a set of changed files. Harness and agent files (.harness/, .claude/, AGENTS.md, CLAUDE.md)
+ * Objective signals of a set of changed files. Reins and agent files (.reins/, .claude/, AGENTS.md, CLAUDE.md)
  * don't count as files or domains; touching architecture.yml is reported on its own.
  * @param {string[]} files repo-relative changed files
  * @param {{ name: string, paths: string[], publicApi: string[] }[]} domains from architecture.yml
@@ -44,7 +44,7 @@ export const isHarnessFile = (f) => /^(\.harness|\.claude)\//.test(f) || f === '
 export function scopeSignals(files, domains, architectureFile) {
   const touched = new Set();
   const publicApi = [];
-  const counted = files.filter((f) => !isHarnessFile(f));
+  const counted = files.filter((f) => !isReinsFile(f));
   for (const f of counted) {
     const d = domains.find((x) => matchesAny(f, x.paths));
     if (!d) continue;
@@ -55,7 +55,7 @@ export function scopeSignals(files, domains, architectureFile) {
 }
 
 /**
- * Minimum level suggested by the signals (same thresholds as `harness scope`):
+ * Minimum level suggested by the signals (same thresholds as `reins scope`):
  * small: ≤ max_files files in ≤ max_domains domain; medium: more files, still ≤ medium.max_domains domain;
  * large: more domains, a public API, or architecture.yml.
  * @param {ReturnType<typeof scopeSignals>} s
@@ -100,7 +100,7 @@ export function checkTriage({ branch, changedFiles, log, logFile, signals, thres
   if (rank(suggested.level) > rank(declared.level)) {
     add('triage-mismatch', branch,
       `Declared ${declared.level} (line ${declared.line}: "${declared.reason}"), but the diff looks ${suggested.level}: ${suggested.reasons.join('; ')}.`,
-      `If the task grew, say so and append a new line with level ${suggested.level}. If the thresholds are wrong for this repo, tune .harness/doctor.yml.`);
+      `If the task grew, say so and append a new line with level ${suggested.level}. If the thresholds are wrong for this repo, tune .reins/doctor.yml.`);
   }
   return out;
 }

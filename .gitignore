@@ -2,13 +2,13 @@ node_modules/
 *.tgz
 coverage/
 .DS_Store
-# local harness state (outside git by design)
-.harness/backlog/
-.harness/progress/
+# local reins state (outside git by design)
+.reins/backlog/
+.reins/progress/
 .tarballs/
 packages/cli/templates/
 packages/*/LICENSE
 packages/adapters/*/LICENSE
 
-# harness: local state (not shared)
-.harness/init-report.md
+# reins: local state (not shared)
+.reins/init-report.md

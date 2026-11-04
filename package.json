@@ -1,10 +1,10 @@
 {
-  "name": "harness-monorepo",
+  "name": "reins-monorepo",
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
-  "description": "Harness for coding agents: deterministic architecture check + portable markdown content.",
+  "description": "reins: architecture checks and memory for coding agents (deterministic check + portable markdown content).",
   "engines": {
     "node": ">=22"
   },
@@ -15,11 +15,11 @@
     "pack:all": "node scripts/pack.mjs",
     "self-check": "node scripts/self-check.mjs",
     "prepare": "husky",
-    "harness:check": "harness check"
+    "reins:check": "reins check"
   },
   "devDependencies": {
-    "@harness/adapter-js": "workspace:*",
-    "@harness/cli": "workspace:*",
+    "@reins/adapter-js": "workspace:*",
+    "reins": "workspace:*",
     "husky": "^9.1.7"
   }
 }

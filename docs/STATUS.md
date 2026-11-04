@@ -19,7 +19,7 @@ Version 0.1.0, not published. Nothing is measured yet: the [pilot](team-adoption
 | Git pre-commit hook and CI job running `check` | templates + `install` | stable | Yes (phase 8); hook and CI steps verified end to end locally; not yet run on GitHub |
 | `doctor` | core + cli | experimental | Yes (phase 5), tested with simulated logs, notebooks and diffs |
 | `sync`, `notes`, `scope` | cli | experimental | Yes (phase 6), tested; notes hook verified with Claude Code (2/2) |
-| Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `@harness/cli` |
+| Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `reins` |
 | Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
@@ -35,6 +35,6 @@ Version 0.1.0, not published. Nothing is measured yet: the [pilot](team-adoption
 | `scripts/lint.mjs` (syntax, import boundaries, AGENTS.md rules, mermaid diagrams GitHub can render, package metadata) | stable, tested |
 | `scripts/rename-scope.mjs` | stable, tested |
 | `scripts/pack.mjs` (`pnpm pack:all`) | used by the end-to-end scripts in `scripts/verify/` |
-| `scripts/self-check.mjs` (`pnpm self-check`) | stable; in CI; checks this repo with dependency-cruiser alone and with `harness check` |
-| `.harness/architecture.yml` of this repo | `cli` > `adapters` > `core`, no cycles, adapters use only the core contract |
+| `scripts/self-check.mjs` (`pnpm self-check`) | stable; in CI; checks this repo with dependency-cruiser alone and with `reins check` |
+| `.reins/architecture.yml` of this repo | `cli` > `adapters` > `core`, no cycles, adapters use only the core contract |
 | `.github/workflows/ci.yml` | written, never run on GitHub |

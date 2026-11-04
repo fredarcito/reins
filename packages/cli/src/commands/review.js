@@ -1,14 +1,14 @@
-// harness review: builds a review prompt (diff + checklist + notes) and prints it, so any agent can use it.
+// reins review: builds a review prompt (diff + checklist + notes) and prints it, so any agent can use it.
 // It never calls an API. Executors are the extension point: today only "print" exists; a future executor
 // (an API call, a local model) receives the same prompt.
 import { execFileSync } from 'node:child_process';
-import { notesFor } from '@harness/core';
+import { notesFor } from '@reins/core';
 import { CliError, isGitRepo } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate } from '../templates.js';
 import { pickBaseRef } from './check.js';
 
-export const CHECKLIST_FILE = '.harness/review/checklist.md';
+export const CHECKLIST_FILE = '.reins/review/checklist.md';
 const DEFAULT_MAX_BYTES = 200_000;
 
 /**
@@ -25,7 +25,7 @@ export const options = {
   'max-bytes': { type: 'string' },
 };
 
-export const help = `Usage: harness review [--base <ref>] [--max-bytes <n>] [--executor print]
+export const help = `Usage: reins review [--base <ref>] [--max-bytes <n>] [--executor print]
 
 Builds a review prompt with the diff of this branch (committed and uncommitted, untracked files included),
 ${CHECKLIST_FILE} and the module notes of the touched paths, and prints it. Paste it into any agent, or pipe it.
@@ -71,7 +71,7 @@ export async function review(ctx) {
   if (!executor) throw new CliError(`Unknown executor "${values.executor}". Available: ${Object.keys(EXECUTORS).join(', ')}.`);
   const maxBytes = values['max-bytes'] === undefined ? DEFAULT_MAX_BYTES : Number(values['max-bytes']);
   if (!Number.isInteger(maxBytes) || maxBytes < 1000) throw new CliError('--max-bytes must be a whole number ≥ 1000.');
-  if (!isGitRepo(root)) throw new CliError('harness review needs a git repository.');
+  if (!isGitRepo(root)) throw new CliError('reins review needs a git repository.');
   if (values.base) {
     try {
       git(root, ['rev-parse', '--verify', '--quiet', `${values.base}^{commit}`]);
@@ -82,7 +82,7 @@ export async function review(ctx) {
 
   const baseRef = pickBaseRef(root, values.base, ctx.env);
   const base = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : 'HEAD';
-  const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n').filter((f) => f && !f.startsWith('.harness/progress/') && !f.startsWith('.harness/backlog/'));
+  const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n').filter((f) => f && !f.startsWith('.reins/progress/') && !f.startsWith('.reins/backlog/'));
   let diff = git(root, ['diff', base]);
   for (const f of untracked) {
     try {

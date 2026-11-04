@@ -1,5 +1,5 @@
 {
-  "name": "@harness/cli",
+  "name": "reins",
   "version": "0.1.0",
   "license": "MIT",
   "files": [
@@ -7,10 +7,10 @@
     "templates",
     "LICENSE"
   ],
-  "description": "Command line for the harness: init, check, doctor, sync and friends.",
+  "description": "Command line for reins: init, check, doctor, sync and friends.",
   "type": "module",
   "bin": {
-    "harness": "./src/bin.js"
+    "reins": "./src/bin.js"
   },
   "exports": {
     ".": "./src/main.js",
@@ -20,15 +20,27 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@harness/core": "workspace:^",
+    "@reins/core": "workspace:^",
     "yaml": "^2.9.1"
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
-    "prepack": "node -e \"require('fs').cpSync('../../templates','templates',{recursive:true})\"",
+    "prepack": "node -e \"require('fs').copyFileSync('../../LICENSE','LICENSE');require('fs').cpSync('../../templates','templates',{recursive:true})\"",
     "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "@harness/adapter-js": "workspace:^"
+    "@reins/adapter-js": "workspace:^"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fredarcito/harness.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/fredarcito/harness#readme",
+  "bugs": {
+    "url": "https://github.com/fredarcito/harness/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

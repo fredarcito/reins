@@ -70,7 +70,7 @@ export function draftNote({ name, paths, publicApi, summary, date }) {
     `paths: ${JSON.stringify(paths)}`,
     '---',
     `# ${name}`,
-    `<!-- Drafted by harness notes new on ${date}. Replace every TODO line; keep the note short (it is read whenever an agent works here). -->`,
+    `<!-- Drafted by reins notes new on ${date}. Replace every TODO line; keep the note short (it is read whenever an agent works here). -->`,
     '',
     '## Purpose',
     'TODO: what this module does and for whom, in one or two lines.',
