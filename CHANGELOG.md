@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Renamed to reins.** CLI package and command `reins` (`npx reins check`, no `--no-install` needed), `@agentreins/core`, `@agentreins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`. Entries below use the new names.
+- **Renamed to reins.** packages `@agentreins/cli` (command `reins`: `npx reins check`, no `--no-install` needed), `@agentreins/core`, `@agentreins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`. Entries below use the new names.
 
 ### Experimental (guidance for agents)
 

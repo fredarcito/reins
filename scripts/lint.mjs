@@ -60,12 +60,12 @@ export function lint(root) {
   if (!scope?.startsWith('@')) report('packages', path.join(root, 'packages/core/package.json'), 'core package name must be scoped (@scope/core)');
   for (const p of pkgs) {
     const file = path.join(p.dir, 'package.json');
-    const isCli = p.dir.endsWith(path.join('packages', 'cli'));
-    if (isCli) {
-      // the CLI is unscoped and named like its command, so `npx <command>` can only ever find this package
+    if (scope && !p.json.name.startsWith(`${scope}/`)) report('packages', file, `name "${p.json.name}" does not use scope ${scope}`);
+    if (p.dir.endsWith(path.join('packages', 'cli'))) {
+      // one command, always "reins": docs, templates, hooks and CI call it by that name
       const bins = Object.keys(p.json.bin ?? {});
-      if (bins.length !== 1 || bins[0] !== p.json.name) report('packages', file, `the CLI package must be unscoped and have one bin with its own name (name "${p.json.name}", bin ${bins.join(', ') || 'none'})`);
-    } else if (scope && !p.json.name.startsWith(`${scope}/`)) report('packages', file, `name "${p.json.name}" does not use scope ${scope}`);
+      if (bins.length !== 1 || bins[0] !== 'reins') report('packages', file, `the CLI must have exactly one bin, "reins" (found: ${bins.join(', ') || 'none'})`);
+    }
     // Also required for the syntax check: without it, `node --check` accepts broken ESM in .js files (Node 22).
     if (p.json.type !== 'module') report('packages', file, 'package must declare "type": "module"');
     if (p.dir.includes(path.join('packages', 'adapters'))) {

@@ -14,7 +14,7 @@ const pkg = (dir, extra) => write(dir, 'package.json', JSON.stringify({ name: 'a
 
 function huskyRepo() {
   const dir = exampleRepo('vite-react', { keepReins: false }); // a repo before adopting reins
-  pkg(dir, { devDependencies: { husky: '^9.1.7', 'reins': '^0.1.0' } });
+  pkg(dir, { devDependencies: { husky: '^9.1.7', '@agentreins/cli': '^0.1.0' } });
   mkdirSync(path.join(dir, '.husky'));
   return dir;
 }
@@ -41,7 +41,7 @@ test('husky repo: sources, .gitignore, script, hook, CI workflow and sync, in on
 
   assert.match(r.stdout, /No \.reins\/architecture\.yml yet: run `npx reins init`/);
   assert.match(r.stdout, /protect the main branch/);
-  assert.doesNotMatch(r.stdout, /reins is not in package\.json: install it/);
+  assert.doesNotMatch(r.stdout, /@agentreins\/cli is not in package\.json: install it/);
 });
 
 test('install is idempotent and never overwrites existing files', async () => {
@@ -83,7 +83,7 @@ test('no hook manager: explains what to do, installs nothing', async () => {
   pkg(dir, {});
   const r = await cli(dir, ['install']);
   assert.match(r.stdout, /No Husky or lefthook found, so no git hook was added/);
-  assert.match(r.stdout, /reins is not in package\.json: install it/);
+  assert.match(r.stdout, /@agentreins\/cli is not in package\.json: install it/);
   assert.equal(existsSync(path.join(dir, '.husky')), false);
   assert.equal(existsSync(path.join(dir, 'node_modules')), false);
 });

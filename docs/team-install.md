@@ -1,6 +1,6 @@
 # Installing reins in the team's repos (without publishing)
 
-The packages are not on npm yet. This is how the team installs them anyway, so that **CI can install them too**.
+The packages are on npm (`npm install -D @agentreins/cli @agentreins/adapter-js`). This page is the alternative without a registry: tarballs committed in each repo, so that **CI can install them too**. Useful offline, behind a firewall, or to try a version that is not published yet.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ Verified with npm and pnpm: a fresh clone in another folder installs with `npm c
      "@agentreins/core": "file:vendor/reins/agentreins-core-0.1.0.tgz"
    ```
    ```bash
-   pnpm add -D ./vendor/reins/reins-0.1.0.tgz ./vendor/reins/agentreins-adapter-js-0.1.0.tgz
+   pnpm add -D ./vendor/reins/agentreins-cli-0.1.0.tgz ./vendor/reins/agentreins-adapter-js-0.1.0.tgz
    ```
 
    **yarn**: not tested.
@@ -49,7 +49,7 @@ Unverified. Two common choices:
 
 | Registry | Notes |
 | --- | --- |
-| GitHub Packages (npm) | Not supported as is: GitHub Packages only hosts scoped packages, and the CLI is published unscoped as `reins` so that `npx reins` can only find it. The scope of `core` and the adapters can be the GitHub organization (`pnpm rename-scope @acme`) |
+| GitHub Packages (npm) | The scope must be the GitHub organization: rename it first with `pnpm rename-scope @acme`. Each developer and CI need a token with `read:packages` in `.npmrc` |
 | Verdaccio (self-hosted) | Any scope. Someone has to run and secure the server |
 
 Then `npm publish` from each package folder (never done by an agent), and consumers install with normal version ranges.

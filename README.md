@@ -46,7 +46,7 @@ npx reins check --update-baseline  # after adjusting the plan: freeze today's vi
 npx reins check                    # green; from now on only *new* violations fail
 ```
 
-`reins` is the command of the `reins` package, installed in your repo as a dev dependency. How to get the packages into your repo: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+`reins` is the command of the `@agentreins/cli` package, installed in your repo as a dev dependency. How to get the packages into your repo: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
 ## Contents
 
@@ -230,7 +230,7 @@ TypeScript repos use the `typescript` package they already have. If it's missing
 
 ```mermaid
 flowchart LR
-    cli["reins<br/>reins command"] --> core["@agentreins/core<br/>rules · config · report"]
+    cli["@agentreins/cli<br/>reins command"] --> core["@agentreins/core<br/>rules · config · report"]
     cli -. "loads at runtime<br/>from your project" .-> adapter["@agentreins/adapter-js<br/>Vite · Next"]
     adapter -- "peerDependency<br/>imports only /contract" --> core
 ```
@@ -238,7 +238,7 @@ flowchart LR
 - `core` knows no framework and never imports `cli` or an adapter.
 - Adapters only see `@agentreins/core/contract` (enforced by the `exports` field).
 - Adapters are installed separately; if one is missing, the CLI tells you which one. It never installs anything.
-- `@agentreins` is the npm organization of `core` and the adapters; the CLI is published unscoped as `reins`.
+- `@agentreins` is the npm organization of every package; the command is `reins`.
 
 ## Context between sessions
 
@@ -582,25 +582,21 @@ flowchart LR
 
 ## Installation
 
-Packages are not published yet: the team installs them from tarballs committed in each repo, so CI can install them too. Details, pnpm and alternatives: [`docs/team-install.md`](docs/team-install.md). To just try `init` and `check` first: [`docs/try-it.md`](docs/try-it.md).
+The packages are on npm under `@agentreins`. Without a registry (offline, or a version not published yet), install from tarballs: [`docs/team-install.md`](docs/team-install.md). To just try `init` and `check` on a branch first: [`docs/try-it.md`](docs/try-it.md).
 
 ```bash
-# 1. In reins repo: build the tarballs
-pnpm install && pnpm pack:all
+# 1. Install the CLI and the JavaScript/TypeScript adapter (pnpm: pnpm add -D …)
+npm install -D @agentreins/cli @agentreins/adapter-js
 
-# 2. In your repo: commit them under vendor/reins/ and install them (npm shown; pnpm in team-install.md)
-mkdir -p vendor/reins && cp /path/to/reins/.tarballs/*.tgz vendor/reins/
-npm install -D ./vendor/reins/*.tgz
-
-# 3. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
+# 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
 npx reins install
 
-# 4. Draft the architecture and the module notes, review init-report.md, adjust architecture.yml,
+# 3. Draft the architecture and the module notes, review init-report.md, adjust architecture.yml,
 #    ask your agent to fill in the notes' TODO lines, then freeze today's violations
 npx reins init
 npx reins check --update-baseline
 
-# 5. Check, commit everything, and protect the main branch in GitHub (PR + approval + "reins" job required)
+# 4. Check, commit everything, and protect the main branch in GitHub (PR + approval + "reins" job required)
 npx reins check
 ```
 

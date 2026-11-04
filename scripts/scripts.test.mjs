@@ -19,7 +19,7 @@ function fakeRepo(files) {
 const base = () => ({
   'packages/core/package.json': { name: '@h/core', type: 'module' },
   'packages/core/src/index.js': "export const x = 1;\n",
-  'packages/cli/package.json': { name: 'reins', type: 'module', bin: { reins: './src/bin.js' }, dependencies: { '@h/core': 'workspace:^' } },
+  'packages/cli/package.json': { name: '@h/cli', type: 'module', bin: { reins: './src/bin.js' }, dependencies: { '@h/core': 'workspace:^' } },
   'packages/cli/src/main.js': "import { x } from '@h/core';\nexport default x;\n",
   'packages/adapters/js/package.json': { name: '@h/adapter-js', type: 'module', peerDependencies: { '@h/core': 'workspace:^' }, reins: { contract: 1 } },
   'packages/adapters/js/src/index.js': "import { CONTRACT_VERSION } from '@h/core/contract';\nexport default CONTRACT_VERSION;\n",
@@ -37,7 +37,7 @@ test('lint passes on a clean repo', () => {
 
 test('lint flags core importing the cli and adapters importing core internals', () => {
   const files = base();
-  files['packages/core/src/index.js'] = "import { run } from 'reins';\nexport default run;\n";
+  files['packages/core/src/index.js'] = "import { run } from '@h/cli';\nexport default run;\n";
   files['packages/adapters/js/src/index.js'] = "import x from '@h/core';\nexport default x;\n";
   const rules = lint(fakeRepo(files)).map((p) => `${p.rule}:${p.file}`);
   assert.deepEqual(rules.sort(), [
@@ -49,10 +49,10 @@ test('lint flags core importing the cli and adapters importing core internals', 
 test('lint flags adapter metadata, scope mismatch and syntax errors', () => {
   const files = base();
   files['packages/adapters/js/package.json'] = { name: '@other/adapter-js', dependencies: { '@h/core': '1' } };
-  files['packages/cli/package.json'] = { name: '@h/cli', type: 'module', bin: { reins: './src/bin.js' } };
+  files['packages/cli/package.json'] = { name: '@h/cli', type: 'module', bin: { other: './src/bin.js' } };
   files['packages/cli/src/broken.js'] = 'export const = ;\n';
   const rules = lint(fakeRepo(files)).map((p) => p.rule);
-  assert.equal(rules.filter((r) => r === 'packages').length, 6); // scope, not ESM, no peer, in dependencies, no contract; cli not named like its bin
+  assert.equal(rules.filter((r) => r === 'packages').length, 6); // scope, not ESM, no peer, in dependencies, no contract; cli bin is not "reins"
   assert.ok(rules.includes('syntax'));
 });
 
@@ -78,7 +78,7 @@ test('lint flags mermaid diagrams GitHub would fail to render', () => {
 
 test('renameScope rewrites names and imports, skips history and longer scopes', () => {
   const files = base();
-  files['README.md'] = 'npm i -D reins @h/adapter-js\nnot @h-other/x\n';
+  files['README.md'] = 'npm i -D @h/cli @h/adapter-js\nnot @h-other/x\n';
   files['packages/cli/test/a.test.js'] = 'assert.match(s, /@h\\/adapter-js/);\n';
   files['docs/VERIFIED.md'] = 'tested @h/core\n';
   const root = fakeRepo(files);
@@ -89,7 +89,7 @@ test('renameScope rewrites names and imports, skips history and longer scopes', 
   assert.equal(r.from, '@h');
   assert.equal(JSON.parse(readFileSync(path.join(root, 'packages/core/package.json'), 'utf8')).name, '@acme/core');
   assert.match(readFileSync(path.join(root, 'packages/adapters/js/src/index.js'), 'utf8'), /'@acme\/core\/contract'/);
-  assert.equal(readFileSync(path.join(root, 'README.md'), 'utf8'), 'npm i -D reins @acme/adapter-js\nnot @h-other/x\n');
+  assert.equal(readFileSync(path.join(root, 'README.md'), 'utf8'), 'npm i -D @acme/cli @acme/adapter-js\nnot @h-other/x\n');
   assert.equal(readFileSync(path.join(root, 'docs/VERIFIED.md'), 'utf8'), 'tested @h/core\n');
   assert.equal(readFileSync(path.join(root, 'packages/cli/test/a.test.js'), 'utf8'), 'assert.match(s, /@acme\\/adapter-js/);\n');
   assert.deepEqual(lint(root), []);

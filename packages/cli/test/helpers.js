@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { run } from 'reins';
+import { run } from '@agentreins/cli';
 
 export const cliDir = fileURLToPath(new URL('..', import.meta.url));
 export const examplesDir = fileURLToPath(new URL('../../../examples/', import.meta.url));

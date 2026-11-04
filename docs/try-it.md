@@ -16,7 +16,7 @@ flowchart LR
 
 ```bash
 pnpm install
-pnpm pack:all          # writes .tarballs/reins-<version>.tgz, agentreins-core-<version>.tgz, agentreins-adapter-js-<version>.tgz
+pnpm pack:all          # writes .tarballs/agentreins-{core,cli,adapter-js}-<version>.tgz
 ```
 
 ## 2. Install them in your repo (on a throwaway branch)
@@ -39,7 +39,7 @@ overrides:
 
 ```bash
 git switch -c try-reins
-pnpm add -D /path/to/reins/.tarballs/reins-0.1.0.tgz /path/to/reins/.tarballs/agentreins-adapter-js-0.1.0.tgz
+pnpm add -D /path/to/reins/.tarballs/agentreins-cli-0.1.0.tgz /path/to/reins/.tarballs/agentreins-adapter-js-0.1.0.tgz
 ```
 
 **yarn**: not tested yet.

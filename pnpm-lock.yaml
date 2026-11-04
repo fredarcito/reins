@@ -11,12 +11,12 @@ importers:
       '@agentreins/adapter-js':
         specifier: workspace:*
         version: link:packages/adapters/js
+      '@agentreins/cli':
+        specifier: workspace:*
+        version: link:packages/cli
       husky:
         specifier: ^9.1.7
         version: 9.1.7
-      reins:
-        specifier: workspace:*
-        version: link:packages/cli
 
   packages/adapters/js:
     dependencies:

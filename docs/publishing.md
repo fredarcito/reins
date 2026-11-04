@@ -4,14 +4,14 @@ Three packages, published together with the same version:
 
 | Package | What it is |
 | --- | --- |
-| `reins` | The CLI and the `reins` command. Unscoped on purpose: `npx reins` can only ever find this package |
-| `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of `reins` |
+| `@agentreins/cli` | The CLI and the `reins` command |
+| `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of the CLI |
 | `@agentreins/adapter-js` | JavaScript/TypeScript adapter. Peer of `@agentreins/core` |
 
 Users install them with:
 
 ```bash
-npm install -D reins @agentreins/adapter-js
+npm install -D @agentreins/cli @agentreins/adapter-js
 ```
 
 ## First time
@@ -36,7 +36,7 @@ pnpm -r publish --access public
 
 `pnpm -r publish`:
 
-- publishes in dependency order: `@agentreins/core`, `@agentreins/adapter-js`, then `reins`;
+- publishes in dependency order: `@agentreins/core`, `@agentreins/adapter-js`, then `@agentreins/cli`;
 - replaces every `workspace:^` with the real version;
 - runs each package's `prepack`, which copies `LICENSE` (and, for the CLI, `templates/`) into the package;
 - requires a clean working tree on `main`.
@@ -47,7 +47,7 @@ A published version can't be replaced: if something is wrong, publish a new patc
 
 ```bash
 mkdir /tmp/reins-try && cd /tmp/reins-try && npm init -y
-npm install -D reins @agentreins/adapter-js
+npm install -D @agentreins/cli @agentreins/adapter-js
 npx reins --help
 ```
 

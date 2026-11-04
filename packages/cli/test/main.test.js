@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { run, SCOPE } from 'reins';
+import { run, SCOPE } from '@agentreins/cli';
 import { readFile } from 'node:fs/promises';
 
 const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
@@ -28,6 +28,6 @@ test('unknown command exits non-zero', async () => {
   assert.match(c.io.stderr, /Unknown command: nope/);
 });
 
-test('scope is derived from the dependency on <scope>/core', () => {
-  assert.ok(pkg.dependencies[`${SCOPE}/core`]);
+test('scope is derived from the package name', () => {
+  assert.equal(`${SCOPE}/cli`, pkg.name);
 });

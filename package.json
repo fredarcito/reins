@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@agentreins/adapter-js": "workspace:*",
-    "reins": "workspace:*",
+    "@agentreins/cli": "workspace:*",
     "husky": "^9.1.7"
   }
 }
