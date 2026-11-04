@@ -1,6 +1,6 @@
 {
   "name": "@agentreins/adapter-js",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "files": [
     "src",
@@ -15,7 +15,20 @@
     "./package.json": "./package.json"
   },
   "keywords": [
-    "reins-adapter"
+    "reins-adapter",
+    "reins",
+    "ai",
+    "coding-agents",
+    "claude-code",
+    "architecture",
+    "lint",
+    "dependencies",
+    "monorepo",
+    "javascript",
+    "typescript",
+    "react",
+    "nextjs",
+    "vite"
   ],
   "reins": {
     "contract": 1

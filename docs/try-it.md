@@ -34,12 +34,12 @@ npm install -D /path/to/reins/.tarballs/*.tgz
 
 ```yaml
 overrides:
-  "@agentreins/core": "file:/path/to/reins/.tarballs/agentreins-core-0.2.0.tgz"
+  "@agentreins/core": "file:/path/to/reins/.tarballs/agentreins-core-0.2.1.tgz"
 ```
 
 ```bash
 git switch -c try-reins
-pnpm add -D /path/to/reins/.tarballs/agentreins-cli-0.2.0.tgz /path/to/reins/.tarballs/agentreins-adapter-js-0.2.0.tgz
+pnpm add -D /path/to/reins/.tarballs/agentreins-cli-0.2.1.tgz /path/to/reins/.tarballs/agentreins-adapter-js-0.2.1.tgz
 ```
 
 **yarn**: not tested yet.

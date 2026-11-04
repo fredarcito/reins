@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 · 2026-11-04
+
+- Each package has a README on npm (the CLI carries the full README of the repository) and keywords; links point to `github.com/fredarcito/reins`.
+
 ## 0.2.0 · 2026-11-04
 
 - New skill `/reins-backlog`: what is pending in the backlog, what to do next (checked against the code), add, close or drop items. `AGENTS.md` (template) says where pending work lives.

@@ -1,7 +1,7 @@
 {
   "name": "reins-monorepo",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "license": "MIT",
   "type": "module",
   "description": "reins: architecture checks and memory for coding agents (deterministic check + portable markdown content).",
