@@ -236,9 +236,9 @@ They come from [`VERIFIED.md`](VERIFIED.md). Pending your OK.
 | Name | **reins** (the straps you steer a horse with): the agent pulls, you steer. Chosen by the author among names free on npm on 2026-11-04 (`reins` returned 404 on the registry) | Keeps the harness metaphor and the design's principle: the agent never commits, the person decides. (In old English and in French it also means kidneys; accepted) |
 | Packages | `@agentreins/cli` (command `reins`), `@agentreins/core`, `@agentreins/adapter-js`; third-party adapters `reins-adapter-<x>`. The organization `reins` was taken on npm; `agentreins` (created by the author, free plan) says what the tool is for: reins for agents. `pnpm lint` requires the CLI to have exactly one bin, `reins` | First plan: publish the CLI unscoped as `reins`, so the `npx reins` fallback would be ours. npm refused it on 2026-11-04 (403: "too similar to existing package redis"); that typosquatting rule applies to everyone, so nobody can publish `reins`, and a bare `npx reins` without the CLI installed fails instead of running someone else's code. That is why `--no-install` is still not needed. Running without installing: `npx @agentreins/cli <command>` |
 | Everything else | Folder `.reins/`, markers `<!-- reins:notes:… -->`, generated skills and agents `reins-*`, script `reins:check`, workflow `.github/workflows/reins.yml` with job `reins` (the branch protection check name) | Nobody had adopted it yet: one name everywhere was cheapest now |
+| Repository | Renamed on GitHub from `fredarcito/harness` to `fredarcito/reins` (2026-11-04); GitHub redirects the old URL. The local folder can keep any name | One name everywhere |
 | History | `docs/DESIGN.md` and `docs/VERIFIED.md` keep the old name `harness` (they record the design and the tests as they were) | Rewriting evidence would make it lie |
 
 ## Open
 
-- **GitHub repository name.** Still `fredarcito/harness`; renaming it is the author's call (GitHub redirects the old URL).
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

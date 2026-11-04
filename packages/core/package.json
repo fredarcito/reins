@@ -1,6 +1,6 @@
 {
   "name": "@agentreins/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "files": [
     "src",
@@ -25,12 +25,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fredarcito/harness.git",
+    "url": "git+https://github.com/fredarcito/reins.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/fredarcito/harness#readme",
+  "homepage": "https://github.com/fredarcito/reins#readme",
   "bugs": {
-    "url": "https://github.com/fredarcito/harness/issues"
+    "url": "https://github.com/fredarcito/reins/issues"
   },
   "publishConfig": {
     "access": "public"

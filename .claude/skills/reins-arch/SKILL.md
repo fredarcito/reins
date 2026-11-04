@@ -18,7 +18,7 @@ description: Review the architecture plan in .reins/architecture.yml against the
    - **Domains:** features without a domain, a public API that doesn't exist or exposes internals, domains reaching into each other's internals.
    - **Generated code, fixtures, stories:** candidates for `ignore:`.
    - **`allow:` entries** whose reason no longer holds, and a baseline that isn't shrinking.
-3. What the file accepts: `version`, `adapter`, `preset`, `ignore` (globs left out of the analysis), `layers`, `domains`, `rules`, `allow` (with a `reason`). Unknown keys are errors. Full reference: https://github.com/fredarcito/harness/blob/main/docs/architecture-yml.md
+3. What the file accepts: `version`, `adapter`, `preset`, `ignore` (globs left out of the analysis), `layers`, `domains`, `rules`, `allow` (with a `reason`). Unknown keys are errors. Full reference: https://github.com/fredarcito/reins/blob/main/docs/architecture-yml.md
 4. Rules for proposals:
    - An existing violation stays in the **baseline** by default: it is debt to fix later. Propose `allow:` only when the person says it is a decision, with their reason, never one you make up.
    - Never reorder layers, widen globs or add exceptions just to make `reins check` pass.

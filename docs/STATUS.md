@@ -5,7 +5,7 @@ Each piece is either:
 - **stable**: enforced by a tool and covered by tests.
 - **experimental**: depends on the agent reading or writing files, or on tool behavior that is not verified (see [`VERIFIED.md`](VERIFIED.md)).
 
-Version 0.1.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/adapter-js`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
+Version 0.2.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/adapter-js`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
 
 | Piece | Package | Planned status | Built |
 | --- | --- | --- | --- |
