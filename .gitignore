@@ -9,3 +9,6 @@ coverage/
 packages/cli/templates/
 packages/*/LICENSE
 packages/adapters/*/LICENSE
+
+# harness: local state (not shared)
+.harness/init-report.md

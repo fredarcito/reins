@@ -46,6 +46,7 @@ Next:
 $ npx --no-install harness init
 Wrote .harness/architecture.yml (draft), .harness/baseline.json (3 existing violations frozen) and .harness/init-report.md.
 Layers: app > features > components > shared · Domains: cart, catalog
+Module notes drafted from the code: .harness/notes/cart.md, .harness/notes/catalog.md. Ask your agent to fill in their TODO lines.
 Next: review .harness/init-report.md, adjust .harness/architecture.yml, run `harness check --update-baseline`, then `harness check`.
 ```
 
@@ -127,12 +128,14 @@ Note .harness/notes/cart.md (applies to src/features/cart/**) for src/features/c
 - 2026-11-04: totals are integer cents.
 ```
 
-**Drafting a note from the code** for a module that has none. The import graph fills in the map; the agent (or you) replaces the `TODO` lines with what the code can't say:
+**Module notes.** `init` already drafted one per domain (step 3). For any other folder, `notes new` drafts one; the import graph fills in the map, and the agent (or you) replaces the `TODO` lines with what the code can't say. Ask your agent: *"fill in the TODO lines of the notes in .harness/notes/"*.
 
 ```console
-$ npx --no-install harness notes new cart
-Drafted .harness/notes/cart.md. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run `harness sync` to add it to the AGENTS.md index.
+$ npx --no-install harness notes new src/lib --name shared
+Drafted .harness/notes/shared.md. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run `harness sync` to add it to the AGENTS.md index.
 ```
+
+What `init` drafted for `cart`:
 
 ```markdown
 ## Map

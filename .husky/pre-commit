@@ -1,0 +1,2 @@
+
+sh .harness/hooks/pre-commit.sh

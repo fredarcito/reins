@@ -40,7 +40,8 @@ harness fixes both:
 
 ```bash
 npx --no-install harness install                  # hook, CI job, .gitignore, AGENTS.md, .claude/ (never overwrites anything)
-npx --no-install harness init                     # drafts .harness/architecture.yml + baseline.json + a review report
+npx --no-install harness init                     # drafts architecture.yml, baseline.json, a review report and one note per domain
+# ask your agent: "fill in the TODO lines of the notes in .harness/notes/"
 npx --no-install harness check --update-baseline  # after adjusting the plan: freeze today's violations
 npx --no-install harness check                    # green; from now on only *new* violations fail
 ```
@@ -248,7 +249,7 @@ Two kinds of memory, both plain markdown in `.harness/`:
 | File | `.harness/notes/<module>.md`, **in git** | `.harness/progress/<branch>.md`, local |
 | Lives | As long as the module | As long as the task |
 | Holds | Purpose, map, how it works, decisions with their why, traps | Goal, done criteria, subtasks, next step |
-| Written by | `harness notes new` drafts it; the agent completes it when closing a task | The agent, one line at a time with `harness progress` |
+| Written by | `harness init` drafts one per domain and `harness notes new` one for any folder; the agent fills in and updates it when closing a task | The agent, one line at a time with `harness progress` |
 
 ```mermaid
 flowchart LR
@@ -594,7 +595,8 @@ npm install -D ./vendor/harness/harness-core-0.1.0.tgz ./vendor/harness/harness-
 # 3. Wire it: .harness/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
 npx --no-install harness install
 
-# 4. Draft the architecture, review init-report.md, adjust architecture.yml, freeze today's violations
+# 4. Draft the architecture and the module notes, review init-report.md, adjust architecture.yml,
+#    ask your agent to fill in the notes' TODO lines, then freeze today's violations
 npx --no-install harness init
 npx --no-install harness check --update-baseline
 
@@ -611,7 +613,7 @@ flowchart LR
     install --> sync["harness sync<br/>AGENTS.md · CLAUDE.md · .claude/"]
 ```
 
-`harness install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
+`harness install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`; an existing `AGENTS.md` only gets the notes index block appended at the end), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
 
 Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
 

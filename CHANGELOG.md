@@ -9,6 +9,7 @@
 - Fixed: after a compaction the notes hook stayed silent, because the session id doesn't change.
 - `harness doctor`: `note-missing`, `note-outdated` (medium and large diffs), `note-draft`, `note-size` (`notes.max_lines` in `doctor.yml`, default 60).
 - `close-task` updates the module notes as part of closing.
+- `harness init` drafts a module note per domain that has none; `harness install` appends the notes index block to an existing `AGENTS.md`; `harness notes new --name`.
 
 ## 0.1.0 · 2026-11-04 (not published)
 

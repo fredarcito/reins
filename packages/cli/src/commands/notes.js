@@ -1,11 +1,12 @@
 // harness notes <path…>: prints the module notes that apply to a path.
 // harness notes --hook: the same, as a Claude Code PreToolUse hook (JSON in on stdin, JSON out), at most once
 // per note and session. It never blocks the agent: any problem means "no note".
-import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { draftNote, matchesAny, notesFor, NOTES_DIR, summarizeModule } from '@harness/core';
+import { notesFor, NOTES_DIR } from '@harness/core';
 import { CliError, toRepoPath } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
+import { writeNoteDraft } from '../notes-draft.js';
 import { loadNotes, readDomains } from '../project.js';
 import { analyze } from './check.js';
 
@@ -15,19 +16,21 @@ export const options = {
   hook: { type: 'boolean' },
   json: { type: 'boolean' },
   paths: { type: 'string' },
+  name: { type: 'string' },
   force: { type: 'boolean' },
 };
 export const positionals = true;
 
 export const help = `Usage: harness notes <path…> [--json]
-       harness notes new <domain|folder> [--paths <glob,…>] [--force]
+       harness notes new <domain|folder> [--name <name>] [--paths <glob,…>] [--force]
        harness notes --hook
 
 Prints the module notes (.harness/notes/*.md) whose "paths" match each path.
 
 new     Drafts .harness/notes/<name>.md for a domain of architecture.yml or a folder: the import graph fills in
         the public API, the most imported files, who uses the module and what it depends on; the rest are TODO
-        lines for the agent or a person to fill in. --paths overrides the globs; --force overwrites.
+        lines for the agent or a person to fill in. --name sets the file name (default: the domain or the
+        folder name), --paths overrides the globs, --force overwrites.
 --hook  For the Claude Code PreToolUse hook that harness sync installs: reads the tool call from stdin and
         returns the notes as additional context, once per note and session.`;
 
@@ -44,14 +47,6 @@ function walk(root, rel = '') {
   }
   return out;
 }
-
-/** The group a file outside the module is shown under: its domain, or its first two folders. */
-const labeler = (domains) => (f) => {
-  const d = domains.find((x) => matchesAny(f, x.paths));
-  if (d) return `domain ${d.name}`;
-  const dir = f.split('/').slice(0, -1).slice(0, 2).join('/');
-  return dir || '(root)';
-};
 
 /** harness notes new <domain|folder> */
 async function newNote(ctx, target) {
@@ -77,27 +72,27 @@ async function newNote(ctx, target) {
     api = [`${rel}/index.{js,jsx,ts,tsx}`];
   }
   if (values.paths) paths = values.paths.split(',').map((p) => p.trim()).filter(Boolean);
+  if (values.name) {
+    if (!/^[\w.-]+$/.test(values.name)) throw new CliError(`--name must be a plain file name (letters, digits, ".", "_", "-"), got "${values.name}".`);
+    name = values.name.replace(/\.md$/, '');
+  }
   const file = `${NOTES_DIR}/${name}.md`;
   if (existsSync(path.join(root, file)) && !values.force) {
     throw new CliError(`${file} already exists. Edit it, or pass --force to replace it with a new draft.`);
   }
 
-  let summary = null;
-  let files;
+  let graph = null;
+  let files = [];
   try {
-    const { graph } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
-    files = graph.files;
-    summary = summarizeModule({ paths, files, edges: graph.edges, label: labeler(domains) });
+    graph = (await analyze(root, { searchPaths: ctx.adapterSearchPaths })).graph;
   } catch (e) {
     if (!(e instanceof CliError)) throw e;
     out(`! warning  Could not build the import graph, so the Map only lists the public API: ${e.message.split('\n')[0]}`);
     files = walk(root);
   }
-  const publicApi = files.filter((f) => matchesAny(f, api)).sort();
-  if (!files.some((f) => matchesAny(f, paths))) out(`! warning  No file matches ${paths.join(', ')}.`);
-
-  mkdirSync(path.join(root, NOTES_DIR), { recursive: true });
-  writeFileSync(path.join(root, file), draftNote({ name, paths, publicApi, summary, date: ctx.today ?? new Date().toISOString().slice(0, 10) }));
+  const date = ctx.today ?? new Date().toISOString().slice(0, 10);
+  const r = writeNoteDraft(root, { name, paths, publicApi: api }, graph, files, domains, date, { force: true });
+  if (r.empty) out(`! warning  No file matches ${paths.join(', ')}.`);
   out(`Drafted ${file}. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run \`harness sync\` to add it to the AGENTS.md index.`);
   return 0;
 }

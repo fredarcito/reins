@@ -113,3 +113,14 @@ test('notes new <folder>: works without a domain, and without a graph (no archit
   assert.equal(bad.code, 2);
   assert.match(bad.stderr, /"nope" is not a domain of architecture\.yml nor a folder/);
 });
+
+test('notes new --name: chooses the file name; rejects paths', async () => {
+  const dir = exampleRepo('next-app');
+  const r = await cli(dir, ['notes', 'new', 'src/lib', '--name', 'shared-lib']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Drafted \.harness\/notes\/shared-lib\.md/);
+  assert.match(readFileSync(path.join(dir, '.harness/notes/shared-lib.md'), 'utf8'), /^---\npaths: \["src\/lib\/\*\*"\]\n---\n# shared-lib\n/);
+  const bad = await cli(dir, ['notes', 'new', 'src/lib', '--name', '../x']);
+  assert.equal(bad.code, 2);
+  assert.match(bad.stderr, /--name must be a plain file name/);
+});

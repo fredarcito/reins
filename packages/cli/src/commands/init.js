@@ -1,13 +1,17 @@
-// harness init: scans the repo and drafts .harness/architecture.yml, .harness/baseline.json and a review report.
+// harness init: scans the repo and drafts .harness/architecture.yml, .harness/baseline.json, a review report and
+// one module note per inferred domain that has none.
 // Never overwrites existing files without confirmation (or --force).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline } from '@harness/core';
+import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, NOTES_DIR } from '@harness/core';
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, HARNESS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
 import { inferLayers, inferDomains, findOrphans, hasTypeScript } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
+import { writeNoteDraft } from '../notes-draft.js';
+import { loadNotes } from '../project.js';
+import { MANIFEST_FILE, sync as runSync } from '../sync/index.js';
 
 export const options = {
   preset: { type: 'string' },
@@ -19,6 +23,8 @@ export const help = `Usage: harness init [options]
 
 Scans the repo and drafts .harness/architecture.yml and .harness/baseline.json, plus a report
 (.harness/init-report.md) with the inferred layers, domains, cycles, doubtful dependencies and orphans.
+It also drafts a module note (.harness/notes/<domain>.md) for each domain that has none, with TODO lines
+for your agent to fill in. Existing notes are never touched.
 The draft describes what exists; review it before committing.
 
 Options:
@@ -75,9 +81,17 @@ export async function init(ctx) {
     files: graph.files.length, edges: graph.edges.length, typescript,
   });
 
+  // module notes to draft: one per inferred domain that no note covers yet
+  const existingNotes = loadNotes(root).notes;
+  const toDraft = domains.filter((d) => {
+    const own = graph.files.filter((f) => matchesAny(f, d.paths));
+    return !existsSync(path.join(root, NOTES_DIR, `${d.name}.md`)) && !own.some((f) => notesFor(f, existingNotes).length);
+  });
+
   if (values['dry-run']) {
     out(`--- ${ARCHITECTURE_FILE} (not written)\n${yml}`);
     out(report);
+    if (toDraft.length) out(`Would draft module notes: ${toDraft.map((d) => `${NOTES_DIR}/${d.name}.md`).join(', ')}`);
     return 0;
   }
 
@@ -95,12 +109,16 @@ export async function init(ctx) {
   writeFileSync(path.join(root, ARCHITECTURE_FILE), yml);
   writeFileSync(path.join(root, BASELINE_FILE), baseline);
   writeFileSync(path.join(root, INIT_REPORT_FILE), report);
+  const drafted = toDraft.map((d) => writeNoteDraft(root, { name: d.name, paths: d.paths, publicApi: d.publicApi }, analysis.graph, [], domains, date).file);
+  // once harness install has run, keep the AGENTS.md notes index in step with the new notes
+  if (drafted.length && existsSync(path.join(root, MANIFEST_FILE))) runSync(root);
 
   const s = result.violations.length;
   out(
     [
       `Wrote ${ARCHITECTURE_FILE} (draft), ${BASELINE_FILE} (${s} existing violation${s === 1 ? '' : 's'} frozen) and ${INIT_REPORT_FILE}.`,
       `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains: ${domains.map((x) => x.name).join(', ') || 'none'}`,
+      ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines.`] : []),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
       `Next: review ${INIT_REPORT_FILE}, adjust ${ARCHITECTURE_FILE}, run \`harness check --update-baseline\`, then \`harness check\`.`,
     ].join('\n'),

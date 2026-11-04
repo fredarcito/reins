@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, tempDir } from './helpers.js';
 
@@ -99,4 +99,20 @@ test('--preset is validated', async () => {
   const r = await cli(dir, ['init', '--preset', 'remix']);
   assert.equal(r.code, 2);
   assert.match(r.stderr, /Unknown preset "remix" .+available: vite-react, next-app, next-pages/);
+});
+
+test('init drafts one module note per domain without one, never touching existing notes', async () => {
+  const dir = exampleRepo('vite-react', { keepHarness: false });
+  mkdirSync(path.join(dir, '.harness/notes'), { recursive: true });
+  writeFileSync(path.join(dir, '.harness/notes/shop-cart.md'), '---\npaths: ["src/features/cart/**"]\n---\nmine\n');
+  const dry = await cli(dir, ['init', '--dry-run']);
+  assert.match(dry.stdout, /Would draft module notes: \.harness\/notes\/catalog\.md$/m);
+  assert.equal(existsSync(path.join(dir, '.harness/notes/catalog.md')), false, 'dry run writes nothing');
+
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Module notes drafted from the code: \.harness\/notes\/catalog\.md\. Ask your agent to fill in their TODO lines\./);
+  assert.match(readFileSync(path.join(dir, '.harness/notes/catalog.md'), 'utf8'), /^---\npaths: \["src\/features\/catalog\/\*\*"\]\n---\n# catalog\n[\s\S]*## Map\n- Public API: `src\/features\/catalog\/index\.js`/);
+  assert.equal(existsSync(path.join(dir, '.harness/notes/cart.md')), false, 'cart already has a note under another name');
+  assert.equal(readFileSync(path.join(dir, '.harness/notes/shop-cart.md'), 'utf8'), '---\npaths: ["src/features/cart/**"]\n---\nmine\n');
 });

@@ -13,10 +13,13 @@
     "lint": "node scripts/lint.mjs",
     "rename-scope": "node scripts/rename-scope.mjs",
     "pack:all": "node scripts/pack.mjs",
-    "self-check": "node scripts/self-check.mjs"
+    "self-check": "node scripts/self-check.mjs",
+    "prepare": "husky",
+    "harness:check": "harness check"
   },
   "devDependencies": {
     "@harness/adapter-js": "workspace:*",
-    "@harness/cli": "workspace:*"
+    "@harness/cli": "workspace:*",
+    "husky": "^9.1.7"
   }
 }

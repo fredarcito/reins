@@ -6,7 +6,8 @@
 //   3. a package.json script
 //   4. the pre-commit hook through the hook manager the repo already uses (Husky or lefthook)
 //   5. .github/workflows/harness.yml running only `harness check`
-//   6. harness sync (AGENTS.md, CLAUDE.md, .claude/)
+//   6. the notes index block at the end of an existing AGENTS.md that has none
+//   7. harness sync (AGENTS.md, CLAUDE.md, .claude/)
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -14,7 +15,7 @@ import { parseDocument } from 'yaml';
 import { ARCHITECTURE_FILE, CliError } from '../context.js';
 import { readText } from '../project.js';
 import { templatesDir, readTemplate } from '../templates.js';
-import { sync as runSync } from '../sync/index.js';
+import { NOTES_BLOCK_RE, NOTES_BLOCK_SECTION, sync as runSync } from '../sync/index.js';
 
 export const options = {
   'dry-run': { type: 'boolean' },
@@ -31,6 +32,7 @@ Wires the harness into this repo, additively (existing files are never overwritt
   - a "harness:check" script in package.json
   - the pre-commit hook in Husky (.husky/pre-commit) or lefthook (lefthook.yml), whichever the repo uses
   - .github/workflows/harness.yml running only \`harness check\` (--force overwrites it)
+  - the module notes index block at the end of an existing AGENTS.md that has none
   - harness sync (AGENTS.md, CLAUDE.md, .claude/)
 It never installs packages. Run \`harness init\` afterwards if there is no architecture.yml yet.`;
 
@@ -196,7 +198,14 @@ export function installInto(root, opts = {}) {
     actions.push(`CI workflow: wrote ${WORKFLOW_FILE} (${packageManager(root)})`);
   }
 
-  // 6. sync
+  // 6. an AGENTS.md the repo already had: append the notes index block if it has none (sync fills it in)
+  const agents = readText(root, 'AGENTS.md');
+  if (agents !== null && !NOTES_BLOCK_RE.test(agents)) {
+    write('AGENTS.md', `${agents}${agents.endsWith('\n') ? '' : '\n'}\n${NOTES_BLOCK_SECTION}`);
+    actions.push('AGENTS.md: appended the module notes index block (kept everything else)');
+  }
+
+  // 7. sync
   if (dry) actions.push('harness sync: would generate AGENTS.md (if missing), CLAUDE.md (if missing) and .claude/');
   else {
     const r = runSync(root);

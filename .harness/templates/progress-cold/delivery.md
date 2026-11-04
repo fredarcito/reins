@@ -1,0 +1,6 @@
+# Delivery · <branch>
+
+- Summary: ...
+- Files touched and why: ...
+- Verification: see verification.md
+- Left uncommitted for review.
