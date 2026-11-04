@@ -1,5 +1,5 @@
 // Computes the dependency graph with dependency-cruiser and returns it in the contract's format.
-import { readdirSync } from 'node:fs';
+import { readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { cruise, getAvailableTranspilers } from 'dependency-cruiser';
 import { matchesAny } from '@harness/core/contract';
@@ -65,11 +65,12 @@ function kindOf(dependencyTypes) {
 
 /**
  * @param {string} repoPath
- * @param {{ preset?: string }} [config] the parsed architecture.yml (only `preset` is used)
+ * @param {{ preset?: string, ignore?: string[] }} [config] the parsed architecture.yml (uses `preset` and `ignore`)
  * @returns {Promise<{ edges: import('@harness/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
  */
 export async function graph(repoPath, config = {}) {
-  const root = path.resolve(repoPath);
+  // Real path: symlinked workspaces resolve to real paths, which must stay inside the root (macOS /var -> /private/var).
+  const root = realpathSync(path.resolve(repoPath));
   assertTypeScriptAvailable(root);
   const aliases = readAliases(root);
   const warnings = [...aliases.warnings];
@@ -82,12 +83,17 @@ export async function graph(repoPath, config = {}) {
       exclude: { path: EXCLUDE },
       doNotFollow: { path: 'node_modules' },
       tsPreCompilationDeps: true,
+      // Packages that only declare "exports" (e.g. workspace packages in a monorepo) don't resolve without this,
+      // and their edges would disappear. Symlinked workspaces resolve to their real path inside the repo.
+      enhancedResolveOptions: { exportsFields: ['exports'], conditionNames: ['import', 'require', 'node', 'default', 'types'] },
     },
     { alias: aliases.alias, modules: [...aliases.modules, 'node_modules'] },
   );
   const output = /** @type {import('dependency-cruiser').ICruiseResult} */ (result.output);
 
-  const isLocalFile = (m) => !m.coreModule && !m.couldNotResolve && !/(^|\/)node_modules\//.test(m.source);
+  const ignore = config.ignore ?? [];
+  const ignored = (f) => ignore.length > 0 && matchesAny(f, ignore);
+  const isLocalFile = (m) => !m.coreModule && !m.couldNotResolve && !/(^|\/)node_modules\//.test(m.source) && !ignored(toPosix(m.source));
   const files = output.modules.filter(isLocalFile).map((m) => toPosix(m.source)).sort();
   const edges = [];
   const unresolved = [];
@@ -100,6 +106,7 @@ export async function graph(repoPath, config = {}) {
         continue;
       }
       if (/(^|\/)node_modules\//.test(d.resolved)) continue;
+      if (ignored(toPosix(d.resolved))) continue;
       edges.push({ from: toPosix(m.source), to: toPosix(d.resolved), kind: kindOf(d.dependencyTypes) });
     }
   }

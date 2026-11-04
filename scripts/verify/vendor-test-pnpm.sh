@@ -9,8 +9,8 @@ cp -R "$R/examples/vite-react" app && cd app
 printf 'node_modules/\n' > .gitignore
 echo '{ "name": "v", "private": true, "type": "module" }' > package.json
 mkdir -p vendor/harness && cp "$R"/.tarballs/*.tgz vendor/harness/
-printf "overrides:\n  \"@harness/core\": \"file:vendor/harness/harness-core-0.0.0.tgz\"\n" > pnpm-workspace.yaml
-pnpm add -D ./vendor/harness/harness-cli-0.0.0.tgz ./vendor/harness/harness-adapter-js-0.0.0.tgz >/dev/null 2>&1; echo "pnpm add exit=$?"
+printf "overrides:\n  \"@harness/core\": \"file:%s\"\n" "$(ls vendor/harness/harness-core-*.tgz)" > pnpm-workspace.yaml
+pnpm add -D ./vendor/harness/harness-cli-*.tgz ./vendor/harness/harness-adapter-js-*.tgz >/dev/null 2>&1; echo "pnpm add exit=$?"
 grep -E '"@harness/cli"' package.json
 npx harness check --update-baseline >/dev/null
 git init -q -b main && git add -A && git -c user.email=a@b -c user.name=a commit -qm v

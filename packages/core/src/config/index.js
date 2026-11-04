@@ -14,7 +14,7 @@ const DEFAULT_SEVERITY_WHEN_NO_RULES = { 'layer-direction': 'error', 'domain-bou
 /** `integrity` is on unless turned off explicitly; the other rules must be listed. */
 const DEFAULT_SEVERITY_WHEN_UNLISTED = { integrity: 'warn' };
 
-const TOP_KEYS = ['version', 'adapter', 'preset', 'layers', 'domains', 'rules', 'allow'];
+const TOP_KEYS = ['version', 'adapter', 'preset', 'ignore', 'layers', 'domains', 'rules', 'allow'];
 const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'];
 
 /**
@@ -26,6 +26,7 @@ const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'
  * @property {number} version
  * @property {string} adapter
  * @property {string} [preset]
+ * @property {string[]} ignore  globs of files left out of the analysis (generated code, fixtures…)
  * @property {Layer[]} layers   ordered from top (may import anything below) to bottom
  * @property {Domain[]} domains
  * @property {Record<string, RuleConfig>} rules
@@ -62,6 +63,7 @@ export function validateConfig(raw, opts = {}) {
   if (raw.version !== CONFIG_VERSION) p(`version: expected ${CONFIG_VERSION}, got ${JSON.stringify(raw.version)}`);
   if (typeof raw.adapter !== 'string' || !raw.adapter) p('adapter: required, e.g. "adapter: js"');
   if (raw.preset !== undefined && (typeof raw.preset !== 'string' || !raw.preset)) p('preset: must be a string');
+  if (raw.ignore !== undefined && !isStrList(raw.ignore)) p('ignore: expected a non-empty list of globs, e.g. ["src/generated/**"]');
 
   /** @type {Layer[]} */
   const layers = [];
@@ -151,7 +153,7 @@ export function validateConfig(raw, opts = {}) {
 
   if (problems.length) return { config: null, problems };
   return {
-    config: { version: raw.version, adapter: raw.adapter, ...(raw.preset ? { preset: raw.preset } : {}), layers, domains, rules, allow },
+    config: { version: raw.version, adapter: raw.adapter, ...(raw.preset ? { preset: raw.preset } : {}), ignore: isStrList(raw.ignore) ? raw.ignore : [], layers, domains, rules, allow },
     problems,
   };
 }

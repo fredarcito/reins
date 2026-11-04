@@ -31,8 +31,12 @@ export function parseTriageLog(text) {
   return { entries, malformed };
 }
 
+/** Agent instructions and generated tool files: they change with the work but are not "files of the task". */
+export const isHarnessFile = (f) => /^(\.harness|\.claude)\//.test(f) || f === 'AGENTS.md' || f === 'CLAUDE.md';
+
 /**
- * Objective signals of a set of changed files.
+ * Objective signals of a set of changed files. Harness and agent files (.harness/, .claude/, AGENTS.md, CLAUDE.md)
+ * don't count as files or domains; touching architecture.yml is reported on its own.
  * @param {string[]} files repo-relative changed files
  * @param {{ name: string, paths: string[], publicApi: string[] }[]} domains from architecture.yml
  * @param {string} architectureFile repo-relative path of architecture.yml
@@ -40,13 +44,14 @@ export function parseTriageLog(text) {
 export function scopeSignals(files, domains, architectureFile) {
   const touched = new Set();
   const publicApi = [];
-  for (const f of files) {
+  const counted = files.filter((f) => !isHarnessFile(f));
+  for (const f of counted) {
     const d = domains.find((x) => matchesAny(f, x.paths));
     if (!d) continue;
     touched.add(d.name);
     if (matchesAny(f, d.publicApi)) publicApi.push(f);
   }
-  return { files: files.length, domains: [...touched].sort(), publicApi, architecture: files.includes(architectureFile) };
+  return { files: counted.length, domains: [...touched].sort(), publicApi, architecture: files.includes(architectureFile) };
 }
 
 /**
@@ -83,7 +88,7 @@ export function checkTriage({ branch, changedFiles, log, logFile, signals, thres
     add('triage-missing', `malformed|${m.line}`, `${logFile} line ${m.line} can't be read: "${m.text}".`,
       'Use one line per task: `YYYY-MM-DD | branch | small|medium|large | reason`.');
   }
-  if (!changedFiles.length) return out;
+  if (!signals.files && !signals.architecture) return out; // nothing but notes, notebook or generated files changed
   const mine = (log?.entries ?? []).filter((e) => e.branch === branch);
   if (!mine.length) {
     add('triage-missing', branch, `Branch ${branch} has ${changedFiles.length} changed file(s) but no line in ${logFile}.`,

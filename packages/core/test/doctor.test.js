@@ -82,6 +82,15 @@ test('malformed triage lines are reported even without a diff', () => {
   assert.deepEqual(rules(doctor({ triageLog: { file: LOG, text: 'oops\n' } })), ['triage-missing']);
 });
 
+test('harness and agent files do not count as task files; architecture.yml still does', () => {
+  const harnessOnly = ['AGENTS.md', '.harness/notes/cart.md', '.harness/.generated.json', '.claude/skills/harness-audit/SKILL.md'];
+  assert.deepEqual(rules(doctor({ changedFiles: harnessOnly })), [], 'only notes and generated files: no triage needed');
+  const r = doctor({ changedFiles: [...harnessOnly, 'src/a.js'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | one file\n' } });
+  assert.deepEqual(rules(r), [], '1 code file is small, whatever else changed');
+  assert.equal(scopeSignals([...harnessOnly, ARCH], domains, ARCH).architecture, true);
+  assert.deepEqual(rules(doctor({ changedFiles: [ARCH] })), ['triage-missing']);
+});
+
 test('agents-size', () => {
   const long = Array.from({ length: 31 }, (_, i) => `line ${i}`).join('\n') + '\n\n';
   assert.deepEqual(rules(doctor({ agentsMd: { file: 'AGENTS.md', text: long } })), ['agents-size']);

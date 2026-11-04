@@ -51,3 +51,28 @@ test('TypeScript files without the typescript package fail loudly instead of bei
   writeFileSync(path.join(js, 'types.d.ts'), 'export {};');
   assert.equal(typeScriptProblem(js, false), null, 'plain JS projects (even with .d.ts files) need no TypeScript');
 });
+
+test('monorepo workspaces: imports of "exports"-only packages resolve to their real path (regression)', async () => {
+  const { mkdirSync, symlinkSync } = await import('node:fs');
+  const ws = mkdtempSync(path.join(tmpdir(), 'harness-ws-'));
+  const w = (f, t) => {
+    mkdirSync(path.dirname(path.join(ws, f)), { recursive: true });
+    writeFileSync(path.join(ws, f), t);
+  };
+  w('package.json', '{ "private": true }');
+  w('packages/lib/package.json', JSON.stringify({ name: '@w/lib', type: 'module', exports: { '.': './src/index.js', './sub': './src/sub.js' } }));
+  w('packages/lib/src/index.js', 'export const a = 1;\n');
+  w('packages/lib/src/sub.js', 'export const b = 1;\n');
+  w('packages/app/src/main.js', "import { a } from '@w/lib';\nimport { b } from '@w/lib/sub';\nexport default [a, b];\n");
+  mkdirSync(path.join(ws, 'packages/app/node_modules/@w'), { recursive: true });
+  symlinkSync('../../../lib', path.join(ws, 'packages/app/node_modules/@w/lib')); // what pnpm/npm workspaces do
+  const r = await graph(ws, {});
+  assert.deepEqual(edgesOf(r), ['static packages/app/src/main.js -> packages/lib/src/index.js', 'static packages/app/src/main.js -> packages/lib/src/sub.js']);
+});
+
+test('ignore: files matching architecture.yml "ignore" leave the graph, warnings included', async () => {
+  const r = await graph(path.join(fixtures, 'vite-alias-array'), { ignore: ['src/main.js'] });
+  assert.deepEqual(r.edges, []);
+  assert.ok(!r.files.includes('src/main.js'));
+  assert.ok(!r.warnings.some((w) => w.includes('could not be resolved')));
+});

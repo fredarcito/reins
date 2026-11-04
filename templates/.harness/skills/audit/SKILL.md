@@ -6,10 +6,10 @@ description: Audit the project, or one domain, for optimizations and keep the fi
 
 The backlog is `.harness/backlog/optimizations.md` (local, outside git). Never start from zero.
 
-1. `npx harness audit list` to see what is already recorded.
-2. **Re-verify every `open` item against the current code.** If it was fixed, `npx harness audit set <id> done "<how>"`. If it no longer applies, `npx harness audit set <id> wontfix "<reason>"`.
-3. Audit the scope you were given. Prefer one domain at a time (`npx harness scope <folder>` shows domains and notes); it costs fewer tokens.
-4. Add only **new** findings: `npx harness audit add "<path>" "<finding and suggested fix>"`. Don't repeat recorded ones, including `wontfix`.
+1. `npx --no-install harness audit list` to see what is already recorded.
+2. **Re-verify every `open` item against the current code.** If it was fixed, `npx --no-install harness audit set <id> done "<how>"`. If it no longer applies, `npx --no-install harness audit set <id> wontfix "<reason>"`.
+3. Audit the scope you were given. Prefer one domain at a time (`npx --no-install harness scope <folder>` shows domains and notes); it costs fewer tokens.
+4. Add only **new** findings: `npx --no-install harness audit add "<path>" "<finding and suggested fix>"`. Don't repeat recorded ones, including `wontfix`.
 5. Don't fix anything during the audit unless asked.
 6. A `wontfix` with a durable reason belongs in the module note (`.harness/notes/`), so nobody proposes it again.
 7. Reply with: new findings, re-verified items and their new status, and what you did not audit.

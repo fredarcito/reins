@@ -136,3 +136,11 @@ test('extra violations (integrity) are never baselined', () => {
   assert.equal(r.ok, false);
   assert.equal(createBaseline([integrity]).violations.length, 0);
 });
+
+test('ignore: edges touching ignored files are not checked; invalid ignore is reported', () => {
+  const cfg = parseConfig(yml.replace('preset: next-app', 'preset: next-app\nignore: ["src/lib/**"]'));
+  assert.deepEqual(cfg.ignore, ['src/lib/**']);
+  assert.ok(!evaluate(edges, cfg).some((v) => v.rule === 'no-cycles'));
+  assert.deepEqual(parseConfig(yml).ignore, []);
+  assert.throws(() => parseConfig(yml.replace('preset: next-app', 'preset: next-app\nignore: "src/**"')), /ignore: expected a non-empty list of globs/);
+});

@@ -11,7 +11,7 @@ tools: [Read, Grep, Glob, Bash]
 **When:** at the end of a large task (see `.harness/policies/multiagent.md`) or when the person asks for a review.
 
 **How:**
-1. `git diff` and `git status` to see the change; `npx harness check` for the architecture result.
+1. `git diff` and `git status` to see the change; `npx --no-install harness check` for the architecture result.
 2. Go through `.harness/review/checklist.md`, item by item.
 3. Read the notes in `.harness/notes/` for the paths the diff touches.
 

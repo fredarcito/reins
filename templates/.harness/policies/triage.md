@@ -16,5 +16,5 @@ Every task gets a level before acting. You decide with your judgment and this po
   `YYYY-MM-DD | <branch> | small|medium|large | <reason>`
   `harness doctor` compares it with the diff.
 - **When in doubt:** pick the lower level and say so ("medium, but could be large if another domain shows up").
-- **Objective signals:** `npx harness scope <paths>` prints the domains, notes and minimum level: 1 domain and ≤ 3 files = small; 1 domain and more files = medium; 2+ domains, a public API or `architecture.yml` = large.
+- **Objective signals:** `npx --no-install harness scope <paths>` prints the domains, notes and minimum level: 1 domain and ≤ 3 files = small; 1 domain and more files = medium; 2+ domains, a public API or `architecture.yml` = large.
 - **Escalate mid-task:** stop and propose a higher level if a second domain appears, the thresholds are exceeded, you need to change a public API, a rule or the baseline, or `harness check` fails for something unexpected. Append a new line to `triage.log`. Don't escalate "just in case".

@@ -10,6 +10,7 @@ Location in a consumer repo: `.harness/architecture.yml`.
 version: 1            # required, always 1 for now
 adapter: js           # required: which language adapter computes the graph
 preset: next-app      # optional: vite-react | next-app | next-pages (adapter presets)
+ignore: ["src/generated/**"]   # optional: files left out of the analysis
 
 layers:               # ordered from TOP to BOTTOM
   - { name: pages,      paths: ["src/app/**"] }
@@ -39,6 +40,7 @@ allow:
 | `version` | yes | Format version. Must be `1` |
 | `adapter` | yes | Adapter name. The CLI looks for `@harness/adapter-<name>`, then `harness-adapter-<name>` |
 | `preset` | no | Preset of the adapter |
+| `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |
 | `domains` | no | Map of name → `{ paths, public_api }` |
 | `rules` | no | List of `{ id, severity, message?, fix?, ignore_kinds?, options? }` |

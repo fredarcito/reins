@@ -5,7 +5,7 @@ Each piece is either:
 - **stable**: enforced by a tool and covered by tests.
 - **experimental**: depends on the agent reading or writing files, or on tool behavior that is not verified (see [`VERIFIED.md`](VERIFIED.md)).
 
-Nothing here is measured. The design is a design, not a proven product.
+Version 0.1.0, not published. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
 
 | Piece | Package | Planned status | Built |
 | --- | --- | --- | --- |
@@ -32,4 +32,6 @@ Nothing here is measured. The design is a design, not a proven product.
 | `scripts/lint.mjs` (syntax, import boundaries, AGENTS.md rules, mermaid diagrams GitHub can render, package metadata) | stable, tested |
 | `scripts/rename-scope.mjs` | stable, tested |
 | `scripts/pack.mjs` (`pnpm pack:all`) | used by the end-to-end scripts in `scripts/verify/` |
+| `scripts/self-check.mjs` (`pnpm self-check`) | stable; in CI; checks this repo with dependency-cruiser alone and with `harness check` |
+| `.harness/architecture.yml` of this repo | `cli` > `adapters` > `core`, no cycles, adapters use only the core contract |
 | `.github/workflows/ci.yml` | written, never run on GitHub |

@@ -4,6 +4,7 @@ import * as layerDirection from './rules/layer-direction.js';
 import * as domainBoundary from './rules/domain-boundary.js';
 import * as noCycles from './rules/no-cycles.js';
 import { mergeEdges, cmp } from './shared.js';
+import { matchesAny } from '../glob.js';
 
 export const RULES = Object.freeze([layerDirection, domainBoundary, noCycles]);
 
@@ -24,7 +25,9 @@ export const RULES = Object.freeze([layerDirection, domainBoundary, noCycles]);
  * @returns {import('./shared.js').Violation[]}
  */
 export function evaluate(edges, config) {
-  const merged = mergeEdges(edges);
+  const ignore = config.ignore ?? [];
+  const kept = ignore.length ? edges.filter((e) => !matchesAny(e.from, ignore) && !matchesAny(e.to, ignore)) : edges;
+  const merged = mergeEdges(kept);
   return RULES.flatMap((r) => r.run(merged, config));
 }
 

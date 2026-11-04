@@ -13,13 +13,13 @@ It does two things:
 ## Quick start
 
 ```bash
-npx harness install                  # hook, CI job, .gitignore, AGENTS.md, .claude/ (never overwrites anything)
-npx harness init                     # drafts .harness/architecture.yml + baseline.json + a review report
-npx harness check --update-baseline  # after adjusting the plan: freeze today's violations
-npx harness check                    # green; from now on only *new* violations fail
+npx --no-install harness install                  # hook, CI job, .gitignore, AGENTS.md, .claude/ (never overwrites anything)
+npx --no-install harness init                     # drafts .harness/architecture.yml + baseline.json + a review report
+npx --no-install harness check --update-baseline  # after adjusting the plan: freeze today's violations
+npx --no-install harness check                    # green; from now on only *new* violations fail
 ```
 
-How to get the packages into your repo (they aren't on npm yet): [Installation](#installation).
+`harness` is the command of the `@harness/cli` package, installed in your repo as a dev dependency. How to get the packages into your repo (they aren't on npm yet): [Installation](#installation). Always use `--no-install`: an unrelated public npm package is also called `harness`, and without the flag `npx` would offer to download it. A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
 ## Contents
 
@@ -484,17 +484,17 @@ pnpm install && pnpm pack:all
 
 # 2. In your repo: commit them under vendor/harness/ and install them (npm shown; pnpm in team-install.md)
 mkdir -p vendor/harness && cp /path/to/harness/.tarballs/*.tgz vendor/harness/
-npm install -D ./vendor/harness/harness-core-0.0.0.tgz ./vendor/harness/harness-cli-0.0.0.tgz ./vendor/harness/harness-adapter-js-0.0.0.tgz
+npm install -D ./vendor/harness/harness-core-0.1.0.tgz ./vendor/harness/harness-cli-0.1.0.tgz ./vendor/harness/harness-adapter-js-0.1.0.tgz
 
 # 3. Wire it: .harness/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
-npx harness install
+npx --no-install harness install
 
 # 4. Draft the architecture, review init-report.md, adjust architecture.yml, freeze today's violations
-npx harness init
-npx harness check --update-baseline
+npx --no-install harness init
+npx --no-install harness check --update-baseline
 
 # 5. Check, commit everything, and protect the main branch in GitHub (PR + approval + "harness" job required)
-npx harness check
+npx --no-install harness check
 ```
 
 ```mermaid
@@ -517,7 +517,7 @@ flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
     p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
     p4 --> gate{{"Pilot on<br/>team repos"}}
-    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"]:::done --> p8["8 · install"]:::done --> p9["9 · Docs +<br/>self-check"]
+    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"]:::done --> p8["8 · install"]:::done --> p9["9 · Docs +<br/>self-check"]:::done
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
 ```
 
@@ -531,6 +531,7 @@ Requirements: Node ≥ 22, pnpm.
 pnpm install
 pnpm lint      # syntax, import boundaries, AGENTS.md rules, mermaid diagrams, package metadata
 pnpm test      # every package + repo scripts (node:test)
+pnpm self-check # this repo's own architecture, checked by its own harness check (and by dependency-cruiser alone)
 pnpm pack:all  # tarballs in .tarballs/ to install in another repo
 ```
 
@@ -542,11 +543,12 @@ harness/
 │   └── adapters/js/     @harness/adapter-js  Vite + React, Next; uses dependency-cruiser
 ├── templates/           files copied into consumer repos
 ├── examples/            vite-react (JS/JSX), next-app (TS): one test repo per preset
-├── scripts/             lint.mjs, rename-scope.mjs, pack.mjs, verify/ (phase 0 experiments)
-└── docs/                design, decisions, verification log, status
+├── scripts/             lint.mjs, rename-scope.mjs, pack.mjs, self-check.mjs, verify/ (end-to-end scripts)
+├── .harness/            this repo's own architecture.yml: cli > adapters > core
+└── docs/                design, decisions, verification log, status, guides
 ```
 
-Rules for contributors (humans and agents) are in [`AGENTS.md`](AGENTS.md). In short: no commits by agents, everything in English, every new dependency justified in [`docs/DECISIONS.md`](docs/DECISIONS.md).
+How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md). Rules for agents working here: [`AGENTS.md`](AGENTS.md). The repo checks its own architecture with its own `harness check`.
 
 Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `--dry-run`, then `pnpm install`.
 
@@ -554,7 +556,9 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 
 | Document | What's in it |
 | --- | --- |
+| [`docs/walkthrough.md`](docs/walkthrough.md) | Full tour on an example app, with real output: install, init, a blocked commit, notes, doctor |
 | [`docs/team-install.md`](docs/team-install.md) | Install in the team's repos without publishing; what goes in git; branch protection |
+| [`docs/team-adoption.md`](docs/team-adoption.md) | The pilot: metrics, how to measure them, keep / simplify / drop; template [`docs/PILOT.md`](docs/PILOT.md) |
 | [`docs/try-it.md`](docs/try-it.md) | Try `init` and `check` on a branch of your repo, without wiring anything |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Full design (Spanish draft, source of truth) |
 | [`docs/architecture-yml.md`](docs/architecture-yml.md) | `architecture.yml` and `baseline.json` reference: keys, rules, globs, defaults |
@@ -562,5 +566,6 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | What is decided, build defaults, dependencies, open questions |
 | [`docs/VERIFIED.md`](docs/VERIFIED.md) | What we tested about Claude Code, pnpm and dependency-cruiser, with evidence |
 | [`docs/STATUS.md`](docs/STATUS.md) | Stable vs. experimental, and what is built |
+| [`CHANGELOG.md`](CHANGELOG.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) | Versions; how to contribute |
 
-License: not decided yet.
+License: [MIT](LICENSE).

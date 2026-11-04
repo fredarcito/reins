@@ -1,6 +1,12 @@
 {
   "name": "@harness/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "src",
+    "templates",
+    "LICENSE"
+  ],
   "description": "Command line for the harness: init, check, doctor, sync and friends.",
   "type": "module",
   "bin": {
@@ -10,10 +16,6 @@
     ".": "./src/main.js",
     "./package.json": "./package.json"
   },
-  "files": [
-    "src",
-    "templates"
-  ],
   "engines": {
     "node": ">=22"
   },

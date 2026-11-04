@@ -3,7 +3,7 @@
 // pnpm pack turns "workspace:^" into real version ranges.
 // Usage: pnpm pack:all
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -15,6 +15,7 @@ rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
 for (const dir of packages) {
   const { name, version } = JSON.parse(readFileSync(path.join(root, dir, 'package.json'), 'utf8'));
+  copyFileSync(path.join(root, 'LICENSE'), path.join(root, dir, 'LICENSE')); // gitignored copy, so the tarball carries it
   execFileSync('pnpm', ['pack', '--pack-destination', out], { cwd: path.join(root, dir), stdio: 'ignore' });
   console.log(`${name}@${version}`);
 }

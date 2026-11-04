@@ -7,3 +7,5 @@ coverage/
 .harness/progress/
 .tarballs/
 packages/cli/templates/
+packages/*/LICENSE
+packages/adapters/*/LICENSE

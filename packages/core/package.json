@@ -1,6 +1,11 @@
 {
   "name": "@harness/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "license": "MIT",
+  "files": [
+    "src",
+    "LICENSE"
+  ],
   "description": "Framework-agnostic core of the harness: architecture check, doctor, reports and the adapter contract.",
   "type": "module",
   "exports": {
@@ -8,9 +13,6 @@
     "./contract": "./src/contract/index.js",
     "./package.json": "./package.json"
   },
-  "files": [
-    "src"
-  ],
   "engines": {
     "node": ">=22"
   },

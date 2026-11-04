@@ -27,21 +27,21 @@ Use the absolute path to `.tarballs/` printed by the previous step.
 
 ```bash
 git switch -c try-harness
-npm install -D /path/to/harness/.tarballs/harness-core-0.0.0.tgz \
-               /path/to/harness/.tarballs/harness-cli-0.0.0.tgz \
-               /path/to/harness/.tarballs/harness-adapter-js-0.0.0.tgz
+npm install -D /path/to/harness/.tarballs/harness-core-0.1.0.tgz \
+               /path/to/harness/.tarballs/harness-cli-0.1.0.tgz \
+               /path/to/harness/.tarballs/harness-adapter-js-0.1.0.tgz
 ```
 
 **pnpm** (verified): pnpm would look for `@harness/core` in the npm registry, where it doesn't exist. Point it to the tarball with an override in `pnpm-workspace.yaml` (create the file if the repo doesn't have one; pnpm 10+ ignores the `pnpm` field of `package.json`):
 
 ```yaml
 overrides:
-  "@harness/core": "file:/path/to/harness/.tarballs/harness-core-0.0.0.tgz"
+  "@harness/core": "file:/path/to/harness/.tarballs/harness-core-0.1.0.tgz"
 ```
 
 ```bash
 git switch -c try-harness
-pnpm add -D /path/to/harness/.tarballs/harness-cli-0.0.0.tgz /path/to/harness/.tarballs/harness-adapter-js-0.0.0.tgz
+pnpm add -D /path/to/harness/.tarballs/harness-cli-0.1.0.tgz /path/to/harness/.tarballs/harness-adapter-js-0.1.0.tgz
 ```
 
 **yarn**: not tested yet.
@@ -51,7 +51,7 @@ TypeScript repos need `typescript` installed (they already have it). Plain JS re
 ## 3. Draft the plan
 
 ```bash
-npx harness init          # or: pnpm exec harness init
+npx --no-install harness init          # or: pnpm exec harness init
 ```
 
 It writes three files and never overwrites existing ones without asking (`--dry-run` to preview, `--force` to overwrite):
@@ -77,14 +77,14 @@ The draft describes what exists. If the repo is messy, the draft is messy: **you
 ## 5. Freeze the violations of your final plan
 
 ```bash
-npx harness check --update-baseline
+npx --no-install harness check --update-baseline
 ```
 
 ## 6. Check
 
 ```bash
-npx harness check         # must say "no new violations" and exit 0
-npx harness check --json  # what an agent would read
+npx --no-install harness check         # must say "no new violations" and exit 0
+npx --no-install harness check --json  # what an agent would read
 ```
 
 ## 7. Break a rule on purpose
@@ -92,7 +92,7 @@ npx harness check --json  # what an agent would read
 Add an import that goes upwards (e.g. a component importing from a feature), then:
 
 ```bash
-npx harness check --files src/components/Whatever.jsx   # what the pre-commit hook will run
+npx --no-install harness check --files src/components/Whatever.jsx   # what the pre-commit hook will run
 ```
 
 It must fail with the rule, the reason and the fix. Undo the change.

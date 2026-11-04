@@ -25,23 +25,23 @@ Verified with npm and pnpm: a fresh clone in another folder installs with `npm c
 
    **npm**
    ```bash
-   npm install -D ./vendor/harness/harness-core-0.0.0.tgz \
-                  ./vendor/harness/harness-cli-0.0.0.tgz \
-                  ./vendor/harness/harness-adapter-js-0.0.0.tgz
+   npm install -D ./vendor/harness/harness-core-0.1.0.tgz \
+                  ./vendor/harness/harness-cli-0.1.0.tgz \
+                  ./vendor/harness/harness-adapter-js-0.1.0.tgz
    ```
 
    **pnpm**: add to `pnpm-workspace.yaml` (pnpm doesn't read the `pnpm` field of `package.json` anymore):
    ```yaml
    overrides:
-     "@harness/core": "file:vendor/harness/harness-core-0.0.0.tgz"
+     "@harness/core": "file:vendor/harness/harness-core-0.1.0.tgz"
    ```
    ```bash
-   pnpm add -D ./vendor/harness/harness-cli-0.0.0.tgz ./vendor/harness/harness-adapter-js-0.0.0.tgz
+   pnpm add -D ./vendor/harness/harness-cli-0.1.0.tgz ./vendor/harness/harness-adapter-js-0.1.0.tgz
    ```
 
    **yarn**: not tested.
 
-4. `npx harness install`, then `npx harness init`. See the [README](../README.md#installation).
+4. `npx --no-install harness install`, then `npx --no-install harness init`. See the [README](../README.md#installation).
 
 **Updating:** pack again, replace the files in `vendor/harness/` (the version in the file name changes with each release), run the same install command, commit. Everyone gets it on their next install.
 

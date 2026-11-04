@@ -204,7 +204,7 @@ export function installInto(root, opts = {}) {
     notes.push(...r.warnings);
   }
 
-  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx harness init\` to draft the architecture plan and the baseline.`);
+  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx --no-install harness init\` to draft the architecture plan and the baseline.`);
   if (!deps(pkg)['@harness/cli']) notes.push('@harness/cli is not in package.json: install it as a dev dependency so the hook and CI can run it.');
   notes.push('In GitHub, protect the main branch: require a PR with an approval and the "harness" check to pass. That is the real guarantee.');
   return { actions, notes };

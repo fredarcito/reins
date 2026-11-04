@@ -1,7 +1,7 @@
 # harness
 
 Monorepo of the harness for coding agents. Design (Spanish, source of truth): `docs/DESIGN.md`.
-Commands: `pnpm install` · `pnpm lint` · `pnpm test`
+Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 
 ## Always
 - Never commit, push, open a PR or `npm publish`. Leave changes uncommitted. Never use `--no-verify`.
@@ -9,7 +9,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test`
 - Node >= 22, ESM, JavaScript with JSDoc types, no build step. Tests use `node:test`, next to the code.
 - Dependency direction: `cli` -> `adapters` -> `core`. `core` never imports `cli` or adapters; adapters only import `@harness/core/contract`.
 - `core` knows no framework: anything specific to JS, Vite or Next lives in `packages/adapters/js`.
-- Don't run tests per subtask: run `pnpm lint && pnpm test` once at the end and say what was verified and what wasn't.
+- Don't run tests per subtask: run `pnpm lint && pnpm test && pnpm self-check` once at the end and say what was verified and what wasn't.
 - No per-folder `AGENTS.md`/`CLAUDE.md`. This file stays at 30 lines or fewer.
 - Stop only for an ambiguous decision with consequences, growing scope, an irreversible action or repeated failures.
 

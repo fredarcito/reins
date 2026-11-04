@@ -1,7 +1,8 @@
 {
   "name": "harness-monorepo",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Harness for coding agents: deterministic architecture check + portable markdown content.",
   "engines": {
@@ -11,6 +12,11 @@
     "test": "pnpm -r test && node --test \"scripts/*.test.mjs\"",
     "lint": "node scripts/lint.mjs",
     "rename-scope": "node scripts/rename-scope.mjs",
-    "pack:all": "node scripts/pack.mjs"
+    "pack:all": "node scripts/pack.mjs",
+    "self-check": "node scripts/self-check.mjs"
+  },
+  "devDependencies": {
+    "@harness/adapter-js": "workspace:*",
+    "@harness/cli": "workspace:*"
   }
 }

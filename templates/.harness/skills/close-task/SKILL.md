@@ -4,8 +4,8 @@ description: Close a coding task. Use it when the person says the task is done, 
 ---
 # Close the task
 
-1. Run once: `npx harness check`, `npx harness doctor` and the tests related to the change.
-2. If the notebook exists (`.harness/progress/<branch>.md`), mark what is done (`npx harness progress done <n>`) and check the done criteria one by one.
+1. Run once: `npx --no-install harness check`, `npx --no-install harness doctor` and the tests related to the change.
+2. If the notebook exists (`.harness/progress/<branch>.md`), mark what is done (`npx --no-install harness progress done <n>`) and check the done criteria one by one.
 3. Never commit, push or open a PR. Leave the changes uncommitted.
 4. Reply with:
    - what changed and the files touched, with why;

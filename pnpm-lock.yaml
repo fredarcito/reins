@@ -6,7 +6,14 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@harness/adapter-js':
+        specifier: workspace:*
+        version: link:packages/adapters/js
+      '@harness/cli':
+        specifier: workspace:*
+        version: link:packages/cli
 
   packages/adapters/js:
     dependencies:

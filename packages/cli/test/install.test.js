@@ -39,7 +39,7 @@ test('husky repo: sources, .gitignore, script, hook, CI workflow and sync, in on
   assert.deepEqual(runs, ['actions/checkout@v4', 'actions/setup-node@v4', 'npm ci', 'npx --no-install harness check']);
   assert.equal(wf.jobs.harness.steps[0].with['fetch-depth'], 0);
 
-  assert.match(r.stdout, /No \.harness\/architecture\.yml yet: run `npx harness init`/);
+  assert.match(r.stdout, /No \.harness\/architecture\.yml yet: run `npx --no-install harness init`/);
   assert.match(r.stdout, /protect the main branch/);
   assert.doesNotMatch(r.stdout, /@harness\/cli is not in package\.json/);
 });

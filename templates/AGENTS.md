@@ -1,11 +1,11 @@
 # {{project}}
-Commands: {{commands}} · `npx harness check`
+Commands: {{commands}} · `npx --no-install harness check`
 
 ## Always
 - Before acting, state the task level (small, medium, large) and why in one line, and append it to `.harness/progress/triage.log`. See `.harness/policies/triage.md`. A prompt starting with [quick] or [deep] decides the level; then don't announce it.
 - Never commit, push or open a PR. Leave the changes uncommitted.
 - Never use `--no-verify`.
-- When closing, run `npx harness check` and `npx harness doctor` once, and say what you verified, which warnings remain and what you did not verify.
+- When closing, run `npx --no-install harness check` and `npx --no-install harness doctor` once, and say what you verified, which warnings remain and what you did not verify.
 - Stop only for an ambiguous decision with consequences, growing scope, an irreversible action or repeated failures.
 
 ## On demand

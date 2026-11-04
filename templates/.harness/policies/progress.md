@@ -16,13 +16,13 @@ Read this for medium and large tasks. The notebook is local (`.harness/progress/
 - Write the done criteria **before** editing, not at the end.
 - Update it silently after each subtask and before switching topic, not "at the end".
 - Markers: `[ ]` pending, `[~]` in progress (only one), `[x]` written but not tested, `[-]` discarded with a reason (`- [-] task — reason`). Never delete discarded items: they stop the idea from coming back.
-- What is needed to finish goes in the notebook. An improvement found on the way goes to the backlog (`npx harness audit add`), not into this task.
+- What is needed to finish goes in the notebook. An improvement found on the way goes to the backlog (`npx --no-install harness audit add`), not into this task.
 - The header says `status: open|closed`. Only the person closes it. Then move what lasts to the module note and delete the notebook.
-- Prefer `npx harness progress done|add|next` to rewriting the file (keeps the format valid).
+- Prefer `npx --no-install harness progress done|add|next` to rewriting the file (keeps the format valid).
 
 ## Verification (once, at the end)
 
 - Don't run tests per subtask.
-- At the end: `npx harness check`, `npx harness doctor` and the related tests, once.
+- At the end: `npx --no-install harness check`, `npx --no-install harness doctor` and the related tests, once.
 - If a subtask changes a shared contract (a hook signature, shared props), run a cheap check first (types or build).
 - The closing message says what was verified, the doctor warnings, how many criteria are met and what was not verified.
