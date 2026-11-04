@@ -53,6 +53,8 @@ Between `init` and `check --update-baseline`:
 1. Review the architecture plan: in Claude Code, type `/reins-arch` (your agent proposes changes with evidence, you approve each one); otherwise read `.reins/init-report.md` and edit `.reins/architecture.yml`.
 2. Have your agent fill in the module notes: in Claude Code, type `/reins-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
 
+Later, after you add or edit a note, skill or agent in `.reins/` (by hand, with `reins notes new` or with `/reins-agent`), run `npx reins sync` so `AGENTS.md` and `.claude/` pick it up. `init` already does it for the notes it drafts.
+
 Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
 ## Skills for your agent
@@ -325,6 +327,8 @@ Cart state and totals for the checkout.
 A **decision** answers "why is it like this?"; a **trap** warns "careful: this looks wrong, and it isn't". When a decision is reversed, update or delete its line: an outdated note is worse than none.
 
 **A conversation gets compacted.** Claude Code fires the `SessionStart` hook with `compact`; `reins resume --hook` puts back the branch notebook, the files changed on the branch and their module notes. Verified with Claude Code: after a compaction the model quoted a notebook and a note that had changed on disk in the meantime ([details](docs/VERIFIED.md#p9-sessionstart-hook-after-a-compaction--pass)). Other agents get the same text with `npx reins resume`.
+
+**Adding one.** `init` drafts a note per domain (a `features/*` folder, or each route folder when there are none). For any other module, `reins notes new <folder>` drafts one, or write `.reins/notes/<name>.md` yourself: only the `paths` frontmatter is required, and it decides when the note is delivered, so include the module's folders outside its route too (e.g. `src/components/jobs/**`). Then run `reins sync` to list it in the `AGENTS.md` index; the Claude Code hook reads `.reins/notes/` directly, so it delivers the note right away.
 
 **Filling them in.** `/reins-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
 
