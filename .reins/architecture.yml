@@ -5,8 +5,10 @@ adapter: js
 # Example apps and test fixtures contain intentional violations and their own aliases.
 ignore: ["examples/**", "packages/*/test/fixtures/**", "packages/adapters/*/test/fixtures/**"]
 
-# Top to bottom: the CLI may use adapters and core; adapters may use core; core uses neither.
+# Top to bottom: repo tooling may use everything; the CLI may use adapters and core; adapters may use core;
+# core uses neither. No package may import scripts/: they are not published.
 layers:
+  - { name: tooling,  paths: ["scripts/**"] }
   - { name: cli,      paths: ["packages/cli/src/**"] }
   - { name: adapters, paths: ["packages/adapters/*/src/**", "packages/adapters/*/rules/**"] }
   - { name: core,     paths: ["packages/core/src/**"] }
