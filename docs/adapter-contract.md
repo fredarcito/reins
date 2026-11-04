@@ -25,8 +25,13 @@ export default {
   graph(repoPath, config) {},    // GraphResult (or Promise)
   rules: ['next-server-client'], // optional: extra rule ids it implements
   evaluate(repoPath, config, graph) {}, // required if `rules` is not empty
+  presets: ['vite-react', 'next-app', 'next-pages'], // optional, used by `harness init`
+  suggestPreset(repoPath) {},    // optional: best preset name, or null
+  loadPreset(name) {},           // optional: { description, layers, domains_from, entries, default_rules? }
 };
 ```
+
+Without `presets`/`loadPreset`, `harness init` can't draft a plan and asks the user to write `architecture.yml` by hand; `check` works the same.
 
 `validateAdapter()` from `@harness/core/contract` checks this shape; the CLI refuses an adapter that fails it.
 
@@ -94,7 +99,7 @@ Heavy dependencies (dependency-cruiser…) belong to the adapter, never to the c
 
 The CLI refuses an adapter whose `contract` differs from the core's `CONTRACT_VERSION`, and says which version to install. Package managers only **warn** on an incompatible peer dependency ([VERIFIED.md, P7](VERIFIED.md#p7-peerdependencies-with-pnpm--pass)), so this check is the real one.
 
-Version 1 grew in phase 3 without breaking: `graph()` may return an object instead of an array, and `rules` + `evaluate` were added. Both are optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
+Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`. All optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
 
 ## Reference implementation: `@harness/adapter-js`
 

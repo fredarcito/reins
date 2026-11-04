@@ -7,12 +7,14 @@ const ICON = { error: '✖', warn: '!' };
 
 /**
  * @param {import('../check/index.js').CheckResult} result
- * @param {{ verbose?: boolean, title?: string }} [opts] verbose: also list violations already in the baseline
+ * @param {{ verbose?: boolean, title?: string, warnings?: string[] }} [opts]
+ *   verbose: also list violations already in the baseline; warnings: problems reading the code (e.g. from the adapter)
  * @returns {string}
  */
 export function formatText(result, opts = {}) {
   const title = opts.title ?? 'harness check';
   const lines = [];
+  for (const w of opts.warnings ?? []) lines.push(`! warning  ${w}`, '');
   const shown = result.violations.filter((v) => v.status === 'new' || opts.verbose);
   for (const v of shown) {
     const where = v.to ? `${v.from} → ${v.to}` : v.from;
@@ -40,15 +42,17 @@ export function formatText(result, opts = {}) {
 /**
  * Stable JSON shape for agents and tools. Bump REPORT_SCHEMA on breaking changes.
  * @param {import('../check/index.js').CheckResult} result
+ * @param {{ warnings?: string[] }} [opts]
  * @returns {string}
  */
-export function formatJson(result) {
+export function formatJson(result, opts = {}) {
   return JSON.stringify(
     {
       schema: REPORT_SCHEMA,
       ok: result.ok,
       partial: result.partial,
       summary: result.summary,
+      warnings: opts.warnings ?? [],
       violations: result.violations.map((v) => ({
         rule: v.rule,
         severity: v.severity,

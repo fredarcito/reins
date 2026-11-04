@@ -29,6 +29,10 @@ importers:
       '@harness/core':
         specifier: workspace:^
         version: link:../core
+    devDependencies:
+      '@harness/adapter-js':
+        specifier: workspace:^
+        version: link:../adapters/js
 
   packages/core:
     dependencies:

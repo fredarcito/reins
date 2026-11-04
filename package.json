@@ -10,6 +10,7 @@
   "scripts": {
     "test": "pnpm -r test && node --test \"scripts/*.test.mjs\"",
     "lint": "node scripts/lint.mjs",
-    "rename-scope": "node scripts/rename-scope.mjs"
+    "rename-scope": "node scripts/rename-scope.mjs",
+    "pack:all": "node scripts/pack.mjs"
   }
 }

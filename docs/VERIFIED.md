@@ -144,6 +144,15 @@ Details that affect the design:
 - **Unverified:** that dependency-cruiser (a dependency of adapter-js) can load the consumer repo's `typescript` under pnpm's strict layout. In this monorepo it works through hoisting. To test with tarballs in phase 8; if it fails, the adapter's error message tells the user, it doesn't pass silently.
 - **Unverified:** real-world `vite.config` alias forms beyond the ones in the fixtures (computed objects, spread helpers, aliases from plugins such as `vite-tsconfig-paths`). Unknown forms produce a warning, not a silent miss.
 
+## Phase 4 findings
+
+- **Install from tarballs, then `init` + `check` — pass with npm and pnpm.** `pnpm pack` of the three packages, installed in copies of the examples outside the monorepo:
+  - pnpm 12.11.2, Next TS example: needs `overrides` for `@harness/core` in `pnpm-workspace.yaml` (otherwise pnpm looks it up in the registry). `init` found the 4 violations, `check` passed.
+  - npm 11.12.1, Vite JS example without `typescript`: works without overrides (the directly installed core satisfies the CLI's range; an override there fails with `EOVERRIDE`). `init`, `check` and `check --files` with a new violation (exit 1) as expected.
+- **dependency-cruiser finds the repo's `typescript` under pnpm — pass** (the phase 3 open question): with the tarball install above, TS files were analyzed (4 violations found). The adapter's guard would have stopped otherwise.
+- **Symlinked working folders — bug found and fixed.** `git rev-parse --show-toplevel` returns the real path; macOS temp folders are symlinks (`/var` → `/private/var`), so `--files` produced wrong paths. The CLI now resolves real paths.
+- **Unverified:** yarn (classic and berry/PnP), `init`/`check` duration on large repos (the examples take well under a second; the whole graph is computed even with `--files`), Windows paths.
+
 ## Unverified (pending)
 
 - Session start hook (`SessionStart`) to load the progress notebook: not tested.

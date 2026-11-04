@@ -5,3 +5,4 @@ coverage/
 # local harness state (outside git by design)
 .harness/backlog/
 .harness/progress/
+.tarballs/

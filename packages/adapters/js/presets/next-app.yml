@@ -11,6 +11,9 @@ layers:
 
 domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
 
+# adapter rules `harness init` proposes for this preset
+default_rules: [next-server-client]
+
 entries:
   - "{,src/}app/**/{page,layout,template,loading,error,global-error,not-found,default,route,forbidden,unauthorized}.{js,jsx,ts,tsx}"
   - "{,src/}app/**/{opengraph-image,twitter-image,icon,apple-icon,sitemap,robots,manifest}.{js,jsx,ts,tsx}"

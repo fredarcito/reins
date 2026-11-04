@@ -15,7 +15,7 @@ Nothing here is measured. The design is a design, not a proven product.
 | Reports (text and JSON) | core | stable | Yes (phase 2), tested |
 | `adapter-js`: detect, aliases, graph, presets | adapters/js | stable | Yes (phase 3), tested on both examples and 3 fixtures |
 | `next-server-client` rule (optional, Next) | adapters/js | stable | Yes (phase 3), tested |
-| CLI `check`, `init`, adapter resolution | cli | stable | Skeleton: `--help`, `--version` |
+| CLI `check`, `init`, adapter resolution | cli | stable | Yes (phase 4), tested; installed from tarballs with npm and pnpm |
 | Git pre-commit hook and CI job running `check` | templates | stable | No (phase 8) |
 | `doctor` | core + cli | experimental | Not started (after the validation gate) |
 | `sync`, `notes`, `scope` | cli | experimental | Not started |
@@ -31,4 +31,5 @@ Nothing here is measured. The design is a design, not a proven product.
 | --- | --- |
 | `scripts/lint.mjs` (syntax, import boundaries, AGENTS.md rules, package metadata) | stable, tested |
 | `scripts/rename-scope.mjs` | stable, tested |
+| `scripts/pack.mjs` (`pnpm pack:all`) | used in phase 4, no automated test |
 | `.github/workflows/ci.yml` | written, never run on GitHub |

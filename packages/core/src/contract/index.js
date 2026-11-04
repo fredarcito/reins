@@ -48,6 +48,18 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * @property {string[]} [rules] extra rule ids the adapter implements (e.g. "next-server-client")
  * @property {(repoPath: string, config: object, graph: { edges: Edge[], files: string[], entries: string[] }) => AdapterViolation[] | Promise<AdapterViolation[]>} [evaluate]
  *   runs the adapter's own rules on the normalized graph; required when `rules` is not empty
+ * @property {string[]} [presets] preset names (used by `harness init`)
+ * @property {(repoPath: string) => string | null} [suggestPreset] best preset for the repo, or null
+ * @property {(name: string) => Preset} [loadPreset] starting point for `harness init`
+ */
+
+/**
+ * @typedef {object} Preset
+ * @property {string} description
+ * @property {{ name: string, paths: string[] }[]} layers  candidate layers, top to bottom
+ * @property {string[]} domains_from  globs of folders whose children become domains, e.g. "src/features/*"
+ * @property {string[]} entries  entry-point globs
+ * @property {string[]} [default_rules] adapter rules `init` should propose for this preset
  */
 
 /**
@@ -81,6 +93,12 @@ export function validateAdapter(adapter) {
     problems.push('"rules" must be a list of rule ids');
   }
   if (a.evaluate !== undefined && typeof a.evaluate !== 'function') problems.push('"evaluate" must be a function');
+  for (const fn of ['suggestPreset', 'loadPreset']) {
+    if (a[fn] !== undefined && typeof a[fn] !== 'function') problems.push(`"${fn}" must be a function`);
+  }
+  if (a.presets !== undefined && !(Array.isArray(a.presets) && a.presets.every((p) => typeof p === 'string'))) {
+    problems.push('"presets" must be a list of preset names');
+  }
   if (Array.isArray(a.rules) && a.rules.length > 0 && typeof a.evaluate !== 'function') {
     problems.push('declares "rules" but has no "evaluate" function to run them');
   }

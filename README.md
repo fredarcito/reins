@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress — nothing is usable from the command line yet.** Phase **3 of 9** is done: the rules engine and the JS adapter work and are tested end to end on two example apps, but the `harness check` and `harness init` commands arrive in phase 4. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress.** Phase **4 of 9** is done: `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. Next is the **validation gate**: trying them on a real team repo before building anything else. The agent-facing pieces (doctor, notes, skills, hooks) don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -16,7 +16,8 @@ It does two things:
 - [How it works](#how-it-works)
 - [What lands in your repo](#what-lands-in-your-repo)
 - [Status of each piece](#status-of-each-piece)
-- [Installation (planned)](#installation-planned)
+- [Commands](#commands)
+- [Installation](#installation)
 - [Roadmap](#roadmap)
 - [Developing this repo](#developing-this-repo)
 - [Documentation](#documentation)
@@ -265,7 +266,7 @@ shared       ─┘
 | `architecture.yml` validation | stable | ✅ |
 | `adapter-js` (Vite, Next, aliases, presets) | stable | ✅ tested on [`examples/`](examples/) |
 | `next-server-client` rule | stable | ✅ optional |
-| CLI `check` and `init` | stable | 🟡 skeleton (`--help`, `--version`) |
+| CLI `check` and `init` | stable | ✅ tested; installed from tarballs with npm and pnpm |
 | Git hook + CI job | stable | ❌ phase 8 |
 | `doctor` | experimental | ❌ |
 | `sync`, `notes`, `scope` | experimental | ❌ |
@@ -273,10 +274,47 @@ shared       ─┘
 | `audit`, `progress`, `review` | experimental | ❌ |
 | `install` | experimental | ❌ |
 
-## Installation (planned)
+## Commands
+
+### `harness init`
+
+Drafts the plan from the code. The code says what exists, not what should exist, so the result is a draft for a person to review.
+
+```mermaid
+flowchart LR
+    scan["Scan the repo<br/>(adapter graph)"] --> layers["Layers: preset folders<br/>that exist, ordered by<br/>dominant import direction"]
+    scan --> domains["Domains: one per<br/>features/* folder,<br/>public API = its index"]
+    layers --> draft["architecture.yml<br/>(draft)"]
+    domains --> draft
+    draft --> run["Run check on the draft"]
+    run --> baseline["baseline.json<br/>(today's violations)"]
+    run --> report["init-report.md<br/>cycles · doubtful deps<br/>orphans · warnings"]
+```
+
+| Option | Effect |
+| --- | --- |
+| `--preset <name>` | `vite-react`, `next-app` or `next-pages` (default: detected) |
+| `--dry-run` | Print the draft and the report, write nothing |
+| `--force` | Overwrite existing files without asking (otherwise it asks, or refuses when there is no terminal) |
+
+If the adapter is missing, it prints the install command for your package manager. It never installs anything.
+
+### `harness check`
+
+| Option | Effect |
+| --- | --- |
+| `--files <a,b>` | Only report violations involving these files (what the pre-commit hook runs) |
+| `--json` | Machine-readable output for agents |
+| `--base <ref>` | Base branch for `integrity` (default: `$GITHUB_BASE_REF`, `origin/HEAD`, `origin/main`, `main`) |
+| `--update-baseline` | Freeze the current violations into `baseline.json` |
+| `--verbose` | Also list violations already in the baseline |
+
+Exit codes: **0** no new errors · **1** new errors · **2** could not run (config, adapter, options).
+
+## Installation
 
 > [!NOTE]
-> Not available yet. Packages are not published; the team will install from tarballs (`pnpm pack`). This section is the target for phase 8.
+> Packages are not published. To try `init` and `check` on a repo today, follow [`docs/try-it.md`](docs/try-it.md) (local tarballs, npm or pnpm). The steps below are the target for phase 8, when `harness install` exists.
 
 ```bash
 # 1. Install the CLI and the adapter for your stack
@@ -302,7 +340,7 @@ Supported projects: Vite + React and Next (app and pages router), in **plain JS/
 ```mermaid
 flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
-    p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]
+    p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
     p4 --> gate{{"Validation gate<br/>real repo"}}
     gate --> p5["5 · doctor"] --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
@@ -318,6 +356,7 @@ Requirements: Node ≥ 22, pnpm.
 pnpm install
 pnpm lint      # syntax, import boundaries, AGENTS.md rules, package metadata
 pnpm test      # every package + repo scripts (node:test)
+pnpm pack:all  # tarballs in .tarballs/ to install in another repo
 ```
 
 ```
@@ -328,7 +367,7 @@ harness/
 │   └── adapters/js/     @harness/adapter-js  Vite + React, Next; uses dependency-cruiser
 ├── templates/           files copied into consumer repos
 ├── examples/            vite-react (JS/JSX), next-app (TS): one test repo per preset
-├── scripts/             lint.mjs, rename-scope.mjs, verify/ (phase 0 experiments)
+├── scripts/             lint.mjs, rename-scope.mjs, pack.mjs, verify/ (phase 0 experiments)
 └── docs/                design, decisions, verification log, status
 ```
 
@@ -340,6 +379,7 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 
 | Document | What's in it |
 | --- | --- |
+| [`docs/try-it.md`](docs/try-it.md) | Try `init` and `check` on a real repo today |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Full design (Spanish draft, source of truth) |
 | [`docs/architecture-yml.md`](docs/architecture-yml.md) | `architecture.yml` and `baseline.json` reference: keys, rules, globs, defaults |
 | [`docs/adapter-contract.md`](docs/adapter-contract.md) | What a language adapter must implement |
