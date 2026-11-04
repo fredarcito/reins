@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   CORE_RULES, parseConfig, ConfigError, runCheck, normalizeGraph, validateEdges,
   parseBaseline, emptyBaseline, createBaseline, serializeBaseline, checkIntegrity, formatText, formatJson,
-} from '@reins/core';
+} from '@agentreins/core';
 import { resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';

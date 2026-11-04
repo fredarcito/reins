@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter } from '@reins/core';
+import { parseFrontmatter } from '@agentreins/core';
 import { REINS_DIR, runScriptCommand } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate, renderAgentsMd } from '../templates.js';

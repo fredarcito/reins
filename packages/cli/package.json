@@ -20,7 +20,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@reins/core": "workspace:^",
+    "@agentreins/core": "workspace:^",
     "yaml": "^2.9.1"
   },
   "scripts": {
@@ -29,7 +29,7 @@
     "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "@reins/adapter-js": "workspace:^"
+    "@agentreins/adapter-js": "workspace:^"
   },
   "repository": {
     "type": "git",

@@ -6,7 +6,7 @@ import path from 'node:path';
 import {
   NotebookError, notebookFile, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook,
   parseNotebook, formatProblems,
-} from '@reins/core';
+} from '@agentreins/core';
 import { CliError } from '../context.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';

@@ -9,7 +9,7 @@ cp -R "$R/examples/vite-react" app && cd app
 printf 'node_modules/\n' > .gitignore
 echo '{ "name": "v", "private": true, "type": "module" }' > package.json
 mkdir -p vendor/reins && cp "$R"/.tarballs/*.tgz vendor/reins/
-npm install -D --silent ./vendor/reins/reins-core-*.tgz ./vendor/reins/reins-*.tgz ./vendor/reins/reins-adapter-js-*.tgz >/dev/null 2>&1
+npm install -D --silent ./vendor/reins/*.tgz >/dev/null 2>&1
 grep -E '"reins"' package.json
 npx reins check --update-baseline >/dev/null
 git init -q -b main && git add -A && git -c user.email=a@b -c user.name=a commit -qm v

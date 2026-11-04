@@ -3,7 +3,7 @@
 // per note and session. It never blocks the agent: any problem means "no note".
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, NOTES_DIR } from '@reins/core';
+import { notesFor, NOTES_DIR } from '@agentreins/core';
 import { CliError, toRepoPath } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';

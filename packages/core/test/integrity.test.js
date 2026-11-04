@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { compareIntegrity, checkIntegrity } from '@reins/core';
+import { compareIntegrity, checkIntegrity } from '@agentreins/core';
 
 const files = { architecture: '.reins/architecture.yml', baseline: '.reins/baseline.json' };
 const bl = (...keys) => JSON.stringify({ version: 1, violations: keys.map((key) => ({ rule: 'no-cycles', key, from: 'a' })) });

@@ -1,7 +1,7 @@
 // Reading reins files of a consumer repo, shared by several commands. None of this needs the adapter.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR } from '@reins/core';
+import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, REINS_DIR } from './context.js';
 
 export const DOCTOR_FILE = `${REINS_DIR}/doctor.yml`;
@@ -41,7 +41,7 @@ export function readDoctorConfig(root) {
 
 /**
  * Every module note in .reins/notes/, sorted by file name.
- * @returns {{ notes: import('@reins/core').Note[], problems: string[] }}
+ * @returns {{ notes: import('@agentreins/core').Note[], problems: string[] }}
  */
 export function loadNotes(root) {
   const dir = path.join(root, NOTES_DIR);

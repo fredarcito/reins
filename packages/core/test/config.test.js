@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES } from '@reins/core';
+import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES } from '@agentreins/core';
 
 const minimal = 'version: 1\nadapter: js\n';
 

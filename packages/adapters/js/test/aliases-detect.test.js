@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readAliases, parseJsonc, detectFramework, loadPreset, PRESETS } from '@reins/adapter-js';
+import { readAliases, parseJsonc, detectFramework, loadPreset, PRESETS } from '@agentreins/adapter-js';
 
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const examples = fileURLToPath(new URL('../../../../examples/', import.meta.url));

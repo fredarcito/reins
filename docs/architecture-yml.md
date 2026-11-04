@@ -38,7 +38,7 @@ allow:
 | Key | Required | What it is |
 | --- | --- | --- |
 | `version` | yes | Format version. Must be `1` |
-| `adapter` | yes | Adapter name. The CLI looks for `@reins/adapter-<name>`, then `reins-adapter-<name>` |
+| `adapter` | yes | Adapter name. The CLI looks for `@agentreins/adapter-<name>`, then `reins-adapter-<name>` |
 | `preset` | no | Preset of the adapter |
 | `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |

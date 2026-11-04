@@ -5,8 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 test('root and ./contract entry points resolve by package name', async () => {
-  const root = await import('@reins/core');
-  const contract = await import('@reins/core/contract');
+  const root = await import('@agentreins/core');
+  const contract = await import('@agentreins/core/contract');
   assert.equal(contract.CONTRACT_VERSION, 1);
   assert.equal(root.CONTRACT_VERSION, contract.CONTRACT_VERSION);
   for (const name of ['parseConfig', 'runCheck', 'createBaseline', 'checkIntegrity', 'formatText', 'formatJson']) {
@@ -15,7 +15,7 @@ test('root and ./contract entry points resolve by package name', async () => {
 });
 
 test('internal files are not reachable through the package name', async () => {
-  await assert.rejects(import('@reins/core/src/index.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
+  await assert.rejects(import('@agentreins/core/src/index.js'), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' });
 });
 
 test('core only imports node builtins, yaml and its own files (never cli, adapters or a framework)', async () => {

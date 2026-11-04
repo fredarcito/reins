@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { CONTRACT_VERSION, validateAdapter } from '@reins/core';
+import { CONTRACT_VERSION, validateAdapter } from '@agentreins/core';
 import { CliError, installCommand } from './context.js';
 import { pkg as cliPkg, SCOPE } from './scope.js';
 
@@ -33,7 +33,7 @@ function packageDir(entry, pkgName) {
  * @param {string} repoRoot
  * @param {string} name adapter name from architecture.yml, e.g. "js"
  * @param {{ searchPaths?: string[] }} [opts] extra folders to resolve from (tests, monorepo setups)
- * @returns {Promise<{ adapter: import('@reins/core/contract').Adapter, packageName: string, version: string }>}
+ * @returns {Promise<{ adapter: import('@agentreins/core/contract').Adapter, packageName: string, version: string }>}
  */
 export async function resolveAdapter(repoRoot, name, opts = {}) {
   const bases = [repoRoot, ...(opts.searchPaths ?? [])];

@@ -230,15 +230,15 @@ TypeScript repos use the `typescript` package they already have. If it's missing
 
 ```mermaid
 flowchart LR
-    cli["reins<br/>reins command"] --> core["@reins/core<br/>rules · config · report"]
-    cli -. "loads at runtime<br/>from your project" .-> adapter["@reins/adapter-js<br/>Vite · Next"]
+    cli["reins<br/>reins command"] --> core["@agentreins/core<br/>rules · config · report"]
+    cli -. "loads at runtime<br/>from your project" .-> adapter["@agentreins/adapter-js<br/>Vite · Next"]
     adapter -- "peerDependency<br/>imports only /contract" --> core
 ```
 
 - `core` knows no framework and never imports `cli` or an adapter.
-- Adapters only see `@reins/core/contract` (enforced by the `exports` field).
+- Adapters only see `@agentreins/core/contract` (enforced by the `exports` field).
 - Adapters are installed separately; if one is missing, the CLI tells you which one. It never installs anything.
-- `@reins` is a **placeholder** scope; the final name is not decided.
+- `@agentreins` is the npm organization of `core` and the adapters; the CLI is published unscoped as `reins`.
 
 ## Context between sessions
 
@@ -590,7 +590,7 @@ pnpm install && pnpm pack:all
 
 # 2. In your repo: commit them under vendor/reins/ and install them (npm shown; pnpm in team-install.md)
 mkdir -p vendor/reins && cp /path/to/reins/.tarballs/*.tgz vendor/reins/
-npm install -D ./vendor/reins/reins-core-0.1.0.tgz ./vendor/reins/reins-0.1.0.tgz ./vendor/reins/reins-adapter-js-0.1.0.tgz
+npm install -D ./vendor/reins/*.tgz
 
 # 3. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
 npx reins install
@@ -645,9 +645,9 @@ pnpm pack:all  # tarballs in .tarballs/ to install in another repo
 ```
 reins/
 ├── packages/
-│   ├── core/            @reins/core        framework-agnostic: check, doctor, report, config, contract
+│   ├── core/            @agentreins/core        framework-agnostic: check, doctor, report, config, contract
 │   ├── cli/             reins         the `reins` command
-│   └── adapters/js/     @reins/adapter-js  Vite + React, Next; uses dependency-cruiser
+│   └── adapters/js/     @agentreins/adapter-js  Vite + React, Next; uses dependency-cruiser
 ├── templates/           files copied into consumer repos
 ├── examples/            vite-react (JS/JSX), next-app (TS): one test repo per preset
 ├── scripts/             lint.mjs, rename-scope.mjs, pack.mjs, self-check.mjs, verify/ (end-to-end scripts)

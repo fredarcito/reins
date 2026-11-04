@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   BACKLOG_HEADER, parseBacklog, addFinding, setStatus, markRecheck,
   parseNotebook, formatProblems, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, NotebookError,
-} from '@reins/core';
+} from '@agentreins/core';
 
 const D = '2026-11-04';
 const template = (name) => readFileSync(new URL(`../../../templates/.reins/templates/${name}`, import.meta.url), 'utf8');

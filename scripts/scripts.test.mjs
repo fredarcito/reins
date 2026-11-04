@@ -79,6 +79,7 @@ test('lint flags mermaid diagrams GitHub would fail to render', () => {
 test('renameScope rewrites names and imports, skips history and longer scopes', () => {
   const files = base();
   files['README.md'] = 'npm i -D reins @h/adapter-js\nnot @h-other/x\n';
+  files['packages/cli/test/a.test.js'] = 'assert.match(s, /@h\\/adapter-js/);\n';
   files['docs/VERIFIED.md'] = 'tested @h/core\n';
   const root = fakeRepo(files);
   const dry = renameScope(root, '@acme', { dryRun: true });
@@ -90,6 +91,7 @@ test('renameScope rewrites names and imports, skips history and longer scopes', 
   assert.match(readFileSync(path.join(root, 'packages/adapters/js/src/index.js'), 'utf8'), /'@acme\/core\/contract'/);
   assert.equal(readFileSync(path.join(root, 'README.md'), 'utf8'), 'npm i -D reins @acme/adapter-js\nnot @h-other/x\n');
   assert.equal(readFileSync(path.join(root, 'docs/VERIFIED.md'), 'utf8'), 'tested @h/core\n');
+  assert.equal(readFileSync(path.join(root, 'packages/cli/test/a.test.js'), 'utf8'), 'assert.match(s, /@acme\\/adapter-js/);\n');
   assert.deepEqual(lint(root), []);
 });
 

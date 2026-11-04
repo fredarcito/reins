@@ -2,7 +2,7 @@
 import { readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { cruise, getAvailableTranspilers } from 'dependency-cruiser';
-import { matchesAny } from '@reins/core/contract';
+import { matchesAny } from '@agentreins/core/contract';
 import { readAliases } from './aliases.js';
 import { detectFramework } from './detect.js';
 import { loadPreset } from './presets.js';
@@ -66,7 +66,7 @@ function kindOf(dependencyTypes) {
 /**
  * @param {string} repoPath
  * @param {{ preset?: string, ignore?: string[] }} [config] the parsed architecture.yml (uses `preset` and `ignore`)
- * @returns {Promise<{ edges: import('@reins/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
+ * @returns {Promise<{ edges: import('@agentreins/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
  */
 export async function graph(repoPath, config = {}) {
   // Real path: symlinked workspaces resolve to real paths, which must stay inside the root (macOS /var -> /private/var).

@@ -84,11 +84,11 @@ test('suggests the missing adapter with the repo package manager, installs nothi
   const pnpmRepo = tempDir({ 'package.json': '{}', 'pnpm-lock.yaml': '' });
   const r = await cli(pnpmRepo, ['init'], { adapterSearchPaths: [] });
   assert.equal(r.code, 2);
-  assert.match(r.stderr, /Adapter "js" is not installed \(looked for @reins\/adapter-js and reins-adapter-js\)\.\nFix: pnpm add -D @reins\/adapter-js/);
+  assert.match(r.stderr, /Adapter "js" is not installed \(looked for @agentreins\/adapter-js and reins-adapter-js\)\.\nFix: pnpm add -D @agentreins\/adapter-js/);
   assert.equal(existsSync(path.join(pnpmRepo, 'node_modules')), false);
 
   const npmRepo = tempDir({ 'package.json': '{}' });
-  assert.match((await cli(npmRepo, ['init'], { adapterSearchPaths: [] })).stderr, /Fix: npm install -D @reins\/adapter-js/);
+  assert.match((await cli(npmRepo, ['init'], { adapterSearchPaths: [] })).stderr, /Fix: npm install -D @agentreins\/adapter-js/);
 
   const noJs = tempDir({ 'Gemfile': '' });
   assert.match((await cli(noJs, ['init'])).stderr, /Could not tell which adapter/);

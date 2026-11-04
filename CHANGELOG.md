@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Renamed to reins.** CLI package and command `reins` (`npx reins check`, no `--no-install` needed), `@reins/core`, `@reins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`. Entries below use the new names.
+- **Renamed to reins.** CLI package and command `reins` (`npx reins check`, no `--no-install` needed), `@agentreins/core`, `@agentreins/adapter-js`, folder `.reins/`, markers `reins:notes`, generated skills and agents `reins-*`, workflow `reins.yml`. Entries below use the new names.
 
 ### Experimental (guidance for agents)
 
@@ -22,7 +22,7 @@ First version, for the team pilot. Install from tarballs: [`docs/team-install.md
 - `reins check`: `layer-direction`, `domain-boundary`, `no-cycles`, baseline (only new violations fail), `integrity` (changes to `architecture.yml`, a growing baseline, generated files out of sync), `--files` for the pre-commit hook, `--json` for agents, `--update-baseline`.
 - `reins init`: drafts `architecture.yml` (layers ordered by import direction, one domain per `features/*` folder), `baseline.json` and a review report (cycles, doubtful dependencies, orphans, warnings). Never overwrites without confirmation.
 - `architecture.yml` validation with every problem reported at once; `ignore:` globs; `allow:` exceptions with a reason.
-- `@reins/adapter-js`: Vite + React and Next (app and pages router), plain JS/JSX or TypeScript; `@/` aliases from `jsconfig`/`tsconfig` (with `extends` and `references`) and `vite.config`; monorepo workspaces; presets `vite-react`, `next-app`, `next-pages`; optional `next-server-client` rule.
+- `@agentreins/adapter-js`: Vite + React and Next (app and pages router), plain JS/JSX or TypeScript; `@/` aliases from `jsconfig`/`tsconfig` (with `extends` and `references`) and `vite.config`; monorepo workspaces; presets `vite-react`, `next-app`, `next-pages`; optional `next-server-client` rule.
 - Pre-commit hook (Husky or lefthook) and a CI workflow running `reins check`.
 
 ### Experimental (guidance for agents)

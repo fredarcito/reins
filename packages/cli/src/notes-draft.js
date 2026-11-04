@@ -1,7 +1,7 @@
 // Drafting module notes from the import graph, shared by `reins notes new` and `reins init`.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { draftNote, matchesAny, NOTES_DIR, summarizeModule } from '@reins/core';
+import { draftNote, matchesAny, NOTES_DIR, summarizeModule } from '@agentreins/core';
 
 /** The group a file outside the module is shown under: its domain, or its first two folders. */
 export const labeler = (domains) => (f) => {

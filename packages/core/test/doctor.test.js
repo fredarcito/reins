@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, scopeSignals, suggestLevel, runDoctor,
   parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES,
-} from '@reins/core';
+} from '@agentreins/core';
 
 const domains = [
   { name: 'billing', paths: ['src/features/billing/**'], publicApi: ['src/features/billing/index.js'] },

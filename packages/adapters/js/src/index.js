@@ -1,12 +1,12 @@
-// @reins/adapter-js: JavaScript and TypeScript projects (Vite + React, Next app and pages router).
+// @agentreins/adapter-js: JavaScript and TypeScript projects (Vite + React, Next app and pages router).
 // Plain JS/JSX projects need no TypeScript. Imports from the core: only the contract.
-import { CONTRACT_VERSION } from '@reins/core/contract';
+import { CONTRACT_VERSION } from '@agentreins/core/contract';
 import { detect, detectFramework } from './detect.js';
 import { graph } from './graph.js';
 import { loadPreset, PRESETS } from './presets.js';
 import * as nextServerClient from '../rules/next-server-client.js';
 
-/** @type {import('@reins/core/contract').Adapter} */
+/** @type {import('@agentreins/core/contract').Adapter} */
 const adapter = {
   name: 'js',
   contract: CONTRACT_VERSION,

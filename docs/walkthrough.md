@@ -54,7 +54,7 @@ From `.reins/init-report.md`:
 
 ```markdown
 ## Summary
-- Adapter: `@reins/adapter-js`, preset `vite-react` (detected)
+- Adapter: `@agentreins/adapter-js`, preset `vite-react` (detected)
 - Scanned: 14 files, 16 internal imports
 - Existing violations frozen in `baseline.json`: **3** (layer-direction: 1, domain-boundary: 1, no-cycles: 1)
 

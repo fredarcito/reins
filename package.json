@@ -18,7 +18,7 @@
     "reins:check": "reins check"
   },
   "devDependencies": {
-    "@reins/adapter-js": "workspace:*",
+    "@agentreins/adapter-js": "workspace:*",
     "reins": "workspace:*",
     "husky": "^9.1.7"
   }

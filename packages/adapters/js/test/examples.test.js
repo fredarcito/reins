@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import adapter from '@reins/adapter-js';
-import { parseConfig, runCheck, emptyBaseline, createBaseline, validateAdapter, validateEdges, normalizeGraph, CORE_RULES } from '@reins/core';
+import adapter from '@agentreins/adapter-js';
+import { parseConfig, runCheck, emptyBaseline, createBaseline, validateAdapter, validateEdges, normalizeGraph, CORE_RULES } from '@agentreins/core';
 
 const examples = fileURLToPath(new URL('../../../../examples/', import.meta.url));
 

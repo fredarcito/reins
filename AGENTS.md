@@ -7,7 +7,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - Never commit, push, open a PR or `npm publish`. Leave changes uncommitted. Never use `--no-verify`.
 - Everything written into the repo is in English (code, comments, docs, templates, CLI messages).
 - Node >= 22, ESM, JavaScript with JSDoc types, no build step. Tests use `node:test`, next to the code.
-- Dependency direction: `cli` -> `adapters` -> `core`. `core` never imports `cli` or adapters; adapters only import `@reins/core/contract`.
+- Dependency direction: `cli` -> `adapters` -> `core`. `core` never imports `cli` or adapters; adapters only import `@agentreins/core/contract`.
 - `core` knows no framework: anything specific to JS, Vite or Next lives in `packages/adapters/js`.
 - Don't run tests per subtask: run `pnpm lint && pnpm test && pnpm self-check` once at the end and say what was verified and what wasn't.
 - No per-folder `AGENTS.md`/`CLAUDE.md`. This file stays at 30 lines or fewer.

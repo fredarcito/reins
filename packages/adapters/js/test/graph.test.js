@@ -4,9 +4,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { graph } from '@reins/adapter-js';
+import { graph } from '@agentreins/adapter-js';
 import { typeScriptProblem } from '../src/graph.js';
-import { validateEdges } from '@reins/core/contract';
+import { validateEdges } from '@agentreins/core/contract';
 
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const edgesOf = (r) => r.edges.map((e) => `${e.kind} ${e.from} -> ${e.to}`).sort();

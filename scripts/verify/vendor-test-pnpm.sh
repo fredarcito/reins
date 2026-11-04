@@ -9,8 +9,8 @@ cp -R "$R/examples/vite-react" app && cd app
 printf 'node_modules/\n' > .gitignore
 echo '{ "name": "v", "private": true, "type": "module" }' > package.json
 mkdir -p vendor/reins && cp "$R"/.tarballs/*.tgz vendor/reins/
-printf "overrides:\n  \"@reins/core\": \"file:%s\"\n" "$(ls vendor/reins/reins-core-*.tgz)" > pnpm-workspace.yaml
-pnpm add -D ./vendor/reins/reins-*.tgz ./vendor/reins/reins-adapter-js-*.tgz >/dev/null 2>&1; echo "pnpm add exit=$?"
+printf "overrides:\n  \"@agentreins/core\": \"file:%s\"\n" "$(ls vendor/reins/*-core-*.tgz)" > pnpm-workspace.yaml
+pnpm add -D $(ls ./vendor/reins/*.tgz | grep -v -- -core-) >/dev/null 2>&1; echo "pnpm add exit=$?"
 grep -E '"reins"' package.json
 npx reins check --update-baseline >/dev/null
 git init -q -b main && git add -A && git -c user.email=a@b -c user.name=a commit -qm v

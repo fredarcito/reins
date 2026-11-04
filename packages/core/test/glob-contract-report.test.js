@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import {
   matchesAny, validateAdapter, validateEdges, CONTRACT_VERSION,
   parseConfig, runCheck, emptyBaseline, createBaseline, evaluate, formatText, formatJson, REPORT_SCHEMA,
-} from '@reins/core';
+} from '@agentreins/core';
 import { edges } from './fixtures/edges.js';
 
 test('glob: *, **, ?, {a,b}', () => {

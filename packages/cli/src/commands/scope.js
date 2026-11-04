@@ -2,7 +2,7 @@
 // (same thresholds as the doctor's triage-mismatch, from .reins/doctor.yml).
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, scopeSignals, suggestLevel } from '@reins/core';
+import { notesFor, scopeSignals, suggestLevel } from '@agentreins/core';
 import { ARCHITECTURE_FILE, toRepoPath } from '../context.js';
 import { loadNotes, readDoctorConfig, readDomains } from '../project.js';
 

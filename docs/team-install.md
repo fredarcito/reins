@@ -25,18 +25,16 @@ Verified with npm and pnpm: a fresh clone in another folder installs with `npm c
 
    **npm**
    ```bash
-   npm install -D ./vendor/reins/reins-core-0.1.0.tgz \
-                  ./vendor/reins/reins-0.1.0.tgz \
-                  ./vendor/reins/reins-adapter-js-0.1.0.tgz
+   npm install -D ./vendor/reins/*.tgz
    ```
 
    **pnpm**: add to `pnpm-workspace.yaml` (pnpm doesn't read the `pnpm` field of `package.json` anymore):
    ```yaml
    overrides:
-     "@reins/core": "file:vendor/reins/reins-core-0.1.0.tgz"
+     "@agentreins/core": "file:vendor/reins/agentreins-core-0.1.0.tgz"
    ```
    ```bash
-   pnpm add -D ./vendor/reins/reins-0.1.0.tgz ./vendor/reins/reins-adapter-js-0.1.0.tgz
+   pnpm add -D ./vendor/reins/reins-0.1.0.tgz ./vendor/reins/agentreins-adapter-js-0.1.0.tgz
    ```
 
    **yarn**: not tested.

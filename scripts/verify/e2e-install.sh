@@ -23,7 +23,7 @@ cat > package.json <<'EOF'
 EOF
 printf 'node_modules/\n' > .gitignore
 git init -q -b main && git add -A && git "${G[@]}" commit -qm "app" && git remote add origin ../origin.git
-npm install -D --silent "$T"/reins-core-*.tgz "$T"/reins-*.tgz "$T"/reins-adapter-js-*.tgz husky@9 >/dev/null 2>&1 || { echo "npm install failed"; exit 1; }
+npm install -D --silent "$T"/*.tgz husky@9 >/dev/null 2>&1 || { echo "npm install failed"; exit 1; }
 npx husky init >/dev/null && : > .husky/pre-commit       # husky init writes "npm test"; start empty
 npx reins install > ../install.log; cat ../install.log
 grep -q "created .husky/pre-commit\|appended to .husky/pre-commit" ../install.log && pass "install wired the Husky hook" || fail "Husky hook not wired"

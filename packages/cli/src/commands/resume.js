@@ -3,7 +3,7 @@
 // --hook is the Claude Code SessionStart hook that reins sync installs (matcher startup|compact|clear).
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { notebookFile, notesFor } from '@reins/core';
+import { notebookFile, notesFor } from '@agentreins/core';
 import { isGitRepo } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { loadNotes, readText } from '../project.js';

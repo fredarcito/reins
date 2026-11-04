@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { draftNote, summarizeModule, parseNote, NOTE_TODO_RE } from '@reins/core';
+import { draftNote, summarizeModule, parseNote, NOTE_TODO_RE } from '@agentreins/core';
 
 const edges = [
   { from: 'src/app/page.js', to: 'src/features/cart/index.js' },

@@ -7,8 +7,8 @@ Source of truth for the design: [`DESIGN.md`](DESIGN.md). This file summarizes w
 - **Three layers:** deterministic core (`architecture.yml`, `baseline.json`, `check`, git hook, CI), portable markdown content, and thin generated tool adapters (`.claude/`, Husky).
 - **Only the core is enforced.** Anything that depends on the agent reading or writing files is an instruction and is marked experimental.
 - **The core knows no framework.** It only sees edges `{ from, to, kind }`. Everything specific lives in adapters with a versioned contract (`contract: 1`: `detect`, `graph`).
-- **Dependency direction:** `cli` → `adapters` → `core`. `core` doesn't import from `cli` or `adapters`. Adapters only see `@reins/core/contract` (enforced with `exports`).
-- **Adapters are installed separately**, with `@reins/core` as a `peerDependency` and `"reins": { "contract": 1 }`. The CLI says which one is missing; it installs nothing.
+- **Dependency direction:** `cli` → `adapters` → `core`. `core` doesn't import from `cli` or `adapters`. Adapters only see `@agentreins/core/contract` (enforced with `exports`).
+- **Adapters are installed separately**, with `@agentreins/core` as a `peerDependency` and `"reins": { "contract": 1 }`. The CLI says which one is missing; it installs nothing.
 - **`check`:** rules `layer-direction`, `domain-boundary`, `no-cycles`; baseline (only new violations fail); integrity of `architecture.yml`, `baseline.json` and generated files. Runs in pre-commit (touched files) and CI (everything). CI plus branch protection is the real guarantee.
 - **`doctor` separate from `check`:** local, informational (exit code 0 unless `--strict`), never in CI or the hook, no baseline or adapter.
 - **The agent never commits, pushes or opens PRs, and never uses `--no-verify`.**
@@ -26,7 +26,7 @@ Source of truth for the design: [`DESIGN.md`](DESIGN.md). This file summarizes w
 | Package manager | pnpm with workspaces (`packages/*`, `packages/adapters/*`). No `packageManager` field: pinning a version made corepack download a different one; the installed pnpm (12.11.2) is used |
 | Tests | `node:test` |
 | CLI | `node:util` `parseArgs`, no framework |
-| npm scope | `@reins/*` as a placeholder, kept in one place and changeable with `scripts/rename-scope.mjs` (final name pending) |
+| npm scope | `@agentreins/*` (decided 2026-11-04, see "Name"), kept in one place and changeable with `scripts/rename-scope.mjs` |
 | Status | Each piece is **stable** (enforced and tested) or **experimental**, in `docs/STATUS.md` and the README |
 | Git | The agent building this repo does not commit, push, open PRs or publish |
 
@@ -77,7 +77,7 @@ Semantics are documented for users in [`architecture-yml.md`](architecture-yml.m
 | Entries | Next special files (`page`, `layout`, `route`, `template`, `loading`, `error`, `not-found`, metadata files, `middleware`…), every file under `pages/`, `src/main.*`, config files, tests and stories | Design: Next special files are entries, not orphans |
 | `next-server-client` | Optional (off unless listed). A `'use client'` file (directive as first statement) must not reach, through runtime imports, a module that imports `server-only` or `next/headers`. Reports the nearest one per path, with the chain | Everything a client component imports ships to the browser. `'use server'` files are allowed: client components may import server actions |
 | Contract growth | `graph()` may return `{ edges, files, entries, warnings }`; adapters may declare `rules` and implement `evaluate(repoPath, config, graph)`. Still contract 1 (all optional) | `init` needs files/entries; adapter rules need file contents |
-| Contract surface | `matchesAny` re-exported from `@reins/core/contract` | Adapters can only import the contract; avoids a second glob implementation |
+| Contract surface | `matchesAny` re-exported from `@agentreins/core/contract` | Adapters can only import the contract; avoids a second glob implementation |
 | Test runner | Each package runs `node --test "test/**/*.test.js"` | Without arguments node also runs fixture files under `test/` |
 
 ## Phase 4 defaults (CLI `check` and `init`)
@@ -85,7 +85,7 @@ Semantics are documented for users in [`architecture-yml.md`](architecture-yml.m
 | Topic | Decision | Why |
 | --- | --- | --- |
 | Files in a consumer repo | `.reins/architecture.yml`, `.reins/baseline.json`, `.reins/init-report.md` | Design layout. The report is for review only; phase 8 will add it to `.gitignore` |
-| Adapter resolution | From the repo root (then optional extra folders, used by tests): `@reins/adapter-<x>`, then `reins-adapter-<x>`. Reads `reins.contract` from the package's `package.json` (falls back to walking up from the entry file), refuses a mismatch, validates the module | Verified in phase 0 that pnpm only warns on peer mismatches |
+| Adapter resolution | From the repo root (then optional extra folders, used by tests): `@agentreins/adapter-<x>`, then `reins-adapter-<x>`. Reads `reins.contract` from the package's `package.json` (falls back to walking up from the entry file), refuses a mismatch, validates the module | Verified in phase 0 that pnpm only warns on peer mismatches |
 | Missing adapter | `init` guesses `js` when there is a `package.json` and prints the install command for the repo's package manager (pnpm/yarn/bun/npm by lockfile). Never installs | Design |
 | Contract growth | Optional `presets`, `suggestPreset(repoPath)`, `loadPreset(name)` on adapters; presets may list `default_rules`. Still contract 1 | `init` needs the preset; the core can't know frameworks |
 | Exit codes | `0` no new errors, `1` new errors, `2` could not run | Hooks and CI only need "did it fail"; `2` separates broken setup from violations |
@@ -202,7 +202,7 @@ Goal (author, 2026-11-04): an agent that comes back to a module a week later kno
 | --- | --- | --- |
 | `yaml` | `core` | Read `architecture.yml` and `doctor.yml`. Node has no YAML parser |
 | `dependency-cruiser` | `adapters/js` only | Compute the import graph (with aliases). Decided in the design over writing our own parser. Requires Node `^22 \|\| ^24 \|\| >=26` |
-| `yaml` | `adapters/js` | Read the presets (`presets/*.yml`). The adapter can't use the core's copy: it may only import `@reins/core/contract` |
+| `yaml` | `adapters/js` | Read the presets (`presets/*.yml`). The adapter can't use the core's copy: it may only import `@agentreins/core/contract` |
 | `yaml` | `cli` | Edit `lefthook.yml` without losing comments (`reins install`) |
 | `typescript` | `adapters/js`: optional peer + dev | Only needed for TS repos; dependency-cruiser uses it to parse `.ts`/`.tsx`. Dev dependency so the TS example can be tested |
 
@@ -222,12 +222,11 @@ They come from [`VERIFIED.md`](VERIFIED.md). Pending your OK.
 | Topic | Decision | Why |
 | --- | --- | --- |
 | Name | **reins** (the straps you steer a horse with): the agent pulls, you steer. Chosen by the author among names free on npm on 2026-11-04 (`reins` returned 404 on the registry) | Keeps the harness metaphor and the design's principle: the agent never commits, the person decides. (In old English and in French it also means kidneys; accepted) |
-| Packages | CLI unscoped: `reins`, with the `reins` command. `core` and adapters under `@reins/` (`@reins/core`, `@reins/adapter-js`); third-party adapters `reins-adapter-<x>` | `npx reins` falls back to the npm package called exactly `reins`: publishing the CLI under that name makes the fallback ours, so `--no-install` is gone. `pnpm lint` requires the CLI to be unscoped with one bin named like the package |
+| Packages | CLI unscoped: `reins`, with the `reins` command. `core` and adapters under `@agentreins/` (`@agentreins/core`, `@agentreins/adapter-js`); third-party adapters `reins-adapter-<x>`. The organization `reins` was taken on npm; `agentreins` (created by the author, free plan) says what the tool is for: reins for agents | `npx reins` falls back to the npm package called exactly `reins`: publishing the CLI under that name makes the fallback ours, so `--no-install` is gone. `pnpm lint` requires the CLI to be unscoped with one bin named like the package |
 | Everything else | Folder `.reins/`, markers `<!-- reins:notes:… -->`, generated skills and agents `reins-*`, script `reins:check`, workflow `.github/workflows/reins.yml` with job `reins` (the branch protection check name) | Nobody had adopted it yet: one name everywhere was cheapest now |
 | History | `docs/DESIGN.md` and `docs/VERIFIED.md` keep the old name `harness` (they record the design and the tests as they were) | Rewriting evidence would make it lie |
 
 ## Open
 
-- **npm organization `@reins`.** Not created yet, and the registry can't tell whether the name is free: creating it on npmjs.com is the check. If it is taken, `pnpm rename-scope @other` changes `core` and the adapters; the CLI stays `reins`.
 - **GitHub repository name.** Still `fredarcito/harness`; renaming it is the author's call (GitHub redirects the old URL).
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

@@ -1,7 +1,7 @@
 // reins audit: the local audit backlog (.reins/backlog/optimizations.md), edited one finding at a time.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { BACKLOG_FILE, STATUSES, parseBacklog, addFinding, setStatus, markRecheck, renderFinding } from '@reins/core';
+import { BACKLOG_FILE, STATUSES, parseBacklog, addFinding, setStatus, markRecheck, renderFinding } from '@agentreins/core';
 import { CliError } from '../context.js';
 import { readText } from '../project.js';
 

@@ -1,4 +1,4 @@
-// Public entry point of @reins/core. Framework-agnostic: it only knows edges, globs, YAML and git.
+// Public entry point of @agentreins/core. Framework-agnostic: it only knows edges, globs, YAML and git.
 export { CONTRACT_VERSION, EDGE_KINDS, validateAdapter, validateEdges, normalizeGraph } from './contract/index.js';
 export { CONFIG_VERSION, CORE_RULES, SEVERITIES, ConfigError, validateConfig, parseConfig, loadConfig } from './config/index.js';
 export { RULES, evaluate, runCheck } from './check/index.js';

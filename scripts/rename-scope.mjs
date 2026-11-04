@@ -47,12 +47,12 @@ export function renameScope(root, next, opts = {}) {
   if (!SCOPE_RE.test(next)) throw new Error(`Invalid scope "${next}". Expected something like @acme.`);
   const from = currentScope(root);
   if (from === next) return { from, to: next, files: [] };
-  // "<scope>/" with the slash, so a longer scope like "@reins-x/" is not touched.
-  const re = new RegExp(`${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/`, 'g');
+  // "<scope>/" with the slash (also "<scope>\/" inside regex literals), so a longer scope like "@reins-x/" is not touched.
+  const re = new RegExp(`${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\\\?)/`, 'g');
   const files = [];
   for (const file of walk(root, root)) {
     const text = readFileSync(file, 'utf8');
-    const updated = text.replace(re, `${next}/`);
+    const updated = text.replace(re, `${next}$1/`);
     if (updated !== text) {
       files.push(path.relative(root, file).split(path.sep).join('/'));
       if (!opts.dryRun) writeFileSync(file, updated);

@@ -16,7 +16,7 @@ flowchart LR
 
 ```bash
 pnpm install
-pnpm pack:all          # writes .tarballs/reins-{core,cli,adapter-js}-<version>.tgz
+pnpm pack:all          # writes .tarballs/reins-<version>.tgz, agentreins-core-<version>.tgz, agentreins-adapter-js-<version>.tgz
 ```
 
 ## 2. Install them in your repo (on a throwaway branch)
@@ -27,21 +27,19 @@ Use the absolute path to `.tarballs/` printed by the previous step.
 
 ```bash
 git switch -c try-reins
-npm install -D /path/to/reins/.tarballs/reins-core-0.1.0.tgz \
-               /path/to/reins/.tarballs/reins-0.1.0.tgz \
-               /path/to/reins/.tarballs/reins-adapter-js-0.1.0.tgz
+npm install -D /path/to/reins/.tarballs/*.tgz
 ```
 
-**pnpm** (verified): pnpm would look for `@reins/core` in the npm registry, where it doesn't exist. Point it to the tarball with an override in `pnpm-workspace.yaml` (create the file if the repo doesn't have one; pnpm 10+ ignores the `pnpm` field of `package.json`):
+**pnpm** (verified): pnpm would look for `@agentreins/core` in the npm registry, where it doesn't exist. Point it to the tarball with an override in `pnpm-workspace.yaml` (create the file if the repo doesn't have one; pnpm 10+ ignores the `pnpm` field of `package.json`):
 
 ```yaml
 overrides:
-  "@reins/core": "file:/path/to/reins/.tarballs/reins-core-0.1.0.tgz"
+  "@agentreins/core": "file:/path/to/reins/.tarballs/agentreins-core-0.1.0.tgz"
 ```
 
 ```bash
 git switch -c try-reins
-pnpm add -D /path/to/reins/.tarballs/reins-0.1.0.tgz /path/to/reins/.tarballs/reins-adapter-js-0.1.0.tgz
+pnpm add -D /path/to/reins/.tarballs/reins-0.1.0.tgz /path/to/reins/.tarballs/agentreins-adapter-js-0.1.0.tgz
 ```
 
 **yarn**: not tested yet.

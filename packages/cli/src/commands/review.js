@@ -2,7 +2,7 @@
 // It never calls an API. Executors are the extension point: today only "print" exists; a future executor
 // (an API call, a local model) receives the same prompt.
 import { execFileSync } from 'node:child_process';
-import { notesFor } from '@reins/core';
+import { notesFor } from '@agentreins/core';
 import { CliError, isGitRepo } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate } from '../templates.js';

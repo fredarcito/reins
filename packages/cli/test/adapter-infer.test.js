@@ -13,7 +13,7 @@ const fakeAdapter = (pkgName, { contract = 1, exportsPkg = true, body } = {}) =>
 });
 
 test('adapter: official scoped name first, then reins-adapter-<name>', async () => {
-  assert.deepEqual(candidates('ruby'), ['@reins/adapter-ruby', 'reins-adapter-ruby']);
+  assert.deepEqual(candidates('ruby'), ['@agentreins/adapter-ruby', 'reins-adapter-ruby']);
   const dir = tempDir(fakeAdapter('reins-adapter-x', { exportsPkg: false }));
   const r = await resolveAdapter(dir, 'x');
   assert.equal(r.packageName, 'reins-adapter-x');

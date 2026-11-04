@@ -16,7 +16,7 @@ flowchart LR
 ## Shape
 
 ```js
-import { CONTRACT_VERSION } from '@reins/core/contract';
+import { CONTRACT_VERSION } from '@agentreins/core/contract';
 
 export default {
   name: 'js',                    // matches `adapter:` in architecture.yml
@@ -33,7 +33,7 @@ export default {
 
 Without `presets`/`loadPreset`, `reins init` can't draft a plan and asks the user to write `architecture.yml` by hand; `check` works the same.
 
-`validateAdapter()` from `@reins/core/contract` checks this shape; the CLI refuses an adapter that fails it.
+`validateAdapter()` from `@agentreins/core/contract` checks this shape; the CLI refuses an adapter that fails it.
 
 ## `graph()` result
 
@@ -74,7 +74,7 @@ Rules that need more than edges (file contents, directives) live in the adapter.
 
 ## What adapters may import from the core
 
-Only `@reins/core/contract` (the core's `exports` field blocks everything else):
+Only `@agentreins/core/contract` (the core's `exports` field blocks everything else):
 
 | Export | Use |
 | --- | --- |
@@ -87,9 +87,9 @@ Only `@reins/core/contract` (the core's `exports` field blocks everything else):
 
 | Field in the adapter's `package.json` | Value |
 | --- | --- |
-| `name` | `@reins/adapter-<name>` (official) or `reins-adapter-<name>` (third party) |
+| `name` | `@agentreins/adapter-<name>` (official) or `reins-adapter-<name>` (third party) |
 | `keywords` | include `reins-adapter` |
-| `peerDependencies` | `"@reins/core": "^<version>"`, never a regular dependency |
+| `peerDependencies` | `"@agentreins/core": "^<version>"`, never a regular dependency |
 | `reins.contract` | the contract version it implements, e.g. `1` |
 | `exports` | expose `./package.json`, so the CLI can read `reins.contract` |
 
@@ -101,7 +101,7 @@ The CLI refuses an adapter whose `contract` differs from the core's `CONTRACT_VE
 
 Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`. All optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
 
-## Reference implementation: `@reins/adapter-js`
+## Reference implementation: `@agentreins/adapter-js`
 
 | Piece | What it does |
 | --- | --- |

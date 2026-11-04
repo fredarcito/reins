@@ -36,8 +36,8 @@ const render = (t, vars) => t.replace(/\{([a-z_]+)\}/g, (m, k) => (k in vars ? v
 /**
  * @param {string} repoPath
  * @param {{ rules: Record<string, { severity: string, message?: string, fix?: string }> }} config parsed architecture.yml
- * @param {{ edges: import('@reins/core/contract').Edge[], files?: string[] }} graph normalized graph
- * @returns {import('@reins/core/contract').AdapterViolation[]}
+ * @param {{ edges: import('@agentreins/core/contract').Edge[], files?: string[] }} graph normalized graph
+ * @returns {import('@agentreins/core/contract').AdapterViolation[]}
  */
 export function run(repoPath, config, graph) {
   const rule = config.rules?.[id];

@@ -21,7 +21,7 @@ cp -R "$REPO/examples/vite-react" app && rm -rf app/.reins && cd app
 printf '{ "name": "cc-resume", "private": true, "type": "module" }\n' > package.json
 printf 'node_modules/\n' > .gitignore
 git init -q -b main && git add -A && git "${G[@]}" commit -qm app
-npm install -D --silent "$REPO"/.tarballs/reins-*.tgz >/dev/null 2>&1 || { echo "npm install failed"; exit 1; }
+npm install -D --silent "$REPO"/.tarballs/*.tgz >/dev/null 2>&1 || { echo "npm install failed"; exit 1; }
 npx reins install >/dev/null && npx reins init >/dev/null
 npx reins notes new cart > ../notes-new.log; cat ../notes-new.log
 grep -q "Used by" .reins/notes/cart.md && pass "notes new drafted the cart note from the graph" || fail "cart note draft"

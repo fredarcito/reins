@@ -1,7 +1,7 @@
 // reins doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { runDoctor, notebookFile, formatText, formatJson } from '@reins/core';
+import { runDoctor, notebookFile, formatText, formatJson } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, REINS_DIR, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { pickBaseRef } from './check.js';
