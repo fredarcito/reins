@@ -1,6 +1,86 @@
 // Adapter contract. The only part of core that adapters may import
-// (enforced by the "exports" field of @harness/core).
-// Phase 1 skeleton: the full contract (types for detect/graph) lands in phase 2.
+// (enforced by the "exports" field of the core package).
+//
+// An adapter turns a repo into a list of edges "file A depends on file B".
+// The core never opens a source file: it only sees these edges.
 
 /** Version of the adapter contract implemented by this core. */
 export const CONTRACT_VERSION = 1;
+
+/**
+ * Recommended values for `Edge.kind`. Adapters may use other non-empty strings;
+ * rules can ignore kinds through `ignore_kinds` in architecture.yml.
+ * - static:  `import x from './x'`, `export … from './x'`, `require('./x')`
+ * - dynamic: `import('./x')`
+ * - type:    type-only imports (`import type …`)
+ */
+export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
+
+/**
+ * One dependency between two files of the repo.
+ * - Paths are relative to the repo root, POSIX separators, no leading "./".
+ * - Only files inside the repo: external packages (node_modules, builtins) are left out.
+ * @typedef {object} Edge
+ * @property {string} from file that imports
+ * @property {string} to   file that is imported
+ * @property {string} kind see EDGE_KINDS
+ */
+
+/**
+ * @typedef {object} Adapter
+ * @property {string} name     short name, e.g. "js" (matches `adapter:` in architecture.yml)
+ * @property {number} contract contract version it implements (must equal CONTRACT_VERSION)
+ * @property {(repoPath: string) => boolean | Promise<boolean>} detect  does this adapter apply to the repo?
+ * @property {(repoPath: string, config: object) => Edge[] | Promise<Edge[]>} graph  dependency edges of the repo
+ * @property {string[]} [rules] extra rule ids the adapter implements (e.g. "next-server-client")
+ */
+
+/**
+ * Checks the shape of an adapter module's default export.
+ * @param {unknown} adapter
+ * @returns {string[]} problems, empty when valid
+ */
+export function validateAdapter(adapter) {
+  if (!adapter || typeof adapter !== 'object') return ['the adapter must export an object as default export'];
+  const a = /** @type {Record<string, unknown>} */ (adapter);
+  const problems = [];
+  if (typeof a.name !== 'string' || !a.name) problems.push('"name" must be a non-empty string');
+  if (!Number.isInteger(a.contract)) problems.push('"contract" must be an integer');
+  else if (a.contract !== CONTRACT_VERSION) {
+    problems.push(`implements contract ${a.contract}, but this core supports contract ${CONTRACT_VERSION}`);
+  }
+  if (typeof a.detect !== 'function') problems.push('"detect" must be a function');
+  if (typeof a.graph !== 'function') problems.push('"graph" must be a function');
+  if (a.rules !== undefined && !(Array.isArray(a.rules) && a.rules.every((r) => typeof r === 'string'))) {
+    problems.push('"rules" must be a list of rule ids');
+  }
+  return problems;
+}
+
+/**
+ * Checks the edges returned by an adapter. Reports at most `limit` problems.
+ * @param {unknown} edges
+ * @param {number} [limit]
+ * @returns {string[]} problems, empty when valid
+ */
+export function validateEdges(edges, limit = 10) {
+  if (!Array.isArray(edges)) return ['graph() must return an array of edges'];
+  const problems = [];
+  for (let i = 0; i < edges.length && problems.length < limit; i++) {
+    const e = edges[i];
+    if (!e || typeof e !== 'object') {
+      problems.push(`edge ${i}: expected { from, to, kind }`);
+      continue;
+    }
+    for (const field of ['from', 'to', 'kind']) {
+      if (typeof e[field] !== 'string' || !e[field]) problems.push(`edge ${i}: "${field}" must be a non-empty string`);
+    }
+    for (const field of ['from', 'to']) {
+      const p = e[field];
+      if (typeof p === 'string' && (p.startsWith('/') || p.startsWith('./') || p.includes('\\') || /^[a-zA-Z]:/.test(p) || p.split('/').includes('..'))) {
+        problems.push(`edge ${i}: "${field}" must be relative to the repo root with "/" separators ("${p}")`);
+      }
+    }
+  }
+  return problems;
+}

@@ -8,7 +8,16 @@
     "./contract": "./src/contract/index.js",
     "./package.json": "./package.json"
   },
-  "files": ["src"],
-  "engines": { "node": ">=22" },
-  "scripts": { "test": "node --test" }
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  }
 }

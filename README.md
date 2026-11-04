@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress — nothing is usable yet.** We are at **phase 1 of 9** (monorepo skeleton). Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress — nothing is usable from the command line yet.** Phase **2 of 9** is done: the rules engine works and is tested, but the JS adapter (phase 3) and the `harness check` command (phase 4) don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -105,7 +105,54 @@ Rules:
 | `domain-boundary` | Code imports a domain's internals instead of its public API | `features/search` imports `features/billing/total.js` instead of `features/billing/index.js` |
 | `no-cycles` | Modules import each other in a loop | `a → b → c → a` |
 
-The `baseline.json` freezes violations that already exist, so `check` starts green on day one and only fails on **new** ones. Permanent, justified exceptions go in `allow:` with a reason.
+Plus `integrity`, which warns when a PR changes `architecture.yml` or makes `baseline.json` grow (see below).
+
+### Reading a report
+
+Every finding says **which rule**, **why** and **how to fix it**, so an agent can fix it without asking:
+
+```
+✖ error layer-direction  src/components/PriceTag.js → src/features/billing/index.js
+    Why: src/components/PriceTag.js (components) imports src/features/billing/index.js (features), but features is above components.
+    Fix: Move what src/components/PriceTag.js needs from features down to components or a lower layer, or invert the dependency (pass it in as props or callbacks).
+
+✖ error no-cycles  src/lib/a.js → src/lib/b.js
+    Why: Import cycle: src/lib/a.js → src/lib/b.js → src/lib/c.js → src/lib/a.js.
+    Fix: Break the cycle: move the code both sides need into a lower module, or invert one of the imports.
+
+harness check: 2 new (2 errors, 0 warnings) · 0 in baseline · 0 fixed
+Result: FAIL (new errors)
+```
+
+With `--json` (phase 4) the same data comes as JSON with a stable `schema` number, one object per finding: `rule`, `severity`, `status` (`new` / `baseline`), `from`, `to`, `message`, `fix`.
+
+### Baseline: start green, only fail on new problems
+
+A real repo already has violations. Fixing them all before adopting the harness isn't realistic, so they are frozen in `baseline.json` and `check` only fails on **new** ones.
+
+```mermaid
+flowchart TB
+    v["Violation found"] --> q{"In baseline.json?"}
+    q -- "yes" --> old["Existing: reported as a count,<br/>does not fail"]
+    q -- "no" --> sev{"severity"}
+    sev -- "error" --> fail["New: FAILS check"]
+    sev -- "warn" --> warn["New: reported,<br/>does not fail"]
+    b["Entry in baseline.json"] --> occ{"Still happens?"}
+    occ -- "no" --> fixed["Fixed: suggest removing it<br/>(the baseline should only shrink)"]
+```
+
+```mermaid
+flowchart LR
+    pr["PR"] --> integ{"integrity<br/>vs. base branch"}
+    integ -- "architecture.yml changed" --> w1["warn: explain it in the PR"]
+    integ -- "baseline.json grew" --> w2["warn: you froze a new violation<br/>instead of fixing it"]
+    integ -- "nothing" --> ok["silent"]
+```
+
+- **Baseline** = existing mess to fix someday. **`allow:`** = a decision, with a reason, that stays.
+- `integrity` is `warn` by default; set it to `error` in `architecture.yml` to make those changes block.
+
+Full reference of the file, rules, globs and defaults: [`docs/architecture-yml.md`](docs/architecture-yml.md).
 
 ### Packages and dependency direction
 
@@ -184,7 +231,8 @@ shared       ─┘
 
 | Piece | Planned status | Built |
 | --- | --- | --- |
-| `check` (rules, baseline, integrity) | stable | ❌ phase 2 |
+| `check` engine (rules, baseline, integrity, reports) | stable | ✅ in `@harness/core`, tested; no command yet |
+| `architecture.yml` validation | stable | ✅ |
 | `adapter-js` (Vite, Next, aliases) | stable | ❌ phase 3 |
 | CLI `check` and `init` | stable | 🟡 skeleton (`--help`, `--version`) |
 | Git hook + CI job | stable | ❌ phase 8 |
@@ -223,7 +271,7 @@ Supported projects: Vite + React and Next (app and pages router), in **plain JS/
 ```mermaid
 flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
-    p1 --> p2["2 · Core check"] --> p3["3 · adapter-js<br/>+ examples"] --> p4["4 · CLI<br/>check + init"]
+    p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"] --> p4["4 · CLI<br/>check + init"]
     p4 --> gate{{"Validation gate<br/>real repo"}}
     gate --> p5["5 · doctor"] --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
@@ -262,6 +310,8 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 | Document | What's in it |
 | --- | --- |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Full design (Spanish draft, source of truth) |
+| [`docs/architecture-yml.md`](docs/architecture-yml.md) | `architecture.yml` and `baseline.json` reference: keys, rules, globs, defaults |
+| [`docs/adapter-contract.md`](docs/adapter-contract.md) | What a language adapter must implement |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | What is decided, build defaults, dependencies, open questions |
 | [`docs/VERIFIED.md`](docs/VERIFIED.md) | What we tested about Claude Code, pnpm and dependency-cruiser, with evidence |
 | [`docs/STATUS.md`](docs/STATUS.md) | Stable vs. experimental, and what is built |

@@ -9,10 +9,10 @@ Nothing here is measured. The design is a design, not a proven product.
 
 | Piece | Package | Planned status | Built |
 | --- | --- | --- | --- |
-| Adapter contract (`detect`, `graph`) | core | stable | Skeleton (version constant only) |
-| `architecture.yml` loader and validation | core | stable | No (phase 2) |
-| `check`: `layer-direction`, `domain-boundary`, `no-cycles`, baseline, integrity | core | stable | No (phase 2) |
-| Reports (text and JSON) | core | stable | No (phase 2) |
+| Adapter contract (`detect`, `graph`, `validateAdapter`, `validateEdges`) | core | stable | Yes (phase 2), tested |
+| `architecture.yml` loader and validation | core | stable | Yes (phase 2), tested |
+| `check`: `layer-direction`, `domain-boundary`, `no-cycles`, baseline, integrity | core | stable | Engine yes (phase 2), tested; no command until phase 4 |
+| Reports (text and JSON) | core | stable | Yes (phase 2), tested |
 | `adapter-js`: detect, aliases, graph, presets | adapters/js | stable | Skeleton (phase 3) |
 | `next-server-client` rule | adapters/js | stable | No (phase 3) |
 | CLI `check`, `init`, adapter resolution | cli | stable | Skeleton: `--help`, `--version` |

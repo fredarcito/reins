@@ -131,6 +131,11 @@ Details that affect the design:
 - **`node --check` quirk (Node 22) — observed.** A `.js` file with broken ESM syntax (`export const = ;`) passes `node --check` when its `package.json` has no `"type": "module"`; with `"type": "module"` it fails as expected. The linter therefore requires `"type": "module"` in every package.
 - **CI workflow — not run.** `.github/workflows/ci.yml` has never run on GitHub. Unverified: `pnpm/action-setup@v4` with pnpm 12.11.2, and pnpm 12 running on Node 24 (locally pnpm ran on Node 22 only).
 
+## Phase 2 notes
+
+- **Integrity in CI — unverified.** `integrity` needs the base branch's history (`git merge-base HEAD <base>`). GitHub's `actions/checkout` fetches one commit by default, so the CI job will probably need `fetch-depth: 0` or an explicit fetch of the base branch. Without it, `check` warns "Could not compare with <base>" instead of failing. To test in phase 8.
+- Integrity was tested against real temporary git repos (merge base, committed and uncommitted changes, missing ref).
+
 ## Unverified (pending)
 
 - Session start hook (`SessionStart`) to load the progress notebook: not tested.
