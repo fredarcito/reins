@@ -31,10 +31,10 @@ Verified with npm and pnpm: a fresh clone in another folder installs with `npm c
    **pnpm**: add to `pnpm-workspace.yaml` (pnpm doesn't read the `pnpm` field of `package.json` anymore):
    ```yaml
    overrides:
-     "@agentreins/core": "file:vendor/reins/agentreins-core-0.2.1.tgz"
+     "@agentreins/core": "file:vendor/reins/agentreins-core-0.3.0.tgz"
    ```
    ```bash
-   pnpm add -D ./vendor/reins/agentreins-cli-0.2.1.tgz ./vendor/reins/agentreins-adapter-js-0.2.1.tgz
+   pnpm add -D ./vendor/reins/agentreins-cli-0.3.0.tgz ./vendor/reins/agentreins-adapter-js-0.3.0.tgz
    ```
 
    **yarn**: not tested.

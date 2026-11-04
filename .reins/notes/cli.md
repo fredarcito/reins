@@ -15,6 +15,7 @@ The `reins` command line: wires the core and the language adapter to a consumer 
 - `src/commands/*.js`: one file per command exporting `options`, `help` and the run function.
 - `src/sync/index.js`: generates `.claude/` and the AGENTS.md notes index from `.reins/`; manifest `.reins/.generated.json`.
 - `src/init/`: `infer.js` (layers, domains, rules from the graph and preset), `render.js` (YAML and init report).
+- `init` domains: `domains_from` first; only if it finds none, `route_domains_from` (one domain per route folder). Notes are drafted per domain, so no domains means no notes.
 - `src/templates.js`: finds `templates/` (packed copy or monorepo root). `notes-seen.js`, `notes-draft.js`: notes hook state and drafting.
 
 ## How it works

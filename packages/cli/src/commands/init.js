@@ -67,7 +67,10 @@ export async function init(ctx) {
   }
   const typescript = hasTypeScript(graph.files);
   const layerInfo = inferLayers(p.layers, graph.files, graph.edges);
-  const domains = inferDomains(p.domains_from ?? [], graph.files);
+  // domain folders first (features/*); a repo organized by routes gets one domain per route folder instead
+  let domains = inferDomains(p.domains_from ?? [], graph.files);
+  const fromRoutes = !domains.length && Boolean(p.route_domains_from?.length);
+  if (fromRoutes) domains = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true });
   const adapterRules = (p.default_rules ?? []).filter((r) => (adapter.rules ?? []).includes(r));
   const yml = renderArchitecture({ adapter: adapterName, preset, date, layers: layerInfo.layers, domains, typescript, adapterRules });
 
@@ -76,7 +79,7 @@ export async function init(ctx) {
   const result = runCheck({ edges: analysis.graph.edges, config: analysis.config, baseline: emptyBaseline(), extra: analysis.extra });
   const baseline = serializeBaseline(createBaseline(result.violations));
   const report = renderReport({
-    date, adapterPackage: packageName, preset, presetReason, detected, layerInfo, domains, result,
+    date, adapterPackage: packageName, preset, presetReason, detected, layerInfo, domains, fromRoutes, result,
     orphans: findOrphans(graph.files, graph.entries, graph.edges), warnings: graph.warnings,
     files: graph.files.length, edges: graph.edges.length, typescript,
   });
@@ -117,8 +120,9 @@ export async function init(ctx) {
   out(
     [
       `Wrote ${ARCHITECTURE_FILE} (draft), ${BASELINE_FILE} (${s} existing violation${s === 1 ? '' : 's'} frozen) and ${INIT_REPORT_FILE}.`,
-      `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains: ${domains.map((x) => x.name).join(', ') || 'none'}`,
+      `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains${fromRoutes ? ' (one per route folder)' : ''}: ${domains.map((x) => x.name).join(', ') || 'none'}`,
       ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines (in Claude Code: /reins-notes).`] : []),
+      ...(domains.length ? [] : ['No domains found, so no module notes were drafted. Draft one per module folder with `reins notes new <folder>`, or declare domains in architecture.yml.']),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
       `Next: review ${INIT_REPORT_FILE} and adjust ${ARCHITECTURE_FILE} (in Claude Code: /reins-arch), run \`reins check --update-baseline\`, then \`reins check\`.`,
     ].join('\n'),

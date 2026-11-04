@@ -53,6 +53,7 @@ const capped = (items) => (items.length > MAX ? [...items.slice(0, MAX), `… an
  * @param {boolean} d.detected
  * @param {ReturnType<import('./infer.js').inferLayers>} d.layerInfo
  * @param {ReturnType<import('./infer.js').inferDomains>} d.domains
+ * @param {boolean} [d.fromRoutes] the domains are route folders (the repo has no domain folders)
  * @param {{ violations: { rule: string, from: string, to?: string, message: string }[] }} d.result
  * @param {string[]} d.orphans
  * @param {string[]} d.warnings
@@ -97,7 +98,7 @@ Folders with source files outside every layer (add them to a layer, or leave the
 ${bullet(capped(d.layerInfo.unclassified.map((u) => `\`${u.folder}/\` (${u.files} files)`)), 'none')}
 
 ## Domains
-
+${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
 ${bullet(d.domains.map((x) => `\`${x.name}\`: \`${x.folder}/\` (${x.files} files), public API ${x.publicApi.map((p) => `\`${p}\``).join(', ')}${x.missingIndex ? ' — **no index file: create it or change public_api**' : ''}`), 'none proposed (no folders matching the preset, e.g. `src/features/*`)')}
 
 ## Cycles

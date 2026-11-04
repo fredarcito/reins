@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, tempDir } from './helpers.js';
 
@@ -115,4 +115,58 @@ test('init drafts one module note per domain without one, never touching existin
   assert.match(readFileSync(path.join(dir, '.reins/notes/catalog.md'), 'utf8'), /^---\npaths: \["src\/features\/catalog\/\*\*"\]\n---\n# catalog\n[\s\S]*## Map\n- Public API: `src\/features\/catalog\/index\.js`/);
   assert.equal(existsSync(path.join(dir, '.reins/notes/cart.md')), false, 'cart already has a note under another name');
   assert.equal(readFileSync(path.join(dir, '.reins/notes/shop-cart.md'), 'utf8'), '---\npaths: ["src/features/cart/**"]\n---\nmine\n');
+});
+
+/** An example repo with its domain folders replaced by the given files (a repo organized by routes). */
+function routesRepo(name, files) {
+  const dir = exampleRepo(name, { keepReins: false });
+  rmSync(path.join(dir, 'src/features'), { recursive: true });
+  for (const [f, content] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
+    writeFileSync(path.join(dir, f), content);
+  }
+  return dir;
+}
+
+test('next-app without features/: one domain and one note per route folder, looking through [lang]', async () => {
+  const dir = routesRepo('next-app', {
+    'src/app/orders/page.tsx': 'export default function Page() { return null; }\n',
+    'src/app/[lang]/layout.tsx': 'export default function L({ children }: { children: unknown }) { return children; }\n',
+    'src/app/[lang]/flights/page.tsx': 'import { Row } from "./Row";\nexport default function Page() { return Row; }\n',
+    'src/app/[lang]/flights/Row.tsx': 'export const Row = 1;\n',
+    'src/app/[lang]/(search)/results/page.tsx': 'export default function Page() { return null; }\n',
+    'src/app/[lang]/[...rest]/page.tsx': 'export default function Page() { return null; }\n',
+    'src/app/[lang]/_private/x.ts': 'export const x = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): search, flights, api, orders\n/);
+  assert.match(r.stdout, /Module notes drafted from the code: .*\.reins\/notes\/flights\.md/);
+  const yml = read(dir, '.reins/architecture.yml');
+  assert.match(yml, /flights: \{ paths: \["src\/app\/\[lang\]\/flights\/\*\*"\], public_api: \["src\/app\/\[lang\]\/flights\/page\.tsx"\] \}/);
+  assert.match(read(dir, '.reins/init-report.md'), /each route folder is proposed as a domain/);
+  assert.match(read(dir, '.reins/notes/search.md'), /paths: \["src\/app\/\[lang\]\/\(search\)\/\*\*"\]/);
+  const check = await cli(dir, ['check']);
+  assert.equal(check.code, 0, check.stdout + check.stderr);
+});
+
+test('vite-react without features/: route folders become domains, public API = what the router imports', async () => {
+  const dir = routesRepo('vite-react', {
+    'src/App.jsx': "import { Jobs } from './routes/jobs/Jobs';\nimport { Profile } from './routes/profile/Profile';\nexport function App() { return [Jobs, Profile]; }\n",
+    'src/routes/jobs/Jobs.jsx': "import { JobRow } from './JobRow';\nexport const Jobs = JobRow;\n",
+    'src/routes/jobs/JobRow.jsx': 'export const JobRow = 1;\n',
+    'src/routes/profile/Profile.jsx': 'export const Profile = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): jobs, profile\n/);
+  assert.match(read(dir, '.reins/architecture.yml'), /jobs: \{ paths: \["src\/routes\/jobs\/\*\*"\], public_api: \["src\/routes\/jobs\/Jobs\.jsx"\] \}/);
+  assert.ok(existsSync(path.join(dir, '.reins/notes/profile.md')));
+});
+
+test('no domains at all: init says why there are no notes and how to draft them', async () => {
+  const dir = routesRepo('vite-react', { 'src/App.jsx': 'export function App() { return null; }\n' });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /No domains found, so no module notes were drafted\. Draft one per module folder with `reins notes new <folder>`/);
 });

@@ -10,6 +10,8 @@ layers:
   - { name: shared,     paths: ["src/hooks/**", "src/lib/**", "src/utils/**", "src/services/**", "src/api/**", "src/store/**", "src/types/**", "src/constants/**"] }
 
 domains_from: ["src/features/*", "src/modules/*"]
+# With no domain folder above, each route folder becomes a domain.
+route_domains_from: ["src/routes/*", "src/pages/*", "src/views/*", "src/screens/*"]
 
 entries:
   - "src/main.{js,jsx,ts,tsx}"

@@ -90,33 +90,55 @@ export function inferLayers(presetLayers, files, edges) {
   return { layers, pairs, conflicts, unclassified };
 }
 
+// Route folder segments (Next conventions): `[lang]` is a parameter, not a module, so the domains are its
+// children; catch-alls (`[...rest]`, `[[...slug]]`) and private folders (`_x`) are never domains.
+const PARAM = /^\[[^.[\]][^\]]*\]$/;
+const SKIPPED = /^(\[\[?\.\.\.|_)/;
+
 /**
  * Proposes one domain per folder matching `domains_from` (e.g. every child of src/features/).
+ * With `routes`, a matching folder that is a route parameter (`[lang]`) is looked through to its children.
+ * Public API: the folder's `index.*`; for routes without one, the files imported from outside the folder plus
+ * the entry points inside it (e.g. Next's page.tsx); otherwise an `index.js` placeholder flagged as missing.
  * @param {string[]} domainsFrom globs of domain folders
  * @param {string[]} files
+ * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean }} [opts]
  * @returns {{ name: string, folder: string, paths: string[], publicApi: string[], missingIndex: boolean, files: number }[]}
  */
-export function inferDomains(domainsFrom, files) {
+export function inferDomains(domainsFrom, files, opts = {}) {
+  const { edges = [], entries = [], routes = false } = opts;
   const folders = new Map();
   for (const f of files) {
-    if (!SOURCE.test(f)) continue;
+    if (!SOURCE.test(f) || (routes && TEST.test(f))) continue;
     const parts = f.split('/');
     for (let i = 1; i < parts.length; i++) {
-      const dir = parts.slice(0, i).join('/');
-      if (matchesAny(dir, domainsFrom)) {
+      if (!matchesAny(parts.slice(0, i).join('/'), domainsFrom)) continue;
+      let end = i;
+      while (routes && PARAM.test(parts[end - 1]) && end < parts.length - 1) end++;
+      const seg = parts[end - 1];
+      const isFolder = end < parts.length;
+      if (isFolder && !(routes && (SKIPPED.test(seg) || PARAM.test(seg)))) {
+        const dir = parts.slice(0, end).join('/');
         folders.set(dir, (folders.get(dir) ?? 0) + 1);
-        break;
       }
+      break;
     }
   }
   const used = new Set();
+  const entrySet = new Set(entries);
   return [...folders].sort(([a], [b]) => (a < b ? -1 : 1)).map(([folder, count]) => {
-    const base = folder.split('/').pop().replace(/[^\w-]/g, '-');
+    const base = folder.split('/').pop().replace(/^\((.+)\)$/, '$1').replace(/[^\w-]/g, '-');
     let name = base;
     for (let k = 2; used.has(name); k++) name = `${base}-${k}`;
     used.add(name);
-    const index = files.filter((f) => new RegExp(`^${folder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/index\\.(js|jsx|mjs|ts|tsx)$`).test(f));
-    return { name, folder, paths: [`${folder}/**`], publicApi: index.length ? index : [`${folder}/index.js`], missingIndex: index.length === 0, files: count };
+    const inside = (f) => f.startsWith(`${folder}/`);
+    const index = files.filter((f) => inside(f) && /^index\.(js|jsx|mjs|ts|tsx)$/.test(f.slice(folder.length + 1)));
+    // a route folder rarely has an index: its public API is what the router (or the framework) reaches
+    const reached = routes && !index.length
+      ? [...new Set([...edges.filter((e) => inside(e.to) && !inside(e.from)).map((e) => e.to), ...files.filter((f) => inside(f) && entrySet.has(f))])].sort()
+      : [];
+    const publicApi = index.length ? index : reached.length ? reached : [`${folder}/index.js`];
+    return { name, folder, paths: [`${folder}/**`], publicApi, missingIndex: !index.length && !reached.length, files: count };
   });
 }
 

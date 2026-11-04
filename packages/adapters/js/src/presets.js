@@ -4,7 +4,7 @@ import { parse } from 'yaml';
 export const PRESETS = Object.freeze(['vite-react', 'next-app', 'next-pages']);
 
 /**
- * @typedef {{ description: string, layers: { name: string, paths: string[] }[], domains_from: string[], entries: string[] }} Preset
+ * @typedef {{ description: string, layers: { name: string, paths: string[] }[], domains_from: string[], route_domains_from?: string[], entries: string[] }} Preset
  */
 
 /**

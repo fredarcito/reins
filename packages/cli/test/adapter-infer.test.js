@@ -75,6 +75,28 @@ test('domains: one per folder, public API from its index, missing index flagged,
   ]);
 });
 
+test('domains from routes: look through [param], skip catch-alls and private folders, public API = what is reached', () => {
+  const files = [
+    'src/app/layout.tsx', 'src/app/[lang]/layout.tsx', 'src/app/[lang]/flights/page.tsx', 'src/app/[lang]/flights/Row.tsx',
+    'src/app/[lang]/flights/Row.test.tsx', 'src/app/[lang]/(search)/page.tsx', 'src/app/[lang]/[...rest]/page.tsx',
+    'src/app/[lang]/[[...opt]]/page.tsx', 'src/app/[lang]/_lib/x.ts', 'src/app/[lang]/[id]/edit/page.tsx', 'src/app/api/ping/route.ts',
+    'src/app/[lang]/shared/util.ts', 'src/app/[lang]/trips/index.ts', 'src/app/[lang]/trips/List.tsx',
+  ];
+  const d = inferDomains(['src/app/*'], files, {
+    routes: true,
+    entries: ['src/app/[lang]/flights/page.tsx', 'src/app/[lang]/(search)/page.tsx', 'src/app/api/ping/route.ts', 'src/app/[lang]/[id]/edit/page.tsx'],
+    edges: [{ from: 'src/app/[lang]/trips/List.tsx', to: 'src/app/[lang]/shared/util.ts' }],
+  });
+  assert.deepEqual(d.map((x) => [x.name, x.folder, x.publicApi.join(','), x.missingIndex, x.files]), [
+    ['search', 'src/app/[lang]/(search)', 'src/app/[lang]/(search)/page.tsx', false, 1],
+    ['edit', 'src/app/[lang]/[id]/edit', 'src/app/[lang]/[id]/edit/page.tsx', false, 1],
+    ['flights', 'src/app/[lang]/flights', 'src/app/[lang]/flights/page.tsx', false, 2],
+    ['shared', 'src/app/[lang]/shared', 'src/app/[lang]/shared/util.ts', false, 1],
+    ['trips', 'src/app/[lang]/trips', 'src/app/[lang]/trips/index.ts', false, 2],
+    ['api', 'src/app/api', 'src/app/api/ping/route.ts', false, 1],
+  ]);
+});
+
 test('orphans: not imported, not entries, not tests, not config, not .d.ts', () => {
   const o = findOrphans(
     ['src/a.js', 'src/b.js', 'src/page.js', 'src/a.test.js', 'vite.config.js', 'src/env.d.ts', 'src/c.ts'],

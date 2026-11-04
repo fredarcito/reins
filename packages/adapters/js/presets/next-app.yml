@@ -10,6 +10,8 @@ layers:
   - { name: shared,     paths: ["{lib,hooks,utils,services,actions,types}/**", "src/{lib,hooks,utils,services,actions,types}/**"] }
 
 domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
+# With no domain folder above, each route folder becomes a domain (`[lang]`-style parameters are looked through).
+route_domains_from: ["app/*", "src/app/*"]
 
 # adapter rules `reins init` proposes for this preset
 default_rules: [next-server-client]

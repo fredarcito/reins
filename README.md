@@ -432,6 +432,10 @@ Drafts the plan from the code. The code says what exists, not what should exist,
 flowchart LR
     scan["Scan the repo<br/>(adapter graph)"] --> layers["Layers: preset folders<br/>that exist, ordered by<br/>dominant import direction"]
     scan --> domains["Domains: one per<br/>features/* folder,<br/>public API = its index"]
+    domains -. "no features/" .-> routes["Domains: one per<br/>route folder<br/>(app/*, src/routes/*…)"]
+    routes --> draft
+    routes --> notes["Module notes<br/>(one draft per domain)"]
+    domains --> notes
     layers --> draft["architecture.yml<br/>(draft)"]
     domains --> draft
     draft --> run["Run check on the draft"]

@@ -27,7 +27,7 @@ export default {
   evaluate(repoPath, config, graph) {}, // required if `rules` is not empty
   presets: ['vite-react', 'next-app', 'next-pages'], // optional, used by `reins init`
   suggestPreset(repoPath) {},    // optional: best preset name, or null
-  loadPreset(name) {},           // optional: { description, layers, domains_from, entries, default_rules? }
+  loadPreset(name) {},           // optional: { description, layers, domains_from, route_domains_from?, entries, default_rules? }
 };
 ```
 

@@ -12,7 +12,7 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - `src/graph.js`: runs dependency-cruiser, filters to local files, classifies edge kinds, computes entries, collects warnings.
 - `src/aliases.js`: reads aliases from tsconfig/jsconfig `paths`/`baseUrl` (following `extends`/`references`) and `vite.config.*` `resolve.alias`, as text.
 - `src/detect.js`: Vite vs Next (and which router) from config files and folders; suggests a preset.
-- `src/presets.js` + `presets/*.yml`: `vite-react`, `next-app`, `next-pages` (layers, `domains_from`, `entries`, `default_rules`).
+- `src/presets.js` + `presets/*.yml`: `vite-react`, `next-app`, `next-pages` (layers, `domains_from`, `route_domains_from`, `entries`, `default_rules`).
 - `rules/next-server-client.js`: a `'use client'` file must not reach a module importing `server-only` or `next/headers`.
 
 ## How it works
