@@ -213,6 +213,13 @@ Test 2 (end to end, [`scripts/verify/cc-resume.sh`](../scripts/verify/cc-resume.
 
 On a copy of `examples/vite-react` installed from npm (`@agentreins/cli` 0.1.0, notes drafted by `reins init`), plus the new skill synced into `.claude/skills/reins-fill-notes/`: `claude -p "/reins-fill-notes"` (haiku, `acceptEdits`). Result: both notes filled, no `TODO` left, Map lines from the graph kept, decisions not invented (one git commit, so they became `- ? question` lines), real traps found (integer cents, the `format.js`/`currency.js` cycle, `Home.jsx` bypassing the catalog public API). It could not run `npx reins doctor` (Bash not allowed in that run) and said so. Follow-up: the draft comment stayed; the skill now says to delete it.
 
+## Skills `reins-review-architecture` and `reins-new-agent` — pass (1/1 each, haiku)
+
+Copy of `examples/vite-react` with a `src/generated/` file, installed from this version's tarballs, `reins install` + `init` + `check --update-baseline`.
+
+- `claude -p "/reins-review-architecture"` (Read/Grep/Glob and `npx reins` only): `architecture.yml` unchanged (same hash). It ran `check --coverage` and `--verbose`, confirmed each baseline item in the code (wrong-layer import in `Button.jsx`, `Home.jsx` bypassing the catalog public API, the `format`/`currency` cycle), proposed `ignore: ["src/generated/**"]` with evidence, kept every existing violation as baseline debt, and ended with questions. Gap found: it couldn't confirm `ignore:` was a valid key; the skill now lists the keys and links the reference.
+- `claude -p "/reins-new-agent …a read-only a11y checker…"` (`acceptEdits`): wrote `.reins/agents/a11y-checker.md` in the house format (read-only, Role/When/How/Returns, under 40 lines), ran `reins sync` (`.claude/agents/reins-a11y-checker.md`, `sync --check` clean) and proposed, without applying, a line for the multi-agent policy.
+
 ## Still unverified
 
 Everything below is assumed, not tested. Each is a candidate for the pilot or for a script in `scripts/verify/`.

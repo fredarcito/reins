@@ -10,6 +10,7 @@ import {
 import { resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
+import { computeCoverage, formatCoverage } from '../coverage.js';
 
 export const options = {
   files: { type: 'string', multiple: true },
@@ -17,6 +18,7 @@ export const options = {
   base: { type: 'string' },
   'update-baseline': { type: 'boolean' },
   verbose: { type: 'boolean' },
+  coverage: { type: 'boolean' },
 };
 
 export const help = `Usage: reins check [options]
@@ -29,7 +31,9 @@ Options:
   --json               JSON output for agents and tools
   --base <ref>         Base branch for the integrity rule (default: $GITHUB_BASE_REF, origin/HEAD, origin/main, main)
   --update-baseline    Write the current violations to baseline.json (review the diff before committing)
-  --verbose            Also list violations already in the baseline`;
+  --verbose            Also list violations already in the baseline
+  --coverage           Show what the plan covers instead of checking: files per layer and domain, folders outside
+                       every layer, imports between layers, exceptions and the baseline (with --json too)`;
 
 /** First base ref that exists. */
 export function pickBaseRef(root, explicit, env = process.env) {
@@ -104,6 +108,13 @@ export async function check(ctx) {
 
   const { config, graph, extra } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
   const warnings = [...graph.warnings];
+
+  if (values.coverage) {
+    const coverage = computeCoverage(config, graph, readBaseline(root).baseline);
+    out(values.json ? JSON.stringify({ ...coverage, warnings }, null, 2) : formatCoverage(coverage));
+    if (!values.json) for (const w of warnings) out(`! warning  ${w}`);
+    return 0;
+  }
 
   if (values['update-baseline']) {
     const { baseline: before } = readBaseline(root);

@@ -122,7 +122,7 @@ ${bullet(d.warnings, 'none')}
 
 ## Next steps
 
-1. Edit \`.reins/architecture.yml\`: layer order, folders outside every layer, domains and their public API.
+1. Edit \`.reins/architecture.yml\`: layer order, folders outside every layer, domains and their public API. In Claude Code, \`/reins-arch\` has your agent propose these changes with evidence; you approve each one.
 2. \`reins check --update-baseline\` to freeze the violations of the final plan.
 3. \`reins check\` must pass. Commit \`.reins/architecture.yml\` and \`.reins/baseline.json\`.
 4. This report is only for review; you don't need to commit it.

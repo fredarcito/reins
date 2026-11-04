@@ -23,7 +23,7 @@ function repo({ keepAgentsMd = false } = {}) {
 }
 
 const GENERATED = [
-  '.claude/skills/reins-audit/SKILL.md', '.claude/skills/reins-close-task/SKILL.md', '.claude/skills/reins-fill-notes/SKILL.md',
+  '.claude/skills/reins-audit/SKILL.md', '.claude/skills/reins-done/SKILL.md', '.claude/skills/reins-notes/SKILL.md', '.claude/skills/reins-arch/SKILL.md', '.claude/skills/reins-agent/SKILL.md',
   '.claude/agents/reins-reviewer.md', '.claude/agents/reins-explorer.md',
   '.claude/settings.json', 'AGENTS.md', 'CLAUDE.md', '.reins/.generated.json',
 ];
@@ -102,7 +102,7 @@ test('--check detects hand edits, stale sources, new notes and removed settings;
   const dir = repo();
   await cli(dir, ['sync']);
   write(dir, '.claude/agents/reins-reviewer.md', 'edited\n');
-  write(dir, '.reins/skills/close-task/SKILL.md', read(dir, '.reins/skills/close-task/SKILL.md') + '\n6. New step.\n');
+  write(dir, '.reins/skills/done/SKILL.md', read(dir, '.reins/skills/done/SKILL.md') + '\n6. New step.\n');
   write(dir, '.reins/notes/catalog.md', '---\npaths: ["src/features/catalog/**"]\n---\n- note\n');
   const s = JSON.parse(read(dir, '.claude/settings.json'));
   s.permissions.deny = [];
@@ -111,7 +111,7 @@ test('--check detects hand edits, stale sources, new notes and removed settings;
   const r = await cli(dir, ['sync', '--check']);
   assert.equal(r.code, 1);
   assert.match(r.stdout, /reins-reviewer\.md: edited by hand/);
-  assert.match(r.stdout, /reins-close-task\/SKILL\.md: out of date with \.reins\/skills\/close-task\/SKILL\.md/);
+  assert.match(r.stdout, /reins-done\/SKILL\.md: out of date with \.reins\/skills\/done\/SKILL\.md/);
   assert.match(r.stdout, /AGENTS\.md: notes index out of date/);
   assert.match(r.stdout, /settings\.json: reins permissions or hook missing/);
   assert.match(read(dir, '.claude/agents/reins-reviewer.md'), /^edited/, '--check writes nothing');

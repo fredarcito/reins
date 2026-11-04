@@ -25,6 +25,7 @@ Version 0.1.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Yes (phase 8), tested; end-to-end with Husky |
 | `notes new`: note drafted from the import graph | core + cli | experimental | Yes (phase 10), tested on both examples |
+| Skills `notes`, `arch`, `agent` and `check --coverage` | templates + cli | experimental | Yes, tested; each skill run once with Claude Code (haiku) |
 | `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
 | Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
 

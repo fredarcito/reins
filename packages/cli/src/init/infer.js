@@ -3,7 +3,7 @@
 import { matchesAny } from '@agentreins/core';
 
 const SOURCE = /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/;
-const TEST = /\.(test|spec|stories)\.[^/]+$|(^|\/)(__tests__|__mocks__|test|tests|e2e)\//;
+export const TEST = /\.(test|spec|stories)\.[^/]+$|(^|\/)(__tests__|__mocks__|test|tests|e2e)\//;
 
 /**
  * @typedef {{ name: string, paths: string[], files: number }} InferredLayer

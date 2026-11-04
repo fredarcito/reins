@@ -50,8 +50,8 @@ npx reins check                    # from now on, only new violations fail
 
 Between `init` and `check --update-baseline`:
 
-1. Review `.reins/init-report.md` and adjust `.reins/architecture.yml` if needed.
-2. Have your agent fill in the module notes: in Claude Code, type `/reins-fill-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
+1. Review the architecture plan: in Claude Code, type `/reins-arch` (your agent proposes changes with evidence, you approve each one); otherwise read `.reins/init-report.md` and edit `.reins/architecture.yml`.
+2. Have your agent fill in the module notes: in Claude Code, type `/reins-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
 
 Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
@@ -63,6 +63,7 @@ Nothing is overwritten: `install` and `init` only add files or ask first. With p
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
 - [Context between sessions](#context-between-sessions)
+- [Skills for your agent](#skills-for-your-agent)
 - [What lands in your repo](#what-lands-in-your-repo)
 - [Status of each piece](#status-of-each-piece)
 - [Commands](#commands)
@@ -312,9 +313,33 @@ A **decision** answers "why is it like this?"; a **trap** warns "careful: this l
 
 **A conversation gets compacted.** Claude Code fires the `SessionStart` hook with `compact`; `reins resume --hook` puts back the branch notebook, the files changed on the branch and their module notes. Verified with Claude Code: after a compaction the model quoted a notebook and a note that had changed on disk in the meantime ([details](docs/VERIFIED.md#p9-sessionstart-hook-after-a-compaction--pass)). Other agents get the same text with `npx reins resume`.
 
-**Filling them in.** `/reins-fill-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
+**Filling them in.** `/reins-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
 
-**Notes stay current.** The `reins-close-task` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
+**Notes stay current.** The `reins-done` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
+
+## Skills for your agent
+
+`reins install` adds these skills; `reins sync` generates them for Claude Code. Type them as commands (`/reins-arch`), add details after them (`/reins-notes cart`), or just ask: Claude Code also picks a skill when your request matches its description. Other agents can read the same instructions in `.reins/skills/<name>/SKILL.md`.
+
+| Skill | What your agent does | When |
+| --- | --- | --- |
+| `/reins-arch` | Checks `.reins/architecture.yml` against the code (`reins check --coverage`, the init report, the baseline) and proposes changes, each with its evidence and its effect. **Applies nothing until you approve each item**, never adds an exception you didn't give a reason for, never bends the plan to make the check pass | After `init`, and every few months |
+| `/reins-notes` | Reads each module and fills in its note. Writes only decisions it can back up; the rest become `- ? question` lines for you | After `init` or `notes new` |
+| `/reins-agent` | Creates a subagent in `.reins/agents/` (read-only by default, the fewest tools, a clear "when to use") and generates it for Claude Code | When you want a new agent: a tester, an a11y checker… |
+| `/reins-done` | Runs the checks once, updates the notebook and the notes of the modules it touched, and reports what was and wasn't verified | When a task is done |
+| `/reins-audit` | Re-checks the audit backlog and adds only new findings | "Review the whole project" |
+
+```mermaid
+flowchart LR
+    init["reins init"] --> review["/reins-arch<br/>proposal with evidence"]
+    review --> you{"You approve<br/>each change"}
+    you --> plan["architecture.yml"]
+    init --> fill["/reins-notes"]
+    fill --> notes["notes/*.md<br/>+ open questions"]
+    plan --> check["reins check --update-baseline"]
+```
+
+Your own agents and skills follow the same path: write them in `.reins/agents/` or `.reins/skills/` (or ask `/reins-agent`), run `reins sync`.
 
 ## What lands in your repo
 
@@ -387,6 +412,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | `reins install` | experimental | ✅ npm and pnpm |
 | `reins sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |
 | `reins notes new`, `resume` + `SessionStart` hook | experimental | ✅ notebook and notes come back after a compaction |
+| Skills `arch`, `notes`, `agent` | experimental | ✅ tested with Claude Code |
 | Templates: `AGENTS.md`, policies, skills, agents | experimental | ✅ |
 | `reins doctor` | experimental | ✅ |
 | `reins audit`, `progress`, `review` | experimental | ✅ |
@@ -425,6 +451,7 @@ If the adapter is missing, it prints the install command for your package manage
 | `--base <ref>` | Base branch for `integrity` (default: `$GITHUB_BASE_REF`, `origin/HEAD`, `origin/main`, `main`) |
 | `--update-baseline` | Freeze the current violations into `baseline.json` |
 | `--verbose` | Also list violations already in the baseline |
+| `--coverage` | Instead of checking, show what the plan covers: files per layer and domain, folders outside every layer (not checked), imports between layers, exceptions and the baseline. With `--json` for agents |
 
 Exit codes: **0** no new errors · **1** new errors · **2** could not run (config, adapter, options).
 
@@ -496,7 +523,7 @@ Notebook format (`.reins/progress/<branch>.md`, local, outside git):
 ```mermaid
 flowchart LR
     subgraph src[".reins/ (sources, in git)"]
-        skills["skills/audit/<br/>skills/close-task/<br/>skills/fill-notes/"]
+        skills["skills/audit/<br/>skills/done/<br/>skills/notes/"]
         agents["agents/reviewer.md<br/>agents/explorer.md"]
         notes["notes/*.md<br/>(paths in frontmatter)"]
     end

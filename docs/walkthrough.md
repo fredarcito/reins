@@ -29,7 +29,7 @@ npx husky init && : > .husky/pre-commit     # this repo already uses Husky; star
 ```console
 $ npx reins install
 reins install:
-  - .reins/ sources: 17 file(s) added
+  - .reins/ sources: 19 file(s) added
   - .gitignore: added .reins/backlog/, .reins/progress/, .reins/init-report.md
   - package.json: added script "reins:check": "reins check"
   - pre-commit hook: appended to .husky/pre-commit (Husky)
@@ -47,8 +47,8 @@ Next:
 $ npx reins init
 Wrote .reins/architecture.yml (draft), .reins/baseline.json (3 existing violations frozen) and .reins/init-report.md.
 Layers: app > features > components > shared · Domains: cart, catalog
-Module notes drafted from the code: .reins/notes/cart.md, .reins/notes/catalog.md. Ask your agent to fill in their TODO lines (in Claude Code: /reins-fill-notes).
-Next: review .reins/init-report.md, adjust .reins/architecture.yml, run `reins check --update-baseline`, then `reins check`.
+Module notes drafted from the code: .reins/notes/cart.md, .reins/notes/catalog.md. Ask your agent to fill in their TODO lines (in Claude Code: /reins-notes).
+Next: review .reins/init-report.md and adjust .reins/architecture.yml (in Claude Code: /reins-arch), run `reins check --update-baseline`, then `reins check`.
 ```
 
 From `.reins/init-report.md`:

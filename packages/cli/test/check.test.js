@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, git, tempDir } from './helpers.js';
 
@@ -106,4 +106,21 @@ test('check --help', async () => {
   assert.equal(r.code, 0);
   assert.match(r.stdout, /--update-baseline/);
   assert.equal(existsSync(path.join(tempDir(), BASELINE)), false);
+});
+
+test('check --coverage: layers, folders outside every layer, imports between layers, domains, baseline', async () => {
+  const dir = exampleRepo('vite-react');
+  await cli(dir, ['check', '--update-baseline']);
+  mkdirSync(path.join(dir, 'src/utils'), { recursive: true });
+  writeFileSync(path.join(dir, 'src/utils/slug.js'), 'export const slug = (s) => s;\n');
+  const r = await cli(dir, ['check', '--coverage']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^reins check --coverage: what \.reins\/architecture\.yml covers/);
+  assert.match(r.stdout, /Outside every layer: 1 files .*\n {2}src\/utils\/ \(1\)/);
+  assert.match(r.stdout, /features → components: 2 down, 1 up {3}\(mixed: check this order\)/);
+  assert.match(r.stdout, /Baseline: 3 frozen violation\(s\) \(/);
+  const json = JSON.parse((await cli(dir, ['check', '--coverage', '--json'])).stdout);
+  assert.deepEqual(json.outside.folders, [{ folder: 'src/utils', files: 1 }]);
+  assert.deepEqual(json.domains.map((d) => [d.name, d.publicApiFiles.length > 0]).sort(), [['cart', true], ['catalog', true]]);
+  assert.equal(json.baseline.total, 3);
 });

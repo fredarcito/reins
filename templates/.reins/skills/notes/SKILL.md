@@ -1,5 +1,5 @@
 ---
-name: fill-notes
+name: notes
 description: Fill in or improve the module notes in .reins/notes/ (purpose, map, how it works, decisions, traps). Use it after reins init or reins notes new, when reins doctor reports note-draft, or when asked to document a module.
 ---
 # Fill in module notes

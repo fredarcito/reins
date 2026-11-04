@@ -1,5 +1,5 @@
 ---
-name: close-task
+name: done
 description: Close a coding task. Use it when the person says the task is done, asks to wrap up or close it, or before delivering a medium or large task.
 ---
 # Close the task
