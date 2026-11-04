@@ -7,30 +7,12 @@ Coding agents write code fast, but they forget, in two ways:
 - **They forget your architecture.** A shared component imports from a feature, one feature reaches into another's internals, an import cycle appears, and nobody notices until the codebase is a tangle. Rules written in a prompt or in `CLAUDE.md` help, until the agent skips them.
 - **They forget your project.** You come back to a module a week later and the agent reads all of its code again to work out what it does and why it was built that way. A long conversation gets compacted, and the decisions of the task go with it.
 
-harness fixes both.
+harness fixes both:
 
-**Your architecture becomes a check** that runs on every commit and every pull request. When code breaks a rule, the commit is blocked with a message that tells the agent exactly what to fix, so it fixes it by itself before you even review:
-
-```
-✖ error layer-direction  src/lib/money.js → src/features/cart/index.js
-    Why: src/lib/money.js (shared) imports src/features/cart/index.js (features), but features is above shared.
-    Fix: Move what src/lib/money.js needs from features down to shared or a lower layer, or invert the dependency.
-```
-
-**Each module gets a short note** saying what it does, how it works, the decisions taken (and why) and its traps. The note reaches the agent the moment it opens a file of that module, so it starts from what the team already knows instead of rediscovering it from the code. After a compaction, the task's notebook and those notes come back on their own.
+- **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. When something breaks a rule, the commit is blocked with the reason and the fix, so the agent corrects it before you even review.
+- **Each module gets a short note.** What it does, how it works, the decisions taken and why, and its traps. The note reaches the agent as soon as it opens a file of that module, and after a compaction the task's notebook comes back on its own. The agent starts from what the team already knows instead of rediscovering it.
 
 **Made for** frontend teams on Vite + React or Next (plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent.
-
-## Why use it
-
-| | |
-| --- | --- |
-| 🔒 **Rules that can't be ignored** | Checked by a git hook and by CI, not by a prompt. Whatever agent or model wrote the code, it passes the same check. |
-| 🧠 **Context that survives** | Module notes carry what a module does and why, from one session to the next. A per-branch notebook carries the task, and comes back by itself after a compaction. |
-| 🟢 **Adopt it on the repo you already have** | `harness init` reads your code and drafts the architecture; `harness notes new` drafts a module's note from its imports. Today's violations are frozen in a baseline, so you start green and only *new* problems fail. |
-| 🤖 **Errors an agent can fix alone** | Every finding says the rule, the reason and the fix, as text or JSON. |
-| ✂️ **Less context, fewer tokens** | A 30-line `AGENTS.md` instead of a long prompt. A module's note arrives only when the agent works on that module. |
-| 🔓 **No lock-in** | A Node CLI and plain markdown. No service, no API keys, no telemetry. Switch agents or models and nothing breaks; every piece is optional. |
 
 ## Without and with harness
 
@@ -42,6 +24,17 @@ harness fixes both.
 | Architecture rules live in a long prompt the agent skims | They live in `architecture.yml`, checked by a tool. The prompt stays at 30 lines |
 | "Review the whole project" every few weeks, from scratch | Findings stay in a backlog; the next audit rechecks them |
 | Adopting rules means fixing all the old debt first | Old debt is frozen in a baseline and can only shrink |
+
+## Why use it
+
+| | |
+| --- | --- |
+| 🔒 **Rules that can't be ignored** | Checked by a git hook and by CI, not by a prompt. Whatever agent or model wrote the code, it passes the same check. |
+| 🧠 **Context that survives** | Module notes carry what a module does and why, from one session to the next. A per-branch notebook carries the task, and comes back by itself after a compaction. |
+| 🟢 **Adopt it on the repo you already have** | `harness init` reads your code and drafts the architecture; `harness notes new` drafts a module's note from its imports. Today's violations are frozen in a baseline, so you start green and only *new* problems fail. |
+| 🤖 **Errors an agent can fix alone** | Every finding says the rule, the reason and the fix, as text or JSON. |
+| ✂️ **Less context, fewer tokens** | A 30-line `AGENTS.md` instead of a long prompt. A module's note arrives only when the agent works on that module. |
+| 🔓 **No lock-in** | A Node CLI and plain markdown. No service, no API keys, no telemetry. Switch agents or models and nothing breaks; every piece is optional. |
 
 ## Quick start
 
@@ -56,8 +49,8 @@ npx --no-install harness check                    # green; from now on only *new
 
 ## Contents
 
-- [Why use it](#why-use-it)
 - [Without and with harness](#without-and-with-harness)
+- [Why use it](#why-use-it)
 - [Quick start](#quick-start)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
