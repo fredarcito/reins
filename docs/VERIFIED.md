@@ -172,6 +172,12 @@ Details that affect the design:
 - Nothing external was tested in this phase: `audit`, `progress` and `review` only touch local files and git.
 - **Unverified:** that agents use `harness progress` instead of rewriting the notebook, and `harness audit` instead of editing the backlog by hand (both are instructions in the policies and skills); how useful the `review` prompt is in practice; review prompts for very large diffs (truncated at 200 KB by default).
 
+## Phase 8 findings
+
+- **Clean install with a real hook manager and CI simulation — pass (9/9 checks).** [`scripts/verify/e2e-install.sh`](../scripts/verify/e2e-install.sh): copy of `examples/vite-react`, tarballs + Husky 9.1.7 via npm, `harness install` + `harness init`; a clean commit passes the hook; a commit with a new violation is **blocked by the hook** with rule, why and fix; a clone without hooks can commit and push the violation; a fresh clone running the workflow steps (`npm ci`, `GITHUB_BASE_REF=main npx --no-install harness check`) is green on `main` and **fails on the PR branch**.
+- **Tarballs outside the repo break CI — observed.** npm records `file:../../…/harness/.tarballs/…` in `package.json` and the lockfile. Fix: commit the tarballs under `vendor/harness/`; verified with npm (`npm ci`) and pnpm (`pnpm install --frozen-lockfile`, with the core override) from a clone in a different folder ([`vendor-test.sh`](../scripts/verify/vendor-test.sh), [`vendor-test-pnpm.sh`](../scripts/verify/vendor-test-pnpm.sh)).
+- **Unverified:** the workflow on real GitHub Actions (`pnpm/action-setup@v4`, `cache:`, `fetch-depth: 0`, `GITHUB_BASE_REF` on PRs), lefthook actually running the command (only the config edit is tested), yarn and bun, internal registries (GitHub Packages, Verdaccio), branch protection settings.
+
 ## Unverified (pending)
 
 - Session start hook (`SessionStart`) to load the progress notebook: not tested.

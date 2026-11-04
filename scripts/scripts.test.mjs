@@ -65,6 +65,16 @@ test('lint flags long and nested AGENTS.md/CLAUDE.md', () => {
   assert.deepEqual(found.sort(), ['agents-md:AGENTS.md', 'agents-md:packages/core/CLAUDE.md']);
 });
 
+test('lint flags mermaid diagrams GitHub would fail to render', () => {
+  const files = base();
+  files['docs/a.md'] = '# a\n\n```mermaid\nflowchart LR\n    a["ok<br/>fine"] --> b["say &quot;hi&quot;"]\n    graph["x"] --> c["a | b"]\n```\n';
+  const found = lint(fakeRepo(files)).filter((p) => p.rule === 'diagrams').map((p) => p.message);
+  assert.equal(found.length, 3);
+  assert.match(found[0], /^line 5: HTML entity/);
+  assert.match(found[1], /^line 6: label contains/);
+  assert.match(found[2], /^line 6: reserved word used as a node id/);
+});
+
 test('renameScope rewrites names and imports, skips history and longer scopes', () => {
   const files = base();
   files['README.md'] = 'npm i -D @h/cli @h/adapter-js\nnot @h-other/x\n';

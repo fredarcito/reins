@@ -3,6 +3,7 @@
 //   syntax          every .js/.mjs file under packages/ and scripts/ parses (node --check)
 //   import-boundary core never imports cli/adapters; adapter code (not its tests) only imports core through "<scope>/core/contract"
 //   agents-md       AGENTS.md has at most 30 lines; AGENTS.md/CLAUDE.md only at the root, templates/ or examples/<name>/
+//   diagrams        mermaid blocks in markdown without HTML entities, quotes/<>/| in labels or reserved node ids
 //   packages        every workspace package is ESM and uses the same npm scope; adapters declare core as peer + harness.contract
 // The real architecture check of this repo (phase 9) will replace import-boundary.
 import { execFileSync } from 'node:child_process';
@@ -106,6 +107,23 @@ export function lint(root) {
     if (name === 'AGENTS.md') {
       const lines = readFileSync(file, 'utf8').trimEnd().split('\n').length;
       if (lines > AGENTS_MAX_LINES) report('agents-md', file, `${lines} lines; the limit is ${AGENTS_MAX_LINES}`);
+    }
+  }
+
+  // diagrams: mermaid blocks in markdown that GitHub fails to render
+  for (const file of walk(root).filter((f) => f.endsWith('.md'))) {
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/```mermaid\n([\s\S]*?)```/g)) {
+      const line = text.slice(0, m.index).split('\n').length;
+      m[1].split('\n').forEach((l, i) => {
+        const at = `line ${line + 1 + i}`;
+        if (/&(quot|lt|gt|amp|#\d+);/.test(l)) report('diagrams', file, `${at}: HTML entity in a mermaid diagram (GitHub decodes it and the diagram breaks); reword the label`);
+        for (const label of l.matchAll(/\["([^\]]*)"\]|\{"([^}]*)"\}|\("([^)]*)"\)/g)) {
+          const t = label[1] ?? label[2] ?? label[3];
+          if (/["<>|]/.test(t.replace(/<br\/>/g, ''))) report('diagrams', file, `${at}: label contains " < > or | ("${t}"); reword it`);
+        }
+        if (/^\s*(graph|end|subgraph|flowchart|style|class|click)\s*[[({]/.test(l)) report('diagrams', file, `${at}: reserved word used as a node id; rename the node`);
+      });
     }
   }
 

@@ -1,6 +1,6 @@
 # Try `init` and `check` on a real repo
 
-How to try the harness on one of your repos **before** the packages are published or `harness install` exists (phase 8). Only `init` and `check` work today. Nothing is installed globally and nothing is committed for you.
+How to **try** `init` and `check` on one of your repos, on a throwaway branch, without wiring anything else. Nothing is installed globally and nothing is committed for you. To adopt the harness for real (hook, CI, agent files), follow [`team-install.md`](team-install.md) and `harness install` instead.
 
 ```mermaid
 flowchart LR

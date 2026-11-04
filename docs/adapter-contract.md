@@ -6,8 +6,8 @@ A language adapter turns a repo into a list of edges "file A depends on file B".
 flowchart LR
     repo["repo on disk"] --> detect{"detect(repoPath)"}
     detect -- "false" --> skip["not this adapter"]
-    detect -- "true" --> graph["graph(repoPath, config)"]
-    graph --> g["{ edges, files, entries, warnings }"]
+    detect -- "true" --> graphfn["graph(repoPath, config)"]
+    graphfn --> g["edges · files · entries · warnings"]
     g --> core["core rules<br/>layer-direction · domain-boundary · no-cycles"]
     g --> evaluate["evaluate(repoPath, config, graph)<br/>adapter rules, e.g. next-server-client"]
     evaluate --> core2["merged into the same report<br/>and the same baseline"]

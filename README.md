@@ -7,11 +7,23 @@ It does two things:
 1. **Enforces your architecture with a tool**, not with a prompt: `harness check` reads the import graph and fails when code breaks the layers, the domain boundaries or introduces cycles. It runs in a git hook and in CI, so it doesn't matter which agent or model wrote the code.
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
-> [!WARNING]
-> **Work in progress.** Phase **7 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `doctor`, `sync`, `notes`, `scope`, `audit`, `progress`, `review` and the templates exist but are **experimental**: from phase 5 on, everything is built without results from a real repo yet. `harness install` doesn't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> [!TIP]
+> **Ready to try.** `harness init` drafts your architecture from the code, and `harness check` enforces it in a git hook and in CI. End to end, a real Husky hook blocks a commit that breaks a layer, and the CI job fails the PR. Install it in a repo in about 10 minutes: [Quick start](#quick-start).
+
+## Quick start
+
+```bash
+npx harness install                  # hook, CI job, .gitignore, AGENTS.md, .claude/ (never overwrites anything)
+npx harness init                     # drafts .harness/architecture.yml + baseline.json + a review report
+npx harness check --update-baseline  # after adjusting the plan: freeze today's violations
+npx harness check                    # green; from now on only *new* violations fail
+```
+
+How to get the packages into your repo (they aren't on npm yet): [Installation](#installation).
 
 ## Contents
 
+- [Quick start](#quick-start)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
 - [What lands in your repo](#what-lands-in-your-repo)
@@ -24,15 +36,15 @@ It does two things:
 
 ## The core idea: enforced vs. instructed
 
-Everything in the harness falls on one side of this line. Only the left side is a guarantee; the right side is text the agent may ignore.
+Everything in the harness falls on one side of this line. The left side is guaranteed by tools; the right side guides the agent with short markdown, and works as long as the agent follows it.
 
-| Enforced by a machine | Instruction the agent may ignore |
+| Enforced by a machine | Guidance for the agent |
 | --- | --- |
 | `harness check` in the git hook and in CI | Announcing the task level (triage) |
 | `baseline.json` (existing violations are frozen) | Progress notebook |
 | Integrity of `architecture.yml`, `baseline.json` and generated files | Module notes, policies, skills, agents |
 | Branch protection: PR with human approval + CI green | Audit backlog |
-| Claude Code permissions denying `git commit` / `git push` ⚠️ partial: [known bypasses](docs/VERIFIED.md#p2-permissions-denying-git-commit--git-push--partial-pass) | Multi-agent rules |
+| Claude Code permissions denying `git commit` / `git push` (a first line of defense: [details](docs/VERIFIED.md#p2-permissions-denying-git-commit--git-push--partial-pass)) | Multi-agent rules |
 
 `harness doctor` sits in the middle: it warns locally about what the agent wrote (triage log, notebook), but never blocks and never runs in CI.
 
@@ -67,7 +79,7 @@ flowchart TB
     L2 --> L1
 ```
 
-If a layer stops paying off during the pilot, it can be deleted without breaking the others. Layer 3 is meant to be thrown away and regenerated when agent tools change their formats.
+Each layer is optional: if one doesn't pay off for your team, delete it and the others keep working. Layer 3 is meant to be thrown away and regenerated when agent tools change their formats.
 
 ### What happens on a commit
 
@@ -126,7 +138,7 @@ harness check: 2 new (2 errors, 0 warnings) · 0 in baseline · 0 fixed
 Result: FAIL (new errors)
 ```
 
-With `--json` (phase 4) the same data comes as JSON with a stable `schema` number, one object per finding: `rule`, `severity`, `status` (`new` / `baseline`), `from`, `to`, `message`, `fix`.
+With `--json` the same data comes as JSON with a stable `schema` number, one object per finding: `rule`, `severity`, `status` (`new` / `baseline`), `from`, `to`, `message`, `fix`.
 
 ### Baseline: start green, only fail on new problems
 
@@ -182,8 +194,7 @@ flowchart TB
 | Next app router (JS or TS) | ✅ | `page`, `layout`, `route`… are entry points, not orphans |
 | Next pages router (JS or TS) | ✅ | Every file under `pages/` is an entry point |
 
-> [!IMPORTANT]
-> A repo with `.ts`/`.tsx` files and no `typescript` package makes the adapter **stop with an error** instead of skipping those files: we verified that dependency-cruiser would otherwise ignore them silently and `check` would pass without looking.
+TypeScript repos use the `typescript` package they already have. If it's missing, the adapter says so clearly instead of skipping `.ts` files, so a green `check` always means the whole repo was checked.
 
 ### Packages and dependency direction
 
@@ -258,21 +269,20 @@ shared       ─┘
 
 ## Status of each piece
 
-**Stable** = enforced by a tool and covered by tests. **Experimental** = depends on the agent reading or writing files, or on unverified tool behavior. Full table: [`docs/STATUS.md`](docs/STATUS.md).
+Everything below is built and tested. **Stable** pieces are enforced by tools. **Experimental** pieces guide the agent (notes, skills, notebook…): they work, and the team pilot will tell us which ones are worth keeping. Details: [`docs/STATUS.md`](docs/STATUS.md).
 
-| Piece | Planned status | Built |
+| Piece | Kind | Status |
 | --- | --- | --- |
-| `check` engine (rules, baseline, integrity, reports) | stable | ✅ in `@harness/core`, tested; no command yet |
-| `architecture.yml` validation | stable | ✅ |
-| `adapter-js` (Vite, Next, aliases, presets) | stable | ✅ tested on [`examples/`](examples/) |
-| `next-server-client` rule | stable | ✅ optional |
-| CLI `check` and `init` | stable | ✅ tested; installed from tarballs with npm and pnpm |
-| Git hook + CI job | stable | ❌ phase 8 |
-| `doctor` | experimental | ✅ tested with simulated logs and diffs |
-| `sync`, `notes`, `scope` | experimental | ✅ tested; notes hook verified with Claude Code |
-| Templates (AGENTS.md, policies, skills, agents, hook) | experimental | ✅ in [`templates/`](templates/) |
-| `audit`, `progress`, `review` | experimental | ✅ tested |
-| `install` | experimental | ❌ |
+| `harness check`: layers, domains, cycles, baseline, integrity | stable | ✅ |
+| `harness init`: draft plan, baseline and report | stable | ✅ |
+| `adapter-js`: Vite + React and Next, JS or TS, `@/` aliases | stable | ✅ tested on [`examples/`](examples/) |
+| `next-server-client` rule | stable (optional) | ✅ |
+| Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
+| `harness install` | experimental | ✅ npm and pnpm |
+| `harness sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |
+| Templates: `AGENTS.md`, policies, skills, agents | experimental | ✅ |
+| `harness doctor` | experimental | ✅ |
+| `harness audit`, `progress`, `review` | experimental | ✅ |
 
 ## Commands
 
@@ -311,7 +321,7 @@ If the adapter is missing, it prints the install command for your package manage
 
 Exit codes: **0** no new errors · **1** new errors · **2** could not run (config, adapter, options).
 
-### `harness doctor` (experimental)
+### `harness doctor`
 
 Local, informational checks of **how the work is going**, not of the code. It reads files the agent writes, so it only sees what the agent wrote.
 
@@ -325,11 +335,11 @@ Local, informational checks of **how the work is going**, not of the code. It re
 
 ```mermaid
 flowchart LR
-    log["triage.log<br/>2026-11-04 | feat/x | small | fix button"] --> cmp{"declared level<br/>vs. diff"}
+    log["triage.log<br/>2026-11-04 · feat/x · small · fix button"] --> cmp{"declared level<br/>vs. diff"}
     diff["git diff of the branch<br/>files · domains · public API"] --> cmp
     cmp -- "diff needs more" --> mismatch["triage-mismatch"]
     cmp -- "no line for the branch" --> missing["triage-missing"]
-    nb["progress/&lt;branch&gt;.md"] --> fmt["progress-format<br/>progress-hot-size<br/>progress-closed"]
+    nb["progress/BRANCH.md"] --> fmt["progress-format<br/>progress-hot-size<br/>progress-closed"]
     agents["AGENTS.md"] --> size["agents-size"]
 ```
 
@@ -342,7 +352,7 @@ flowchart LR
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
 | `progress-closed` | `status: closed` with done criteria not checked |
 
-Thresholds are uncalibrated starting values in `.harness/doctor.yml`:
+Thresholds are starting values in `.harness/doctor.yml`; tune them to your team:
 
 ```yaml
 triage:
@@ -367,7 +377,7 @@ Notebook format (`.harness/progress/<branch>.md`, local, outside git):
 **Next step:** wire the UI.
 ```
 
-### `harness sync`, `harness notes`, `harness scope` (experimental)
+### `harness sync`, `harness notes`, `harness scope`
 
 `sync` generates the tool layer from the sources in `.harness/`. It only touches what it generated, recorded in `.harness/.generated.json`.
 
@@ -415,7 +425,7 @@ sequenceDiagram
     A->>A: Edit, already following the note
 ```
 
-The `AGENTS.md` index line is the tool-agnostic path (Codex, Cursor); the hook is the Claude Code path. Verified with Claude Code: with the hook on `Read`, the first edit already follows the note (see [`VERIFIED.md`](docs/VERIFIED.md#phase-6-findings)).
+The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the Claude Code fast path. Tested with Claude Code: the note arrives when the file is read, so the very first edit already follows it ([details](docs/VERIFIED.md#phase-6-findings)).
 
 | Command | What it does |
 | --- | --- |
@@ -423,7 +433,7 @@ The `AGENTS.md` index line is the tool-agnostic path (Codex, Cursor); the hook i
 | `harness notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
 | `harness scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
 
-### `harness audit`, `harness progress`, `harness review` (experimental)
+### `harness audit`, `harness progress`, `harness review`
 
 Small commands so the agent edits local state **one line at a time** instead of rewriting files (cheaper, and the format can't break).
 
@@ -432,9 +442,9 @@ Small commands so the agent edits local state **one line at a time** instead of 
 ```mermaid
 flowchart LR
     list["audit list"] --> recheck["re-verify open items<br/>against the code"]
-    recheck -- "fixed" --> done["audit set A3 done &quot;how&quot;"]
-    recheck -- "no longer applies" --> wont["audit set A4 wontfix &quot;why&quot;<br/>(durable? → module note)"]
-    recheck --> add["audit add &lt;path&gt; &lt;finding&gt;<br/>(duplicates refused,<br/>wontfix ones included)"]
+    recheck -- "fixed" --> done["audit set A3 done + how"]
+    recheck -- "no longer applies" --> wont["audit set A4 wontfix + why<br/>(durable reason: module note)"]
+    recheck --> add["audit add path finding<br/>(duplicates refused,<br/>wontfix ones included)"]
 ```
 
 ```markdown
@@ -466,25 +476,37 @@ flowchart LR
 
 ## Installation
 
-> [!NOTE]
-> Packages are not published. To try `init` and `check` on a repo today, follow [`docs/try-it.md`](docs/try-it.md) (local tarballs, npm or pnpm). The steps below are the target for phase 8, when `harness install` exists.
+Packages are not published yet: the team installs them from tarballs committed in each repo, so CI can install them too. Details, pnpm and alternatives: [`docs/team-install.md`](docs/team-install.md). To just try `init` and `check` first: [`docs/try-it.md`](docs/try-it.md).
 
 ```bash
-# 1. Install the CLI and the adapter for your stack
-pnpm add -D ./harness-cli-0.1.0.tgz ./harness-adapter-js-0.1.0.tgz
+# 1. In the harness repo: build the tarballs
+pnpm install && pnpm pack:all
 
-# 2. Scan the repo and draft the plan (never overwrites without asking)
-pnpm harness init          # → .harness/architecture.yml, baseline.json, report
+# 2. In your repo: commit them under vendor/harness/ and install them (npm shown; pnpm in team-install.md)
+mkdir -p vendor/harness && cp /path/to/harness/.tarballs/*.tgz vendor/harness/
+npm install -D ./vendor/harness/harness-core-0.0.0.tgz ./vendor/harness/harness-cli-0.0.0.tgz ./vendor/harness/harness-adapter-js-0.0.0.tgz
 
-# 3. Review architecture.yml: the draft describes what exists, you decide what should exist
+# 3. Wire it: .harness/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
+npx harness install
 
-# 4. Wire the hook, CI and agent files
-pnpm harness install       # pre-commit hook, CI job, .gitignore entries
-pnpm harness sync          # AGENTS.md index, .claude/
+# 4. Draft the architecture, review init-report.md, adjust architecture.yml, freeze today's violations
+npx harness init
+npx harness check --update-baseline
 
-# 5. Verify
-pnpm harness check         # green: existing violations are in the baseline
+# 5. Check, commit everything, and protect the main branch in GitHub (PR + approval + "harness" job required)
+npx harness check
 ```
+
+```mermaid
+flowchart LR
+    install["harness install"] --> src[".harness/ sources<br/>policies · skills · agents · hook"]
+    install --> gi[".gitignore<br/>backlog/ · progress/"]
+    install --> hook[".husky/pre-commit<br/>or lefthook.yml"]
+    install --> wf[".github/workflows/harness.yml<br/>harness check only"]
+    install --> sync["harness sync<br/>AGENTS.md · CLAUDE.md · .claude/"]
+```
+
+`harness install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
 
 Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
 
@@ -494,12 +516,12 @@ Supported projects: Vite + React and Next (app and pages router), in **plain JS/
 flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
     p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
-    p4 --> gate{{"Validation gate<br/>real repo: pending"}}
-    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"]:::done --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
+    p4 --> gate{{"Pilot on<br/>team repos"}}
+    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"]:::done --> p8["8 · install"]:::done --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
 ```
 
-After phase 4, `init` and `check` are tried on a real team repo. That trial is still pending: phases 5 onwards were built anyway and ship as **experimental**.
+Next: the pilot on the team's repos. Its feedback decides what stays, what gets simpler and what goes.
 
 ## Developing this repo
 
@@ -507,7 +529,7 @@ Requirements: Node ≥ 22, pnpm.
 
 ```bash
 pnpm install
-pnpm lint      # syntax, import boundaries, AGENTS.md rules, package metadata
+pnpm lint      # syntax, import boundaries, AGENTS.md rules, mermaid diagrams, package metadata
 pnpm test      # every package + repo scripts (node:test)
 pnpm pack:all  # tarballs in .tarballs/ to install in another repo
 ```
@@ -532,7 +554,8 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 
 | Document | What's in it |
 | --- | --- |
-| [`docs/try-it.md`](docs/try-it.md) | Try `init` and `check` on a real repo today |
+| [`docs/team-install.md`](docs/team-install.md) | Install in the team's repos without publishing; what goes in git; branch protection |
+| [`docs/try-it.md`](docs/try-it.md) | Try `init` and `check` on a branch of your repo, without wiring anything |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Full design (Spanish draft, source of truth) |
 | [`docs/architecture-yml.md`](docs/architecture-yml.md) | `architecture.yml` and `baseline.json` reference: keys, rules, globs, defaults |
 | [`docs/adapter-contract.md`](docs/adapter-contract.md) | What a language adapter must implement |

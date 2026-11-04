@@ -18,7 +18,8 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@harness/core": "workspace:^"
+    "@harness/core": "workspace:^",
+    "yaml": "^2.9.1"
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",

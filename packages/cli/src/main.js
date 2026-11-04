@@ -11,6 +11,7 @@ import * as scopeCmd from './commands/scope.js';
 import * as auditCmd from './commands/audit.js';
 import * as progressCmd from './commands/progress.js';
 import * as reviewCmd from './commands/review.js';
+import * as installCmd from './commands/install.js';
 
 export { SCOPE };
 
@@ -25,10 +26,8 @@ const COMMANDS = {
   audit: { run: auditCmd.audit, options: auditCmd.options, help: auditCmd.help, positionals: true },
   progress: { run: progressCmd.progress, options: progressCmd.options, help: progressCmd.help, positionals: true },
   review: { run: reviewCmd.review, options: reviewCmd.options, help: reviewCmd.help },
+  install: { run: installCmd.install, options: installCmd.options, help: installCmd.help },
 };
-
-/** Commands planned in docs/DESIGN.md, wired in later phases. */
-export const PLANNED_COMMANDS = ['install'];
 
 const HELP = `Usage: harness <command> [options]
 
@@ -42,8 +41,7 @@ Commands:
   audit    Local audit backlog: list, add, set status, recheck (experimental)
   progress Edit the branch notebook without rewriting it (experimental)
   review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
-
-Not implemented yet: ${PLANNED_COMMANDS.join(', ')}
+  install  Wire the harness into this repo: sources, hook, CI, .gitignore, sync (experimental)
 
 Options:
   -h, --help     Show help (also: harness <command> --help)
@@ -80,10 +78,6 @@ export async function run(argv, io = {}) {
   if (command === '-v' || command === '--version') {
     out(pkg.version);
     return 0;
-  }
-  if (PLANNED_COMMANDS.includes(command)) {
-    err(`harness ${command}: not implemented yet.`);
-    return 2;
   }
   const cmd = COMMANDS[command];
   if (!cmd) {
