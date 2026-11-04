@@ -22,7 +22,7 @@ Nothing here is measured. The design is a design, not a proven product.
 | Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `@harness/cli` |
 | Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
-| `audit`, `progress`, `review` | cli | experimental | Not started |
+| `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Not started |
 
 ## Repo tooling

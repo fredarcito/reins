@@ -8,6 +8,9 @@ import * as doctorCmd from './commands/doctor.js';
 import * as syncCmd from './commands/sync.js';
 import * as notesCmd from './commands/notes.js';
 import * as scopeCmd from './commands/scope.js';
+import * as auditCmd from './commands/audit.js';
+import * as progressCmd from './commands/progress.js';
+import * as reviewCmd from './commands/review.js';
 
 export { SCOPE };
 
@@ -19,10 +22,13 @@ const COMMANDS = {
   sync: { run: syncCmd.sync, options: syncCmd.options, help: syncCmd.help },
   notes: { run: notesCmd.notes, options: notesCmd.options, help: notesCmd.help, positionals: true },
   scope: { run: scopeCmd.scope, options: scopeCmd.options, help: scopeCmd.help, positionals: true },
+  audit: { run: auditCmd.audit, options: auditCmd.options, help: auditCmd.help, positionals: true },
+  progress: { run: progressCmd.progress, options: progressCmd.options, help: progressCmd.help, positionals: true },
+  review: { run: reviewCmd.review, options: reviewCmd.options, help: reviewCmd.help },
 };
 
 /** Commands planned in docs/DESIGN.md, wired in later phases. */
-export const PLANNED_COMMANDS = ['audit', 'progress', 'review', 'install'];
+export const PLANNED_COMMANDS = ['install'];
 
 const HELP = `Usage: harness <command> [options]
 
@@ -33,6 +39,9 @@ Commands:
   sync     Generate .claude/ and the AGENTS.md notes index from .harness/ (experimental)
   notes    Print the module notes for a path; --hook for Claude Code (experimental)
   scope    Domains, notes and minimum task level for some paths (experimental)
+  audit    Local audit backlog: list, add, set status, recheck (experimental)
+  progress Edit the branch notebook without rewriting it (experimental)
+  review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
 
 Not implemented yet: ${PLANNED_COMMANDS.join(', ')}
 

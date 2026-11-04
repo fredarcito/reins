@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress.** Phase **6 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `doctor`, `sync`, `notes`, `scope` and the templates exist but are **experimental**: from phase 5 on, everything is built without results from a real repo yet. `install`, `audit`, `progress` and `review` don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress.** Phase **7 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `doctor`, `sync`, `notes`, `scope`, `audit`, `progress`, `review` and the templates exist but are **experimental**: from phase 5 on, everything is built without results from a real repo yet. `harness install` doesn't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -271,7 +271,7 @@ shared       ─┘
 | `doctor` | experimental | ✅ tested with simulated logs and diffs |
 | `sync`, `notes`, `scope` | experimental | ✅ tested; notes hook verified with Claude Code |
 | Templates (AGENTS.md, policies, skills, agents, hook) | experimental | ✅ in [`templates/`](templates/) |
-| `audit`, `progress`, `review` | experimental | ❌ |
+| `audit`, `progress`, `review` | experimental | ✅ tested |
 | `install` | experimental | ❌ |
 
 ## Commands
@@ -423,6 +423,47 @@ The `AGENTS.md` index line is the tool-agnostic path (Codex, Cursor); the hook i
 | `harness notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
 | `harness scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
 
+### `harness audit`, `harness progress`, `harness review` (experimental)
+
+Small commands so the agent edits local state **one line at a time** instead of rewriting files (cheaper, and the format can't break).
+
+**`harness audit`**: the audit backlog, so "review the whole project" doesn't start from zero every few weeks.
+
+```mermaid
+flowchart LR
+    list["audit list"] --> recheck["re-verify open items<br/>against the code"]
+    recheck -- "fixed" --> done["audit set A3 done &quot;how&quot;"]
+    recheck -- "no longer applies" --> wont["audit set A4 wontfix &quot;why&quot;<br/>(durable? → module note)"]
+    recheck --> add["audit add &lt;path&gt; &lt;finding&gt;<br/>(duplicates refused,<br/>wontfix ones included)"]
+```
+
+```markdown
+- [open] A1 · 2026-11-04 · `src/lib/format.js` · Cache Intl.NumberFormat per locale.
+- [open] [recheck] A2 · 2026-11-04 · `src/features/cart/` · Memoize the totals.
+- [wontfix] A3 · 2026-11-04 · `src/api/` · Batch requests. — wontfix 2026-11-06: the API has no batch endpoint
+```
+
+| Command | Effect |
+| --- | --- |
+| `audit list [--status open\|done\|wontfix\|all] [--recheck]` | Show findings (default: open) |
+| `audit add <path> <finding>` | New open finding |
+| `audit set <id> <status> <reason>` | `done`/`wontfix` need a reason; clears `recheck` |
+| `audit recheck <id…> \| open` | Flag findings to verify again |
+
+**`harness progress`**: edits the branch notebook (`.harness/progress/<branch>.md`) and refuses anything that would break its format.
+
+| Command | Effect |
+| --- | --- |
+| `progress new [--hot]` | Notebook from the template (mini; `--hot` adds the cold folder) |
+| `progress show` | Numbered items |
+| `progress add <text> [--criteria]` | `- [ ]` in Subtasks (or Done criteria) |
+| `progress start <n>` | `[~]`; any other `[~]` goes back to `[ ]` |
+| `progress done <n>` | `[x]` |
+| `progress drop <n> <reason>` | `[-] … — reason` (kept, so it isn't proposed again) |
+| `progress next <text>` | The "Next step" line |
+
+**`harness review`**: prints a review prompt (instructions, changed files, checklist, notes of the touched paths, diff including uncommitted and untracked files) for any agent. It calls no API; `--executor` is the extension point for a future runner.
+
 ## Installation
 
 > [!NOTE]
@@ -454,7 +495,7 @@ flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
     p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
     p4 --> gate{{"Validation gate<br/>real repo: pending"}}
-    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
+    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"]:::done --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
 ```
 

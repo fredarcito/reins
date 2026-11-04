@@ -92,7 +92,7 @@ export function checkNotebook({ file, text, maxLines }) {
   const problems = formatProblems(nb);
   if (problems.length) {
     add('progress-format', `${file} is not in the notebook format: ${problems.join('; ')}.`,
-      'Fix those lines by hand or with `harness progress` (phase 7).');
+      'Fix those lines by hand; afterwards prefer `harness progress` edits, which keep the format valid.');
   }
   if (nb.header?.status === 'closed') {
     const criteria = nb.items.filter((it) => it.section.startsWith('done criteria'));
