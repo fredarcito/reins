@@ -9,6 +9,7 @@ Commands: {{commands}} · `npx --no-install harness check`
 - Stop only for an ambiguous decision with consequences, growing scope, an irreversible action or repeated failures.
 
 ## On demand
+- Resuming a task, or the conversation was compacted → run `npx --no-install harness resume`.
 - Medium or large task → read `.harness/policies/progress.md`.
 - Several agents (large only) → read `.harness/policies/multiagent.md`.
 - Before touching these paths, read their note:

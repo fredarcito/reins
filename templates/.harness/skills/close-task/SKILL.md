@@ -6,11 +6,18 @@ description: Close a coding task. Use it when the person says the task is done, 
 
 1. Run once: `npx --no-install harness check`, `npx --no-install harness doctor` and the tests related to the change.
 2. If the notebook exists (`.harness/progress/<branch>.md`), mark what is done (`npx --no-install harness progress done <n>`) and check the done criteria one by one.
-3. Never commit, push or open a PR. Leave the changes uncommitted.
-4. Reply with:
+3. Update the module notes, so the next session doesn't rediscover this module from the code. For medium and large tasks, for each module you touched (`npx --no-install harness scope <files>` lists their notes):
+   - add the decisions you took, each with its why, and the traps you found;
+   - update "Map" and "How it works" if they changed;
+   - a domain without a note: `npx --no-install harness notes new <domain>`, then fill in every TODO;
+   - nothing durable changed: leave the note as it is.
+   The doctor warns about `note-outdated`, `note-missing` and `note-draft`.
+4. Never commit, push or open a PR. Leave the changes uncommitted.
+5. Reply with:
    - what changed and the files touched, with why;
    - what you verified and how (commands and results);
    - the doctor warnings that remain;
    - how many done criteria are met, and which are not;
+   - the module notes you created or updated, and what you added;
    - what you did **not** verify.
-5. Don't set `status: closed`: only the person closes the task. When they confirm, move durable decisions to the module note in `.harness/notes/`.
+6. Don't set `status: closed`: only the person closes the task.

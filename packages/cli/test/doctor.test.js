@@ -24,7 +24,8 @@ test('reports triage-missing for a branch with changes, exits 0; --strict exits 
   assert.equal(r.code, 0);
   assert.match(r.stdout, /! warn {2}triage-missing {2}\.harness\/progress\/triage\.log/);
   assert.match(r.stdout, /Branch feat\/discounts has 4 changed file\(s\)/);
-  assert.match(r.stdout, /harness doctor: 0 errors, 1 warning$/m);
+  assert.match(r.stdout, /! warn {2}note-missing {2}cart\n {4}Why: Domain cart changed \(4 file\(s\)\) and has no module note/);
+  assert.match(r.stdout, /harness doctor: 0 errors, 2 warnings$/m);
   assert.equal((await cli(dir, ['doctor', '--strict'])).code, 1);
 });
 
@@ -34,8 +35,21 @@ test('compares the declared level with the diff (committed + untracked files, lo
   write(dir, '.harness/progress/notes.txt', 'local, not counted');
   const r = await cli(dir, ['doctor', '--json']);
   const data = JSON.parse(r.stdout);
-  assert.deepEqual(data.violations.map((v) => v.rule), ['triage-mismatch']);
+  assert.deepEqual(data.violations.map((v) => v.rule), ['triage-mismatch', 'note-missing']);
   assert.match(data.violations[0].message, /looks medium: 4 files \(small allows 3\)/);
+
+  mkdirSync(path.join(dir, '.harness/notes'), { recursive: true });
+  write(dir, '.harness/notes/cart.md', '---\npaths: ["src/features/cart/**"]\n---\n## Purpose\nThe cart.\n');
+  git(dir, 'add', '.harness/notes/cart.md');
+  git(dir, 'commit', '-qm', 'note');
+  git(dir, 'switch', '-q', 'main');
+  git(dir, 'merge', '-q', '--ff-only', 'feat/discounts');
+  git(dir, 'switch', '-qc', 'feat/more');
+  for (const f of ['rules.js', 'format.js', 'api.js', 'extra.js']) write(dir, `src/features/cart/${f}`, 'export const y = 2;\n');
+  write(dir, '.harness/progress/triage.log', '2026-11-04 | feat/more | medium | more cart\n');
+  const outdated = JSON.parse((await cli(dir, ['doctor', '--json', '--base', 'main'])).stdout);
+  assert.deepEqual(outdated.violations.map((v) => v.rule), ['note-outdated']);
+  assert.equal(outdated.violations[0].from, '.harness/notes/cart.md');
 });
 
 test('reads thresholds from doctor.yml', async () => {

@@ -7,17 +7,19 @@ export const DOCTOR_DEFAULTS = Object.freeze({
   triage: { small: { max_files: 3, max_domains: 1 }, medium: { max_domains: 1 } },
   agents_md: { max_lines: 30 },
   progress: { hot_max_lines: 40 },
+  notes: { max_lines: 60 },
 });
 
 /**
  * @typedef {{ triage: { small: { max_files: number, max_domains: number }, medium: { max_domains: number } },
- *   agents_md: { max_lines: number }, progress: { hot_max_lines: number } }} DoctorConfig
+ *   agents_md: { max_lines: number }, progress: { hot_max_lines: number }, notes: { max_lines: number } }} DoctorConfig
  */
 
 const SHAPE = {
   triage: { small: { max_files: 0, max_domains: 0 }, medium: { max_domains: 0 } },
   agents_md: { max_lines: 0 },
   progress: { hot_max_lines: 0 },
+  notes: { max_lines: 0 },
 };
 
 /**

@@ -1,14 +1,47 @@
 # harness
 
-A harness for coding agents (Claude Code, Codex, Cursor…) working on frontend repos (Vite + React, Next).
+**AI agents that respect your architecture and remember your project.**
 
-It does two things:
+Coding agents write code fast, but they forget, in two ways:
 
-1. **Enforces your architecture with a tool**, not with a prompt: `harness check` reads the import graph and fails when code breaks the layers, the domain boundaries or introduces cycles. It runs in a git hook and in CI, so it doesn't matter which agent or model wrote the code.
-2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
+- **They forget your architecture.** A shared component imports from a feature, one feature reaches into another's internals, an import cycle appears, and nobody notices until the codebase is a tangle. Rules written in a prompt or in `CLAUDE.md` help, until the agent skips them.
+- **They forget your project.** You come back to a module a week later and the agent reads all of its code again to work out what it does and why it was built that way. A long conversation gets compacted, and the decisions of the task go with it.
 
-> [!TIP]
-> **Ready to try.** `harness init` drafts your architecture from the code, and `harness check` enforces it in a git hook and in CI. End to end, a real Husky hook blocks a commit that breaks a layer, and the CI job fails the PR. Install it in a repo in about 10 minutes: [Quick start](#quick-start).
+harness fixes both.
+
+**Your architecture becomes a check** that runs on every commit and every pull request. When code breaks a rule, the commit is blocked with a message that tells the agent exactly what to fix, so it fixes it by itself before you even review:
+
+```
+✖ error layer-direction  src/lib/money.js → src/features/cart/index.js
+    Why: src/lib/money.js (shared) imports src/features/cart/index.js (features), but features is above shared.
+    Fix: Move what src/lib/money.js needs from features down to shared or a lower layer, or invert the dependency.
+```
+
+**Each module gets a short note** saying what it does, how it works, the decisions taken (and why) and its traps. The note reaches the agent the moment it opens a file of that module, so it starts from what the team already knows instead of rediscovering it from the code. After a compaction, the task's notebook and those notes come back on their own.
+
+**Made for** frontend teams on Vite + React or Next (plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent.
+
+## Why use it
+
+| | |
+| --- | --- |
+| 🔒 **Rules that can't be ignored** | Checked by a git hook and by CI, not by a prompt. Whatever agent or model wrote the code, it passes the same check. |
+| 🧠 **Context that survives** | Module notes carry what a module does and why, from one session to the next. A per-branch notebook carries the task, and comes back by itself after a compaction. |
+| 🟢 **Adopt it on the repo you already have** | `harness init` reads your code and drafts the architecture; `harness notes new` drafts a module's note from its imports. Today's violations are frozen in a baseline, so you start green and only *new* problems fail. |
+| 🤖 **Errors an agent can fix alone** | Every finding says the rule, the reason and the fix, as text or JSON. |
+| ✂️ **Less context, fewer tokens** | A 30-line `AGENTS.md` instead of a long prompt. A module's note arrives only when the agent works on that module. |
+| 🔓 **No lock-in** | A Node CLI and plain markdown. No service, no API keys, no telemetry. Switch agents or models and nothing breaks; every piece is optional. |
+
+## Without and with harness
+
+| Without | With harness |
+| --- | --- |
+| A shared component imports from a feature. Someone spots it in review, or nobody does | The commit is blocked; the agent reads the fix and corrects it |
+| A week later, the agent reads a whole module again to find out what it does and why | Its note (purpose, map, decisions with their why, traps) reaches the agent as soon as it opens the module |
+| A long conversation gets compacted and the task's decisions are lost | The notebook and the notes of the files in play come back right after the compaction |
+| Architecture rules live in a long prompt the agent skims | They live in `architecture.yml`, checked by a tool. The prompt stays at 30 lines |
+| "Review the whole project" every few weeks, from scratch | Findings stay in a backlog; the next audit rechecks them |
+| Adopting rules means fixing all the old debt first | Old debt is frozen in a baseline and can only shrink |
 
 ## Quick start
 
@@ -23,9 +56,12 @@ npx --no-install harness check                    # green; from now on only *new
 
 ## Contents
 
+- [Why use it](#why-use-it)
+- [Without and with harness](#without-and-with-harness)
 - [Quick start](#quick-start)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
+- [Context between sessions](#context-between-sessions)
 - [What lands in your repo](#what-lands-in-your-repo)
 - [Status of each piece](#status-of-each-piece)
 - [Commands](#commands)
@@ -210,6 +246,73 @@ flowchart LR
 - Adapters are installed separately; if one is missing, the CLI tells you which one. It never installs anything.
 - `@harness` is a **placeholder** scope; the final name is not decided.
 
+## Context between sessions
+
+Two kinds of memory, both plain markdown in `.harness/`:
+
+| | Module note | Branch notebook |
+| --- | --- | --- |
+| File | `.harness/notes/<module>.md`, **in git** | `.harness/progress/<branch>.md`, local |
+| Lives | As long as the module | As long as the task |
+| Holds | Purpose, map, how it works, decisions with their why, traps | Goal, done criteria, subtasks, next step |
+| Written by | `harness notes new` drafts it; the agent completes it when closing a task | The agent, one line at a time with `harness progress` |
+
+```mermaid
+flowchart LR
+    subgraph mem["Memory in .harness/"]
+        direction TB
+        note["notes/cart.md"]
+        nb["progress/feat-x.md"]
+    end
+    subgraph when["When it reaches the agent"]
+        direction TB
+        open["Opens a file of the module<br/>PreToolUse hook"]
+        start["Session start, /clear,<br/>compaction<br/>SessionStart hook"]
+        any["Any agent<br/>AGENTS.md index ·<br/>harness resume"]
+    end
+    note --> open
+    note --> start
+    nb --> start
+    note --> any
+    nb --> any
+    open --> agent["Agent"]
+    start --> agent
+    any --> agent
+```
+
+**Coming back to a module a week later.** The agent opens `src/features/cart/cartStore.js` and, before it edits anything, receives:
+
+```markdown
+## Purpose
+Cart state and totals for the checkout.
+
+## Map
+- Public API: `src/features/cart/index.js`
+- `cartStore.js`: the single source of truth; components only read from it.
+
+## Decisions
+- 2026-10-28: totals are integer cents. Why: float rounding broke the invoices.
+
+## Traps
+- `clear()` keeps the coupon on purpose: the coupon belongs to the session, not to the cart.
+```
+
+**What goes in each section.** A note is for someone who has never seen the module and has to change it safely today. If the code already says something clearly, it doesn't go in the note.
+
+| Section | What it is | Example | Doesn't belong |
+| --- | --- | --- | --- |
+| **Purpose** | What the module does and for whom, in one or two lines. The question it answers: "do I need to touch this module for my task?" | "Cart state and totals for the checkout." | How it does it; history |
+| **Map** | Where things are: the public API (the only entry point for other modules) and the key files, one line each on what they are for. `notes new` fills in the parts the import graph knows | "`cartStore.js`: the single source of truth; components only read from it." | A list of every file; what each function does line by line |
+| **How it works** | The main flow in a few lines: where the data comes from, what changes it, who reads it. What you'd otherwise rebuild by reading several files | "Components dispatch actions to `cartStore`; `totals.js` recomputes on every change; the checkout page only reads." | Details that are obvious from a single file |
+| **Decisions** | Choices that were made on purpose, with a date and **why**, ideally with what was rejected. They stop the next session from "fixing" something that was decided | "2026-10-28: totals are integer cents. Why: float rounding broke the invoices." | Decisions without a why; things that are just how the framework works |
+| **Traps** | What looks wrong but is intentional, and invariants that must hold. Where a reasonable change breaks something | "`clear()` keeps the coupon on purpose: the coupon belongs to the session." | General bugs (those go to the backlog) |
+
+A **decision** answers "why is it like this?"; a **trap** warns "careful: this looks wrong, and it isn't". When a decision is reversed, update or delete its line: an outdated note is worse than none.
+
+**A conversation gets compacted.** Claude Code fires the `SessionStart` hook with `compact`; `harness resume --hook` puts back the branch notebook, the files changed on the branch and their module notes. Verified with Claude Code: after a compaction the model quoted a notebook and a note that had changed on disk in the meantime ([details](docs/VERIFIED.md#p9-sessionstart-hook-after-a-compaction--pass)). Other agents get the same text with `npx --no-install harness resume`.
+
+**Notes stay current.** The `harness-close-task` skill updates the notes of the modules a task touched, and `harness doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
+
 ## What lands in your repo
 
 After installing, a consumer repo gets this. Files marked *local* stay out of git.
@@ -222,7 +325,7 @@ your-repo/
 │   ├── architecture.yml           # layers, domains, rules, exceptions  ← you decide this
 │   ├── baseline.json              # frozen existing violations
 │   ├── doctor.yml                 # doctor thresholds
-│   ├── notes/<module>.md          # decisions and traps per module
+│   ├── notes/<module>.md          # per module: purpose, map, how it works, decisions, traps
 │   ├── policies/                  # triage, progress, multiagent
 │   ├── skills/  agents/           # sources for .claude/skills and .claude/agents
 │   ├── review/checklist.md
@@ -280,6 +383,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
 | `harness install` | experimental | ✅ npm and pnpm |
 | `harness sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |
+| `harness notes new`, `resume` + `SessionStart` hook | experimental | ✅ notebook and notes come back after a compaction |
 | Templates: `AGENTS.md`, policies, skills, agents | experimental | ✅ |
 | `harness doctor` | experimental | ✅ |
 | `harness audit`, `progress`, `review` | experimental | ✅ |
@@ -351,6 +455,10 @@ flowchart LR
 | `progress-hot-size` | The hot notebook is longer than 40 lines |
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
 | `progress-closed` | `status: closed` with done criteria not checked |
+| `note-missing` | A medium or large diff touched a domain that has no module note |
+| `note-outdated` | A medium or large diff changed a module's files but not its note |
+| `note-draft` | A note of a touched module still has `TODO` lines from `notes new` |
+| `note-size` | A note of a touched module is longer than 60 lines |
 
 Thresholds are starting values in `.harness/doctor.yml`; tune them to your team:
 
@@ -360,6 +468,7 @@ triage:
   medium: { max_domains: 1 }
 agents_md: { max_lines: 30 }
 progress:  { hot_max_lines: 40 }
+notes:     { max_lines: 60 }
 ```
 
 Notebook format (`.harness/progress/<branch>.md`, local, outside git):
@@ -377,7 +486,7 @@ Notebook format (`.harness/progress/<branch>.md`, local, outside git):
 **Next step:** wire the UI.
 ```
 
-### `harness sync`, `harness notes`, `harness scope`
+### `harness sync`, `harness notes`, `harness scope`, `harness resume`
 
 `sync` generates the tool layer from the sources in `.harness/`. It only touches what it generated, recorded in `.harness/.generated.json`.
 
@@ -392,7 +501,7 @@ flowchart LR
         cskills[".claude/skills/harness-*/"]
         cagents[".claude/agents/harness-*.md"]
         index["AGENTS.md<br/>notes index block"]
-        settings[".claude/settings.json<br/>deny git commit/push<br/>+ notes hook"]
+        settings[".claude/settings.json<br/>deny git commit/push<br/>+ notes and resume hooks"]
     end
     skills --> cskills
     agents --> cagents
@@ -431,6 +540,9 @@ The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the
 | --- | --- |
 | `harness notes <path…>` | Prints the notes that apply to each path |
 | `harness notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
+| `harness notes new <domain\|folder>` | Drafts `.harness/notes/<name>.md` from the import graph: public API, most imported files, who uses the module, what it depends on. The rest are `TODO` lines to fill in. `--paths` sets the globs, `--force` overwrites |
+| `harness resume` | Branch notebook, files changed on the branch and their notes: what an agent needs to pick a task up. `--json` for agents |
+| `harness resume --hook` | The same, as the Claude Code `SessionStart` hook (startup, `/clear`, compaction). After a compaction the notes are delivered again |
 | `harness scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
 
 ### `harness audit`, `harness progress`, `harness review`

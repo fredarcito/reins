@@ -11,5 +11,6 @@ export {
   parseNotebook, formatProblems, notebookFile, MARKERS,
 } from './doctor/index.js';
 export { NOTES_DIR, parseNote, parseFrontmatter, isNoteFile, notesFor } from './notes/index.js';
+export { NOTE_TODO_RE, summarizeModule, draftNote } from './notes/draft.js';
 export { BACKLOG_FILE, BACKLOG_HEADER, STATUSES, parseBacklog, renderFinding, addFinding, setStatus, markRecheck } from './backlog/index.js';
 export { NotebookError, SECTIONS, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook } from './doctor/progress-edit.js';

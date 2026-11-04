@@ -5,7 +5,7 @@ Every task gets a level before acting. You decide with your judgment and this po
 | Level | Signal | What you do |
 | --- | --- | --- |
 | small | A named file or function; a bounded change | Read only that file and its note. Don't explore. No notebook |
-| medium | One domain, several files, no new architecture decisions | Use the notes index, search inside the domain, summarize in two lines before editing. Mini notebook |
+| medium | One domain, several files, no new architecture decisions | Read the module note first (purpose, map, how it works); search the code only for what it does not answer. Summarize in two lines before editing. Mini notebook |
 | large | Several domains, a new feature, a refactor, a contract change, a migration, or "review everything" | Write done criteria, use the explorer (read-only), present a plan and **wait for confirmation**. Full notebook |
 
 ## Rules

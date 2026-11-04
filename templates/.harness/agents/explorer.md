@@ -11,7 +11,7 @@ tools: [Read, Grep, Glob]
 **When:** large tasks, before the plan (see `.harness/policies/triage.md`).
 
 **How:**
-1. Start from `.harness/architecture.yml` (layers and domains) and the notes in `.harness/notes/`.
+1. Start from the module notes in `.harness/notes/` (purpose, map, how it works) and `.harness/architecture.yml` (layers and domains). Read the code only for what the notes don't answer.
 2. Search inside the domains involved; read public APIs before internals.
 3. Stop when you can answer the question; don't read the whole repo.
 

@@ -12,12 +12,13 @@ Read this for medium and large tasks. The notebook is local (`.harness/progress/
 
 ## Rules
 
-- At the start, if the notebook exists, read it and resume from "Next step".
+- At the start, if the notebook exists, read it and resume from "Next step". `npx --no-install harness resume` prints the notebook, the files changed on the branch and their module notes; in Claude Code it arrives on its own when a session starts, after `/clear` and after a compaction.
+- Write the notebook so that it is enough to continue after the conversation is compacted: the goal, the decisions taken so far and the next step, not a log of what you did.
 - Write the done criteria **before** editing, not at the end.
 - Update it silently after each subtask and before switching topic, not "at the end".
 - Markers: `[ ]` pending, `[~]` in progress (only one), `[x]` written but not tested, `[-]` discarded with a reason (`- [-] task — reason`). Never delete discarded items: they stop the idea from coming back.
 - What is needed to finish goes in the notebook. An improvement found on the way goes to the backlog (`npx --no-install harness audit add`), not into this task.
-- The header says `status: open|closed`. Only the person closes it. Then move what lasts to the module note and delete the notebook.
+- The header says `status: open|closed`. Only the person closes it. What lasts beyond the task (decisions with their why, traps, how the module works) goes to the module note in `.harness/notes/` when closing; then the notebook can be deleted.
 - Prefer `npx --no-install harness progress done|add|next` to rewriting the file (keeps the format valid).
 
 ## Verification (once, at the end)

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Experimental (guidance for agents)
+
+- Context between sessions: module notes with a fixed shape (Purpose, Map, How it works, Decisions, Traps); `harness notes new <domain|folder>` drafts one from the import graph; `harness resume` prints the branch notebook, the changed files and their notes.
+- Claude Code: `harness sync` adds a `SessionStart` hook (`startup`, `compact`, `clear`) running `harness resume --hook`, so the notebook and the module notes come back after a compaction.
+- Fixed: after a compaction the notes hook stayed silent, because the session id doesn't change.
+- `harness doctor`: `note-missing`, `note-outdated` (medium and large diffs), `note-draft`, `note-size` (`notes.max_lines` in `doctor.yml`, default 60).
+- `close-task` updates the module notes as part of closing.
+
 ## 0.1.0 · 2026-11-04 (not published)
 
 First version, for the team pilot. Install from tarballs: [`docs/team-install.md`](docs/team-install.md).

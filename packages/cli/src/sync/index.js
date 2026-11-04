@@ -3,7 +3,7 @@
 //   .harness/skills/<n>/   -> .claude/skills/harness-<n>/       (SKILL.md gets name: harness-<n>)
 //   .harness/agents/<n>.md -> .claude/agents/harness-<n>.md     (Claude Code subagent frontmatter)
 //   .harness/notes/*.md    -> notes index block inside AGENTS.md
-//   (fixed)                -> hook + git permissions inside .claude/settings.json
+//   (fixed)                -> hooks (notes, resume) + git permissions inside .claude/settings.json
 //   templates              -> AGENTS.md and CLAUDE.md, only when missing
 //
 // Everything it writes is recorded in .harness/.generated.json, and it only ever touches what is recorded there:
@@ -24,7 +24,10 @@ export const NOTES_BLOCK_RE = /(<!-- harness:notes:start[^>]*-->\r?\n)([\s\S]*?)
 /** Permissions and hooks harness adds to .claude/settings.json. */
 export const SETTINGS = Object.freeze({
   deny: ['Bash(git commit:*)', 'Bash(git push:*)'],
-  hooks: [{ event: 'PreToolUse', matcher: 'Read|Edit|Write|MultiEdit', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/harness notes --hook' }],
+  hooks: [
+    { event: 'PreToolUse', matcher: 'Read|Edit|Write|MultiEdit', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/harness notes --hook' },
+    { event: 'SessionStart', matcher: 'startup|compact|clear', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/harness resume --hook' },
+  ],
 });
 
 const sha = (s) => createHash('sha256').update(s).digest('hex');

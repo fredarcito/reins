@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo } from './helpers.js';
 import { hookResponse } from '../src/commands/notes.js';
@@ -80,4 +80,36 @@ test('scope: domains, public API, notes and minimum level; folders are expanded'
   const arch = JSON.parse((await cli(dir, ['scope', '.harness/architecture.yml', '--json'])).stdout);
   assert.equal(arch.level, 'large');
   assert.equal((await cli(dir, ['scope'])).code, 2);
+});
+
+test('notes new <domain>: drafts the note from the graph; refuses to overwrite without --force', async () => {
+  const dir = exampleRepo('next-app');
+  const r = await cli(dir, ['notes', 'new', 'orders']);
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /Drafted \.harness\/notes\/orders\.md\. Fill in the TODO lines/);
+  const text = readFileSync(path.join(dir, '.harness/notes/orders.md'), 'utf8');
+  assert.match(text, /^---\npaths: \["src\/features\/orders\/\*\*"\]\n---\n# orders\n/);
+  assert.match(text, /- Public API: `src\/features\/orders\/index\.ts`/);
+  assert.match(text, /- Files: 4\./);
+  assert.match(text, /- Used by: .*src\/app/);
+  assert.match(text, /- Depends on: .*src\/lib/);
+  assert.match((await cli(dir, ['notes', 'src/features/orders/queries.ts'])).stdout, /Note \.harness\/notes\/orders\.md/);
+
+  const again = await cli(dir, ['notes', 'new', 'orders']);
+  assert.equal(again.code, 2);
+  assert.match(again.stderr, /orders\.md already exists\. Edit it, or pass --force/);
+  assert.equal((await cli(dir, ['notes', 'new', 'orders', '--force'])).code, 0);
+});
+
+test('notes new <folder>: works without a domain, and without a graph (no architecture.yml)', async () => {
+  const dir = exampleRepo('next-app', { keepHarness: false });
+  const r = await cli(dir, ['notes', 'new', 'src/lib']);
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /Could not build the import graph/);
+  const text = readFileSync(path.join(dir, '.harness/notes/lib.md'), 'utf8');
+  assert.match(text, /^---\npaths: \["src\/lib\/\*\*"\]\n---\n# lib\n/);
+  assert.doesNotMatch(text, /Used by/);
+  const bad = await cli(dir, ['notes', 'new', 'nope']);
+  assert.equal(bad.code, 2);
+  assert.match(bad.stderr, /"nope" is not a domain of architecture\.yml nor a folder/);
 });

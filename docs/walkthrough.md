@@ -1,6 +1,6 @@
 # Walkthrough: install the harness in an app and use it
 
-A full tour on `examples/vite-react` (Vite + React, plain JS/JSX), from an empty repo to a blocked commit. Every output below is real, from [`scripts/verify/e2e-install.sh`](../scripts/verify/e2e-install.sh), which replays this tour automatically. About 10 minutes by hand.
+A full tour on `examples/vite-react` (Vite + React, plain JS/JSX), from an empty repo to a blocked commit. Every output below is real, from [`scripts/verify/e2e-install.sh`](../scripts/verify/e2e-install.sh), which replays this tour automatically (`notes new` and `resume`: [`scripts/verify/cc-resume.sh`](../scripts/verify/cc-resume.sh); the notebook text is shortened). About 10 minutes by hand.
 
 ```mermaid
 flowchart LR
@@ -125,6 +125,42 @@ harness sync: 1 change(s):
 $ npx --no-install harness notes src/features/cart/cartStore.js
 Note .harness/notes/cart.md (applies to src/features/cart/**) for src/features/cart/cartStore.js:
 - 2026-11-04: totals are integer cents.
+```
+
+**Drafting a note from the code** for a module that has none. The import graph fills in the map; the agent (or you) replaces the `TODO` lines with what the code can't say:
+
+```console
+$ npx --no-install harness notes new cart
+Drafted .harness/notes/cart.md. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run `harness sync` to add it to the AGENTS.md index.
+```
+
+```markdown
+## Map
+- Public API: `src/features/cart/index.js`
+- Files: 3. Most imported: `src/features/cart/cartStore.js`, `src/features/cart/index.js`, `src/features/cart/CartSummary.jsx`
+- Used by: src/components (1), src/pages (1)
+- Depends on: src/components (1)
+```
+
+**Resuming a task** in a new session, or after the conversation was compacted. Claude Code receives this on its own through the `SessionStart` hook; any other agent runs the command:
+
+```console
+$ npx --no-install harness resume
+Context to resume the work on branch feat/coupons (from harness resume). Read it before continuing.
+
+## Progress notebook .harness/progress/feat-coupons.md
+Resume from its "Next step"; keep it updated with `npx --no-install harness progress`.
+
+# feat/coupons · status: open · updated: 2026-11-04
+**Goal:** coupons in the cart.
+**Next step:** wire the coupon field in CartSummary.
+
+## Files changed on this branch (1)
+- src/features/cart/cartStore.js
+
+## Module notes for those files (follow them)
+### .harness/notes/cart.md (applies to src/features/cart/**)
+...
 ```
 
 **Sizing a task** before starting:

@@ -1,27 +1,109 @@
 // harness notes <path…>: prints the module notes that apply to a path.
 // harness notes --hook: the same, as a Claude Code PreToolUse hook (JSON in on stdin, JSON out), at most once
 // per note and session. It never blocks the agent: any problem means "no note".
-import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor } from '@harness/core';
-import { HARNESS_DIR, toRepoPath } from '../context.js';
-import { loadNotes } from '../project.js';
+import { draftNote, matchesAny, notesFor, NOTES_DIR, summarizeModule } from '@harness/core';
+import { CliError, toRepoPath } from '../context.js';
+import { takeUnseen } from '../notes-seen.js';
+import { loadNotes, readDomains } from '../project.js';
+import { analyze } from './check.js';
 
-export const SEEN_FILE = `${HARNESS_DIR}/progress/.notes-seen.json`;
-const MAX_SESSIONS = 50;
+export { SEEN_FILE } from '../notes-seen.js';
 
-export const options = { hook: { type: 'boolean' }, json: { type: 'boolean' } };
+export const options = {
+  hook: { type: 'boolean' },
+  json: { type: 'boolean' },
+  paths: { type: 'string' },
+  force: { type: 'boolean' },
+};
 export const positionals = true;
 
 export const help = `Usage: harness notes <path…> [--json]
+       harness notes new <domain|folder> [--paths <glob,…>] [--force]
        harness notes --hook
 
 Prints the module notes (.harness/notes/*.md) whose "paths" match each path.
---hook is for the Claude Code PreToolUse hook that harness sync installs: it reads the tool call from stdin and
-returns the notes as additional context, once per note and session.`;
+
+new     Drafts .harness/notes/<name>.md for a domain of architecture.yml or a folder: the import graph fills in
+        the public API, the most imported files, who uses the module and what it depends on; the rest are TODO
+        lines for the agent or a person to fill in. --paths overrides the globs; --force overwrites.
+--hook  For the Claude Code PreToolUse hook that harness sync installs: reads the tool call from stdin and
+        returns the notes as additional context, once per note and session.`;
+
+const SKIP = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'out', 'coverage']);
+
+/** Every file under a repo folder (repo-relative), skipping build output and dependencies. */
+function walk(root, rel = '') {
+  const out = [];
+  for (const name of readdirSync(path.join(root, rel)).sort()) {
+    if (SKIP.has(name) || name.startsWith('.')) continue;
+    const r = rel ? `${rel}/${name}` : name;
+    if (statSync(path.join(root, r)).isDirectory()) out.push(...walk(root, r));
+    else out.push(r);
+  }
+  return out;
+}
+
+/** The group a file outside the module is shown under: its domain, or its first two folders. */
+const labeler = (domains) => (f) => {
+  const d = domains.find((x) => matchesAny(f, x.paths));
+  if (d) return `domain ${d.name}`;
+  const dir = f.split('/').slice(0, -1).slice(0, 2).join('/');
+  return dir || '(root)';
+};
+
+/** harness notes new <domain|folder> */
+async function newNote(ctx, target) {
+  const { root, cwd, values, out } = ctx;
+  const info = [];
+  const domains = readDomains(root, info);
+  const domain = domains.find((d) => d.name === target);
+  let name;
+  let paths;
+  let api = [];
+  if (domain) {
+    name = domain.name;
+    paths = domain.paths;
+    api = domain.publicApi;
+  } else {
+    const rel = toRepoPath(root, cwd, target).replace(/\/$/, '');
+    if (!existsSync(path.join(root, rel)) || !statSync(path.join(root, rel)).isDirectory()) {
+      const known = domains.map((d) => d.name).join(', ');
+      throw new CliError(`"${target}" is not a domain of architecture.yml nor a folder.${known ? ` Domains: ${known}.` : ''}`);
+    }
+    name = path.basename(rel);
+    paths = [`${rel}/**`];
+    api = [`${rel}/index.{js,jsx,ts,tsx}`];
+  }
+  if (values.paths) paths = values.paths.split(',').map((p) => p.trim()).filter(Boolean);
+  const file = `${NOTES_DIR}/${name}.md`;
+  if (existsSync(path.join(root, file)) && !values.force) {
+    throw new CliError(`${file} already exists. Edit it, or pass --force to replace it with a new draft.`);
+  }
+
+  let summary = null;
+  let files;
+  try {
+    const { graph } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
+    files = graph.files;
+    summary = summarizeModule({ paths, files, edges: graph.edges, label: labeler(domains) });
+  } catch (e) {
+    if (!(e instanceof CliError)) throw e;
+    out(`! warning  Could not build the import graph, so the Map only lists the public API: ${e.message.split('\n')[0]}`);
+    files = walk(root);
+  }
+  const publicApi = files.filter((f) => matchesAny(f, api)).sort();
+  if (!files.some((f) => matchesAny(f, paths))) out(`! warning  No file matches ${paths.join(', ')}.`);
+
+  mkdirSync(path.join(root, NOTES_DIR), { recursive: true });
+  writeFileSync(path.join(root, file), draftNote({ name, paths, publicApi, summary, date: ctx.today ?? new Date().toISOString().slice(0, 10) }));
+  out(`Drafted ${file}. Fill in the TODO lines (purpose, how it works, decisions with why, traps), then run \`harness sync\` to add it to the AGENTS.md index.`);
+  return 0;
+}
 
 /** Formats notes for a path, for people and agents alike. */
-const render = (file, notes) =>
+export const render = (file, notes) =>
   notes.map((n) => `Note ${n.file} (applies to ${n.paths.join(', ')}) for ${file}:\n${n.body}`).join('\n\n');
 
 /** Reads all of stdin. */
@@ -56,29 +138,8 @@ export function hookResponse(root, input) {
   if (!notes.length) return null;
 
   // once per note and session
-  const session = typeof input.session_id === 'string' ? input.session_id : null;
-  let unseen = notes;
-  if (session) {
-    const seenPath = path.join(root, SEEN_FILE);
-    let seen = {};
-    try {
-      seen = existsSync(seenPath) ? JSON.parse(readFileSync(seenPath, 'utf8')) : {};
-    } catch {
-      seen = {};
-    }
-    const already = new Set(seen[session] ?? []);
-    unseen = notes.filter((n) => !already.has(n.file));
-    if (!unseen.length) return null;
-    seen[session] = [...already, ...unseen.map((n) => n.file)];
-    const sessions = Object.keys(seen);
-    for (const old of sessions.slice(0, Math.max(0, sessions.length - MAX_SESSIONS))) delete seen[old];
-    try {
-      mkdirSync(path.dirname(seenPath), { recursive: true });
-      writeFileSync(seenPath, JSON.stringify(seen));
-    } catch {
-      /* read-only checkout: deliver the note anyway */
-    }
-  }
+  const unseen = takeUnseen(root, typeof input.session_id === 'string' ? input.session_id : null, notes);
+  if (!unseen.length) return null;
   return JSON.stringify({
     hookSpecificOutput: {
       hookEventName: input.hook_event_name ?? 'PreToolUse',
@@ -104,6 +165,13 @@ export async function notes(ctx) {
   if (!ctx.positionals.length) {
     out(help);
     return 2;
+  }
+  if (ctx.positionals[0] === 'new') {
+    if (ctx.positionals.length !== 2) {
+      out(help);
+      return 2;
+    }
+    return newNote(ctx, ctx.positionals[1]);
   }
   const { notes: all, problems } = loadNotes(root);
   const results = ctx.positionals.map((p) => {

@@ -54,6 +54,8 @@ test('generated content: prefixed names, Claude frontmatter, notes index, CLAUDE
   assert.deepEqual(settings.permissions.deny, SETTINGS.deny);
   assert.equal(settings.hooks.PreToolUse[0].matcher, 'Read|Edit|Write|MultiEdit');
   assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /harness notes --hook$/);
+  assert.equal(settings.hooks.SessionStart[0].matcher, 'startup|compact|clear');
+  assert.match(settings.hooks.SessionStart[0].hooks[0].command, /harness resume --hook$/);
 });
 
 test('never touches third-party skills, agents or settings, and keeps the order of existing settings', async () => {

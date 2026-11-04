@@ -69,11 +69,11 @@ test('triage-missing: a diff without a line for the branch; nothing without a di
 test('triage-mismatch: the latest line of the branch is compared with the diff', () => {
   const files = ['src/features/billing/a.js', 'src/features/billing/b.js', 'src/features/billing/c.js', 'src/features/billing/d.js'];
   const r = doctor({ changedFiles: files, triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | tweak billing\n' } });
-  assert.deepEqual(rules(r), ['triage-mismatch']);
+  assert.deepEqual(rules(r), ['triage-mismatch', 'note-missing']);
   assert.match(r.violations[0].message, /Declared small \(line 1: "tweak billing"\), but the diff looks medium: 4 files \(small allows 3\)/);
 
   const escalated = doctor({ changedFiles: files, triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | a\n2026-11-04 | feat/x | medium | it grew\n' } });
-  assert.deepEqual(rules(escalated), []);
+  assert.deepEqual(rules(escalated), ['note-missing']);
   const large = doctor({ changedFiles: ['README.md'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | large | refactor\n' } });
   assert.deepEqual(rules(large), [], 'declaring more than needed is not flagged');
 });
@@ -148,4 +148,39 @@ test('every doctor finding is a warning with rule, why and fix; the result never
   assert.match(text, /harness doctor: 0 errors, 5 warnings$/);
   assert.doesNotMatch(text, /baseline|Result:/);
   assert.equal(formatText(doctor(), { title: 'harness doctor', baseline: false }), 'harness doctor: nothing to report');
+});
+
+const note = (file, paths, body = '## Purpose\nBilling totals.\n') => ({ file, paths, body });
+const billingFiles = ['src/features/billing/a.js', 'src/features/billing/b.js', 'src/features/billing/c.js', 'src/features/billing/d.js'];
+const medium = { file: LOG, text: '2026-11-04 | feat/x | medium | billing work\n' };
+
+test('note-missing and note-outdated: only for medium and large diffs', () => {
+  const small = doctor({ changedFiles: billingFiles.slice(0, 2), triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | fix\n' } });
+  assert.deepEqual(rules(small), [], 'a small fix writes nothing');
+
+  const missing = doctor({ changedFiles: billingFiles, triageLog: medium });
+  assert.deepEqual(rules(missing), ['note-missing']);
+  assert.equal(missing.violations[0].from, 'billing');
+  assert.match(missing.violations[0].message, /Domain billing changed \(4 file\(s\)\) and has no module note/);
+  assert.match(missing.violations[0].fix, /npx --no-install harness notes new billing/);
+
+  const notes = [note('.harness/notes/billing.md', ['src/features/billing/**'])];
+  const outdated = doctor({ changedFiles: billingFiles, triageLog: medium, notes });
+  assert.deepEqual(rules(outdated), ['note-outdated']);
+  assert.match(outdated.violations[0].message, /^4 file\(s\) of this module changed \(src\/features\/billing\/a\.js, src\/features\/billing\/b\.js, src\/features\/billing\/c\.js, …\), but its note did not\./);
+
+  const updated = doctor({ changedFiles: [...billingFiles, '.harness/notes/billing.md'], triageLog: medium, notes });
+  assert.deepEqual(rules(updated), [], 'the note changed with the code');
+});
+
+test('note-draft and note-size: for the notes of what the branch touched', () => {
+  const draft = note('.harness/notes/billing.md', ['src/features/billing/**'], '## Purpose\nTODO: what it does.\n## Decisions\n- TODO YYYY-MM-DD: x\n');
+  const long = note('.harness/notes/search.md', ['src/features/search/**'], Array.from({ length: 61 }, (_, i) => `- ${i}`).join('\n'));
+  const untouched = note('.harness/notes/other.md', ['src/other/**'], 'TODO: x');
+  const r = doctor({ changedFiles: ['src/features/billing/a.js', '.harness/notes/search.md'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | x\n' }, notes: [draft, long, untouched] });
+  assert.deepEqual(rules(r), ['note-draft', 'note-size']);
+  assert.match(r.violations[1].message, /The note has 61 lines; the limit is 60/);
+  const tuned = doctor({ config: parseDoctorConfig('notes: { max_lines: 100 }\n'), changedFiles: ['.harness/notes/search.md'], notes: [long] });
+  assert.deepEqual(rules(tuned), []);
+  assert.ok(DOCTOR_RULES.includes('note-outdated'));
 });

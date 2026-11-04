@@ -24,6 +24,9 @@ Version 0.1.0, not published. Nothing is measured yet: the [pilot](team-adoption
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Yes (phase 8), tested; end-to-end with Husky |
+| `notes new`: note drafted from the import graph | core + cli | experimental | Yes (phase 10), tested on both examples |
+| `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
+| Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
 
 ## Repo tooling
 

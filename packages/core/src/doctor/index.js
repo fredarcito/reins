@@ -2,10 +2,12 @@
 // (triage.log, the progress notebook) and at the local diff. It never blocks (warn only), never uses the
 // baseline or a language adapter, and must not run in CI or in the git hook.
 // Pure: the caller reads the files and git state and passes them in.
-import { checkTriage, parseTriageLog, scopeSignals } from './triage.js';
+import { checkTriage, parseTriageLog, scopeSignals, suggestLevel } from './triage.js';
+import { checkNotes } from './notes.js';
 import { checkNotebook, countLines } from './progress.js';
 
-export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 'agents-size', 'progress-hot-size', 'progress-format', 'progress-closed']);
+export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 'agents-size', 'progress-hot-size', 'progress-format', 'progress-closed',
+  'note-missing', 'note-outdated', 'note-draft', 'note-size']);
 
 /**
  * @param {object} input
@@ -17,10 +19,12 @@ export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 
  * @param {{ file: string, text: string | null }} input.triageLog
  * @param {{ file: string, text: string | null }} input.agentsMd
  * @param {{ file: string, text: string }[]} input.notebooks hot notebooks to check (usually the current branch's)
+ * @param {{ file: string, paths: string[], body: string }[]} [input.notes] module notes of the repo
  * @returns {import('../check/index.js').CheckResult}
  */
-export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks }) {
+export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [] }) {
   const findings = [];
+  const signals = scopeSignals(changedFiles, domains, architectureFile);
 
   findings.push(
     ...checkTriage({
@@ -28,7 +32,7 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
       changedFiles,
       log: triageLog.text === null ? null : parseTriageLog(triageLog.text),
       logFile: triageLog.file,
-      signals: scopeSignals(changedFiles, domains, architectureFile),
+      signals,
       thresholds: config.triage,
     }),
   );
@@ -43,6 +47,10 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
       });
     }
   }
+
+  findings.push(
+    ...checkNotes({ changedFiles, notes, domains, level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines }),
+  );
 
   for (const nb of notebooks) findings.push(...checkNotebook({ file: nb.file, text: nb.text, maxLines: config.progress.hot_max_lines }));
 

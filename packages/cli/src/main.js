@@ -8,6 +8,7 @@ import * as doctorCmd from './commands/doctor.js';
 import * as syncCmd from './commands/sync.js';
 import * as notesCmd from './commands/notes.js';
 import * as scopeCmd from './commands/scope.js';
+import * as resumeCmd from './commands/resume.js';
 import * as auditCmd from './commands/audit.js';
 import * as progressCmd from './commands/progress.js';
 import * as reviewCmd from './commands/review.js';
@@ -23,6 +24,7 @@ const COMMANDS = {
   sync: { run: syncCmd.sync, options: syncCmd.options, help: syncCmd.help },
   notes: { run: notesCmd.notes, options: notesCmd.options, help: notesCmd.help, positionals: true },
   scope: { run: scopeCmd.scope, options: scopeCmd.options, help: scopeCmd.help, positionals: true },
+  resume: { run: resumeCmd.resume, options: resumeCmd.options, help: resumeCmd.help },
   audit: { run: auditCmd.audit, options: auditCmd.options, help: auditCmd.help, positionals: true },
   progress: { run: progressCmd.progress, options: progressCmd.options, help: progressCmd.help, positionals: true },
   review: { run: reviewCmd.review, options: reviewCmd.options, help: reviewCmd.help },
@@ -34,10 +36,11 @@ const HELP = `Usage: harness <command> [options]
 Commands:
   check    Check the architecture rules (git hook and CI)
   init     Draft .harness/architecture.yml and baseline.json from the code
-  doctor   Local workflow checks: triage log, AGENTS.md size, progress notebook (experimental)
+  doctor   Local workflow checks: triage log, notebook, module notes, AGENTS.md size (experimental)
   sync     Generate .claude/ and the AGENTS.md notes index from .harness/ (experimental)
-  notes    Print the module notes for a path; --hook for Claude Code (experimental)
+  notes    Print the module notes for a path; "notes new" drafts one; --hook for Claude Code (experimental)
   scope    Domains, notes and minimum task level for some paths (experimental)
+  resume   Notebook, changed files and notes to resume a task; --hook for Claude Code (experimental)
   audit    Local audit backlog: list, add, set status, recheck (experimental)
   progress Edit the branch notebook without rewriting it (experimental)
   review   Print a review prompt: diff + checklist + notes; calls no API (experimental)

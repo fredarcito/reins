@@ -182,6 +182,19 @@ Built after the validation gate without feedback from a real repo ("continue"), 
 | Pilot | [`team-adoption.md`](team-adoption.md) + [`PILOT.md`](PILOT.md) template; thresholds decided before starting | Design: metrics and keep/simplify/drop criteria defined in advance |
 | `npx --no-install harness` | Every doc, template, skill, policy, hook and CI step runs the CLI with `--no-install` | An unrelated public npm package is called `harness` (0.0.6): a bare `npx harness` in a repo without the CLI installed would offer to download and run it |
 
+## Phase 10 defaults (context between sessions; experimental)
+
+Goal (author, 2026-11-04): an agent that comes back to a module a week later knows what it does, its decisions and why, without reading all its code; and a long conversation that gets compacted keeps what matters of the task.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Note format | Template with five sections: Purpose, Map, How it works, Decisions (date, decision, why), Traps. Still free markdown: nothing is parsed except the `paths` frontmatter | A list of dated decisions doesn't tell a newcomer what the module is; the sections are what you'd otherwise rediscover from the code |
+| `harness notes new <domain\|folder>` | Drafts the note from the import graph (public API, most imported files, who uses the module, what it depends on, grouped by domain or by first two folders). What only people know is left as `TODO` lines. Without a graph (no `architecture.yml`, no adapter) it still drafts, without the Map facts. Never overwrites without `--force` | The graph knows the structure for free; the agent only writes what the code can't say |
+| Keeping notes current | `close-task` updates the notes of the touched modules as part of closing (no longer "when the person confirms"). New doctor rules, warn only: `note-missing` (a touched domain has no note) and `note-outdated` (a module's files changed but its note didn't) only for medium/large diffs (the objective level of the diff, not the declared one); `note-draft` (TODO lines left) and `note-size` (> `notes.max_lines`, default 60) for the notes of what the branch touched | A note nobody writes is worth nothing; small fixes must not pay this |
+| `harness resume` | Prints the branch notebook, the files changed on the branch (up to 30) and the notes of those files (up to 6 in full, the rest by path). `--json` for agents | One command to pick a task up, for any agent |
+| `SessionStart` hook | `sync` adds `harness resume --hook` with matcher `startup\|compact\|clear`. Not `resume`: a resumed session still has its transcript. Prints nothing when there is no notebook and no change | Verified in Claude Code 2.1.318 (P9): fires with `source: "compact"` and its context reaches the model |
+| Notes after a compaction | The session keeps its `session_id` after a compaction, so the "once per session" record made the notes hook stay silent while the notes were gone from the context. On `compact` and `clear`, `resume --hook` forgets the session's record and re-delivers the notes of the changed files; later reads deliver the others again | Bug found while designing this phase (P9) |
+
 ## Dependencies
 
 | Package | Where | Why |
@@ -206,5 +219,4 @@ They come from [`VERIFIED.md`](VERIFIED.md). Pending your OK.
 ## Open
 
 - **Repo name and final npm scope — deferred 2026-11-04.** Only the author and the team will try it for now, installing from tarballs; nothing is published. `@harness/*` stays as the placeholder, kept in one place so `scripts/rename-scope.mjs` can change it later. (`@harness/*` has no published packages, but we couldn't confirm the organization is free.)
-- **License.** No `LICENSE` until decided.
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

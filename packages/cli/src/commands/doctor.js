@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { runDoctor, notebookFile, formatText, formatJson } from '@harness/core';
 import { ARCHITECTURE_FILE, CliError, HARNESS_DIR, isGitRepo } from '../context.js';
-import { DOCTOR_FILE, readDoctorConfig, readDomains, readText as read } from '../project.js';
+import { DOCTOR_FILE, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { pickBaseRef } from './check.js';
 export const TRIAGE_LOG = `${HARNESS_DIR}/progress/triage.log`;
 const LOCAL_DIRS = [`${HARNESS_DIR}/progress/`, `${HARNESS_DIR}/backlog/`];
@@ -17,7 +17,7 @@ export const options = {
 export const help = `Usage: harness doctor [options]
 
 Local, informational checks of the workflow: triage log vs. the diff, AGENTS.md size, progress notebook
-format. Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
+format, and the module notes of what the branch touched (missing, not updated, still a draft, too long). Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
 Thresholds: ${DOCTOR_FILE}.
 
 Options:
@@ -28,7 +28,7 @@ Options:
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 
 /** Files changed on this branch compared to the base (committed, staged, unstaged and untracked). */
-function changedFiles(root, baseRef) {
+export function changedFiles(root, baseRef) {
   const base = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : 'HEAD';
   const tracked = git(root, ['diff', '--name-only', base]).split('\n');
   const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n');
@@ -78,6 +78,7 @@ export async function doctor(ctx) {
     triageLog: { file: TRIAGE_LOG, text: read(root, TRIAGE_LOG) },
     agentsMd: { file: 'AGENTS.md', text: read(root, 'AGENTS.md') },
     notebooks: nbText === null ? [] : [{ file: nbFile, text: nbText }],
+    notes: loadNotes(root).notes,
   });
 
   if (values.json) out(formatJson(result, { warnings: notes }));
