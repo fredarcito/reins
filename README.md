@@ -55,15 +55,28 @@ Between `init` and `check --update-baseline`:
 
 Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
+## Skills for your agent
+
+Commands for your agent, installed by `reins install`. In Claude Code, type them (`/reins-arch`), add details after them (`/reins-notes cart`), or just ask in your own words: Claude picks the skill whose description matches. Other agents read the same instructions in `.reins/skills/<name>/SKILL.md`.
+
+| Skill | What your agent does | When |
+| --- | --- | --- |
+| `/reins-done` | Closes a task: runs the checks once, updates the notebook and the notes of the modules it touched, says what was and wasn't verified | When a task is done |
+| `/reins-backlog` | Shows what is pending in the backlog, proposes what to do next (checked against the code), adds, closes or drops items | "What's pending?", "what should we do next?" |
+| `/reins-notes` | Reads each module and fills in its note. Writes only decisions it can back up; the rest become `- ? question` lines for you | After `init` or `notes new` |
+| `/reins-arch` | Reviews `.reins/architecture.yml` against the code and proposes changes with evidence. **Applies nothing until you approve each one**, and never bends the plan just to make the check pass | After `init`, and every few months |
+| `/reins-audit` | Looks for new improvements in the code and adds only new findings to the backlog | "Review the whole project" |
+| `/reins-agent` | Creates a new subagent in `.reins/agents/` (read-only by default, the fewest tools) and generates it for Claude Code | When you want a new agent: a tester, an a11y checker… |
+
 ## Contents
 
 - [Without and with reins](#without-and-with-reins)
 - [Why use it](#why-use-it)
 - [Quick start](#quick-start)
+- [Skills for your agent](#skills-for-your-agent)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
 - [Context between sessions](#context-between-sessions)
-- [Skills for your agent](#skills-for-your-agent)
 - [What lands in your repo](#what-lands-in-your-repo)
 - [Status of each piece](#status-of-each-piece)
 - [Commands](#commands)
@@ -317,17 +330,9 @@ A **decision** answers "why is it like this?"; a **trap** warns "careful: this l
 
 **Notes stay current.** The `reins-done` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
 
-## Skills for your agent
+### How the skills fit in
 
-`reins install` adds these skills; `reins sync` generates them for Claude Code. Type them as commands (`/reins-arch`), add details after them (`/reins-notes cart`), or just ask: Claude Code also picks a skill when your request matches its description. Other agents can read the same instructions in `.reins/skills/<name>/SKILL.md`.
-
-| Skill | What your agent does | When |
-| --- | --- | --- |
-| `/reins-arch` | Checks `.reins/architecture.yml` against the code (`reins check --coverage`, the init report, the baseline) and proposes changes, each with its evidence and its effect. **Applies nothing until you approve each item**, never adds an exception you didn't give a reason for, never bends the plan to make the check pass | After `init`, and every few months |
-| `/reins-notes` | Reads each module and fills in its note. Writes only decisions it can back up; the rest become `- ? question` lines for you | After `init` or `notes new` |
-| `/reins-agent` | Creates a subagent in `.reins/agents/` (read-only by default, the fewest tools, a clear "when to use") and generates it for Claude Code | When you want a new agent: a tester, an a11y checker… |
-| `/reins-done` | Runs the checks once, updates the notebook and the notes of the modules it touched, and reports what was and wasn't verified | When a task is done |
-| `/reins-audit` | Re-checks the audit backlog and adds only new findings | "Review the whole project" |
+After `init`, two skills turn the drafts into something you can trust; you approve the architecture changes one by one.
 
 ```mermaid
 flowchart LR

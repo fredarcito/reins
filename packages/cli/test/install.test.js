@@ -23,7 +23,7 @@ test('husky repo: sources, .gitignore, script, hook, CI workflow and sync, in on
   const dir = huskyRepo();
   const r = await cli(dir, ['install']);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /\.reins\/ sources: 19 file\(s\) added/);
+  assert.match(r.stdout, /\.reins\/ sources: 20 file\(s\) added/);
   for (const f of ['.reins/policies/triage.md', '.reins/skills/audit/SKILL.md', '.reins/agents/reviewer.md', '.reins/doctor.yml', 'AGENTS.md', 'CLAUDE.md', '.claude/settings.json', '.reins/.generated.json']) {
     assert.ok(existsSync(path.join(dir, f)), f);
   }
@@ -57,7 +57,7 @@ test('install is idempotent and never overwrites existing files', async () => {
   git(dir, 'add', '-A');
   git(dir, 'commit', '-qm', 'install');
   const again = await cli(dir, ['install']);
-  assert.match(again.stdout, /0 file\(s\) added, 19 already there \(kept\)/);
+  assert.match(again.stdout, /0 file\(s\) added, 20 already there \(kept\)/);
   assert.match(again.stdout, /already ignores the local reins folders/);
   assert.match(again.stdout, /script "reins:check" already exists \(kept\)/);
   assert.match(again.stdout, /\.husky\/pre-commit already runs reins/);
@@ -110,7 +110,7 @@ test('--dry-run writes nothing; no package.json is an error', async () => {
   git(dir, 'commit', '-qm', 'base');
   const r = await cli(dir, ['install', '--dry-run']);
   assert.match(r.stdout, /dry run, nothing written/);
-  assert.match(r.stdout, /19 file\(s\) added/);
+  assert.match(r.stdout, /20 file\(s\) added/);
   assert.equal(git(dir, 'status', '--porcelain'), '');
 
   const empty = exampleRepo('vite-react');

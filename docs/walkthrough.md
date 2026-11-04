@@ -29,7 +29,7 @@ npx husky init && : > .husky/pre-commit     # this repo already uses Husky; star
 ```console
 $ npx reins install
 reins install:
-  - .reins/ sources: 19 file(s) added
+  - .reins/ sources: 20 file(s) added
   - .gitignore: added .reins/backlog/, .reins/progress/, .reins/init-report.md
   - package.json: added script "reins:check": "reins check"
   - pre-commit hook: appended to .husky/pre-commit (Husky)

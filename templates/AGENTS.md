@@ -10,6 +10,7 @@ Commands: {{commands}} · `npx reins check`
 
 ## On demand
 - Resuming a task, or the conversation was compacted → run `npx reins resume`.
+- "What's pending?" → `npx reins audit list` (backlog) and `npx reins progress show` (current task).
 - Medium or large task → read `.reins/policies/progress.md`.
 - Several agents (large only) → read `.reins/policies/multiagent.md`.
 - Before touching these paths, read their note:
