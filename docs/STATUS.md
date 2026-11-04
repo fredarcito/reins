@@ -18,10 +18,10 @@ Nothing here is measured. The design is a design, not a proven product.
 | CLI `check`, `init`, adapter resolution | cli | stable | Yes (phase 4), tested; installed from tarballs with npm and pnpm |
 | Git pre-commit hook and CI job running `check` | templates | stable | No (phase 8) |
 | `doctor` | core + cli | experimental | Yes (phase 5), tested with simulated logs, notebooks and diffs |
-| `sync`, `notes`, `scope` | cli | experimental | Not started |
-| Templates: AGENTS.md, policies, notebook, skills, agents | templates | experimental | Not started |
-| Notes delivered by `PreToolUse` hook | templates | experimental | Not started; hook behavior partially verified (P1) |
-| Permissions denying `git commit`/`git push` | templates | experimental | Not started; known bypasses (P2) |
+| `sync`, `notes`, `scope` | cli | experimental | Yes (phase 6), tested; notes hook verified with Claude Code (2/2) |
+| Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `@harness/cli` |
+| Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |
+| Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
 | `audit`, `progress`, `review` | cli | experimental | Not started |
 | `install` in a consumer repo | cli | experimental | Not started |
 

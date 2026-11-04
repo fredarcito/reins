@@ -8,7 +8,7 @@ It does two things:
 2. **Gives the agent short, portable markdown** (a 30-line `AGENTS.md`, per-module notes, policies, skills) so it spends fewer tokens and doesn't lose context between sessions.
 
 > [!WARNING]
-> **Work in progress.** Phase **5 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `harness doctor` exists but is **experimental**: from phase 5 on, everything is built without results from a real repo yet. Notes, skills, hooks and `install` don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
+> **Work in progress.** Phase **6 of 9** is done. `harness init` and `harness check` work and can be [tried on a real repo](docs/try-it.md) from local tarballs. `doctor`, `sync`, `notes`, `scope` and the templates exist but are **experimental**: from phase 5 on, everything is built without results from a real repo yet. `install`, `audit`, `progress` and `review` don't exist yet. Nothing is measured: token savings and quality gains are hypotheses until the team pilot. See [Roadmap](#roadmap) and [`docs/STATUS.md`](docs/STATUS.md).
 
 ## Contents
 
@@ -269,8 +269,8 @@ shared       ─┘
 | CLI `check` and `init` | stable | ✅ tested; installed from tarballs with npm and pnpm |
 | Git hook + CI job | stable | ❌ phase 8 |
 | `doctor` | experimental | ✅ tested with simulated logs and diffs |
-| `sync`, `notes`, `scope` | experimental | ❌ |
-| Templates (AGENTS.md, policies, skills, agents) | experimental | ❌ |
+| `sync`, `notes`, `scope` | experimental | ✅ tested; notes hook verified with Claude Code |
+| Templates (AGENTS.md, policies, skills, agents, hook) | experimental | ✅ in [`templates/`](templates/) |
 | `audit`, `progress`, `review` | experimental | ❌ |
 | `install` | experimental | ❌ |
 
@@ -367,6 +367,62 @@ Notebook format (`.harness/progress/<branch>.md`, local, outside git):
 **Next step:** wire the UI.
 ```
 
+### `harness sync`, `harness notes`, `harness scope` (experimental)
+
+`sync` generates the tool layer from the sources in `.harness/`. It only touches what it generated, recorded in `.harness/.generated.json`.
+
+```mermaid
+flowchart LR
+    subgraph src[".harness/ (sources, in git)"]
+        skills["skills/audit/SKILL.md<br/>skills/close-task/SKILL.md"]
+        agents["agents/reviewer.md<br/>agents/explorer.md"]
+        notes["notes/*.md<br/>(paths in frontmatter)"]
+    end
+    subgraph gen["generated (in git, never edit)"]
+        cskills[".claude/skills/harness-*/"]
+        cagents[".claude/agents/harness-*.md"]
+        index["AGENTS.md<br/>notes index block"]
+        settings[".claude/settings.json<br/>deny git commit/push<br/>+ notes hook"]
+    end
+    skills --> cskills
+    agents --> cagents
+    notes --> index
+    sync(["harness sync"]) -.-> gen
+    manifest[".harness/.generated.json<br/>what harness owns"] -.-> sync
+```
+
+| Situation | What `sync` does |
+| --- | --- |
+| Third-party skill, agent or setting (e.g. another tool's hook) | Never touched |
+| A file at a generated path that harness didn't create | Not touched; warning |
+| A generated file edited by hand | Overwritten, with a message (edit the source instead); `--check` fails |
+| A source deleted | Its generated files are removed (kept if edited by hand) |
+| `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only the notes block is managed) |
+
+`sync --check` writes nothing and fails if anything differs. Once `.generated.json` exists, `harness check` reports the same differences under `integrity`.
+
+**How a module note reaches the agent:**
+
+```mermaid
+sequenceDiagram
+    participant A as Agent (Claude Code)
+    participant H as PreToolUse hook
+    participant N as harness notes --hook
+    A->>H: Read src/features/cart/cartStore.js
+    H->>N: { session_id, tool_input.file_path }
+    N->>N: notes whose paths match,<br/>not yet seen in this session
+    N-->>A: additionalContext: "money is integer cents…"
+    A->>A: Edit, already following the note
+```
+
+The `AGENTS.md` index line is the tool-agnostic path (Codex, Cursor); the hook is the Claude Code path. Verified with Claude Code: with the hook on `Read`, the first edit already follows the note (see [`VERIFIED.md`](docs/VERIFIED.md#phase-6-findings)).
+
+| Command | What it does |
+| --- | --- |
+| `harness notes <path…>` | Prints the notes that apply to each path |
+| `harness notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
+| `harness scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
+
 ## Installation
 
 > [!NOTE]
@@ -398,7 +454,7 @@ flowchart LR
     p0["0 · Verify<br/>assumptions"]:::done --> p1["1 · Skeleton"]:::done
     p1 --> p2["2 · Core check"]:::done --> p3["3 · adapter-js<br/>+ examples"]:::done --> p4["4 · CLI<br/>check + init"]:::done
     p4 --> gate{{"Validation gate<br/>real repo: pending"}}
-    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"] --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
+    gate --> p5["5 · doctor"]:::done --> p6["6 · Templates<br/>+ sync"]:::done --> p7["7 · audit,<br/>progress, review"] --> p8["8 · install"] --> p9["9 · Docs +<br/>self-check"]
     classDef done fill:#2e7d32,color:#fff,stroke:#1b5e20
 ```
 

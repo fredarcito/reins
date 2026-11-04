@@ -11,7 +11,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "src"
+    "src",
+    "templates"
   ],
   "engines": {
     "node": ">=22"
@@ -20,7 +21,9 @@
     "@harness/core": "workspace:^"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "prepack": "node -e \"require('fs').cpSync('../../templates','templates',{recursive:true})\"",
+    "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true})\""
   },
   "devDependencies": {
     "@harness/adapter-js": "workspace:^"

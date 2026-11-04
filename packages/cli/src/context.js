@@ -30,6 +30,14 @@ export function installCommand(root, pkg) {
   return `npm install -D ${pkg}`;
 }
 
+/** How to run a package.json script with the repo's package manager. */
+export function runScriptCommand(root, script) {
+  if (existsSync(path.join(root, 'pnpm-lock.yaml'))) return `pnpm ${script}`;
+  if (existsSync(path.join(root, 'yarn.lock'))) return `yarn ${script}`;
+  if (existsSync(path.join(root, 'bun.lockb')) || existsSync(path.join(root, 'bun.lock'))) return `bun run ${script}`;
+  return script === 'test' ? 'npm test' : `npm run ${script}`;
+}
+
 /** Error with an exit code; the message is shown as is. */
 export class CliError extends Error {
   /** @param {string} message @param {number} [exitCode] */

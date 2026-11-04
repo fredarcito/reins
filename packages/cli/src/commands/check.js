@@ -9,6 +9,7 @@ import {
 } from '@harness/core';
 import { resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
+import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
 
 export const options = {
   files: { type: 'string', multiple: true },
@@ -128,6 +129,18 @@ export async function check(ctx) {
       const baseRef = pickBaseRef(root, values.base, ctx.env);
       if (!baseRef) warnings.push('No base branch found (tried origin/HEAD, origin/main, main…): the integrity rule was skipped. Pass --base <ref>.');
       else integrity.push(...checkIntegrity({ repoRoot: root, baseRef, architectureFile: ARCHITECTURE_FILE, baselineFile: BASELINE_FILE, severity: /** @type {'error'|'warn'} */ (integrityRule.severity) }));
+    }
+  }
+
+  // integrity of generated files: only once harness sync has been adopted (a manifest exists)
+  if (integrityRule && integrityRule.severity !== 'off' && existsSync(path.join(root, MANIFEST_FILE))) {
+    const { divergences } = runSync(root, { check: true });
+    for (const d of divergences) {
+      integrity.push({
+        rule: 'integrity', severity: /** @type {'error'|'warn'} */ (integrityRule.severity), key: `integrity|generated|${d}`, from: MANIFEST_FILE,
+        message: `Generated file out of sync: ${d}.`,
+        fix: 'Run `harness sync` and commit the result. Edit the sources in .harness/, not the generated files.',
+      });
     }
   }
 

@@ -6,3 +6,4 @@ coverage/
 .harness/backlog/
 .harness/progress/
 .tarballs/
+packages/cli/templates/

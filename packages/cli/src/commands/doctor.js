@@ -1,13 +1,10 @@
 // harness doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, runDoctor, notebookFile, formatText, formatJson } from '@harness/core';
+import { runDoctor, notebookFile, formatText, formatJson } from '@harness/core';
 import { ARCHITECTURE_FILE, CliError, HARNESS_DIR, isGitRepo } from '../context.js';
+import { DOCTOR_FILE, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { pickBaseRef } from './check.js';
-
-export const DOCTOR_FILE = `${HARNESS_DIR}/doctor.yml`;
 export const TRIAGE_LOG = `${HARNESS_DIR}/progress/triage.log`;
 const LOCAL_DIRS = [`${HARNESS_DIR}/progress/`, `${HARNESS_DIR}/backlog/`];
 
@@ -28,7 +25,6 @@ Options:
   --json        JSON output
   --base <ref>  Base branch to compute the diff of this branch (default: as in harness check)`;
 
-const read = (root, f) => (existsSync(path.join(root, f)) ? readFileSync(path.join(root, f), 'utf8') : null);
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
 
 /** Files changed on this branch compared to the base (committed, staged, unstaged and untracked). */
@@ -37,22 +33,6 @@ function changedFiles(root, baseRef) {
   const tracked = git(root, ['diff', '--name-only', base]).split('\n');
   const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n');
   return [...new Set([...tracked, ...untracked])].filter((f) => f && !LOCAL_DIRS.some((d) => f.startsWith(d))).sort();
-}
-
-/** Domains from architecture.yml, without needing the adapter (unknown rule ids are accepted here). */
-function readDomains(root, notes) {
-  const text = read(root, ARCHITECTURE_FILE);
-  if (text === null) {
-    notes.push(`${ARCHITECTURE_FILE} not found: triage can't count domains.`);
-    return [];
-  }
-  const ids = [...text.matchAll(/\bid:\s*["']?([\w-]+)/g)].map((m) => m[1]);
-  try {
-    return parseConfig(text, { file: ARCHITECTURE_FILE, knownRules: [...new Set([...CORE_RULES, ...ids])] }).domains;
-  } catch (e) {
-    notes.push(`${ARCHITECTURE_FILE} is not valid, so triage can't count domains (run \`harness check\` to see why).`);
-    return [];
-  }
 }
 
 /**
@@ -67,13 +47,7 @@ export async function doctor(ctx) {
     return 0;
   }
 
-  let config;
-  try {
-    config = parseDoctorConfig(read(root, DOCTOR_FILE), { file: DOCTOR_FILE });
-  } catch (e) {
-    if (e instanceof ConfigError) throw new CliError(e.message);
-    throw e;
-  }
+  const config = readDoctorConfig(root);
 
   const notes = [];
   let branch = 'HEAD';

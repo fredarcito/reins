@@ -1,0 +1,6 @@
+# Decisions · <branch>
+
+One line per decision or open question, with the date.
+
+- YYYY-MM-DD: decided ... because ...
+- YYYY-MM-DD: open question: ...
