@@ -2,7 +2,16 @@
 
 ## 0.7.0 · 2026-11-05
 
-Catching module notes that no longer match the code. Run `reins sync` after updating. The `notes` and `done` skills changed: if you never edited `.reins/skills/notes/` and `.reins/skills/done/`, delete them and run `npx reins install` to get the new ones (see Updating in the README).
+Catching module notes that no longer match the code.
+
+After updating the packages:
+
+1. The `notes` and `done` skills changed. If you never edited them: `rm -rf .reins/skills/notes .reins/skills/done` and `npx reins install` (it copies only what is missing). If you did, merge by hand: `diff -ru node_modules/@agentreins/cli/templates/.reins/skills .reins/skills`.
+2. `npx reins sync`, then `npx reins doctor` and `npx reins notes stale`.
+3. If doctor reports `note-dead-paths`/`note-dead-refs`, or `stale` lists notes far behind: in Claude Code, `/reins-notes review` (it costs tokens; ask for a few notes at a time if there are many).
+4. Commit `.reins/skills/`, `.claude/`, `.reins/.generated.json` and any note that changed.
+
+From a version before 0.6.2, also delete the `- Before touching these paths, read their note:` line above the notes block in `AGENTS.md`.
 
 - `reins doctor`, for every note (not only the ones the branch touched), warn only:
   - `note-dead-paths`: a glob in a note's `paths` matches no file. A module that was moved or renamed leaves its note reaching nobody, silently.

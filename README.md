@@ -61,7 +61,7 @@ Nothing is overwritten: `install` and `init` only add files or ask first. With p
 
 ```bash
 # 1. Update the packages (@agentreins/core comes along with the CLI)
-npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest
+npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest   # pnpm: pnpm add -D …
 
 # 2. Regenerate what reins owns, then check
 npx reins sync
@@ -95,6 +95,8 @@ diff -ru node_modules/@agentreins/cli/templates/.reins .reins
 ```
 
 A file you never edited can simply be deleted and copied again by `npx reins install`. Then run `npx reins sync`.
+
+Finally, commit what changed: `.reins/`, `.claude/` and `AGENTS.md`.
 
 ## Skills for your agent
 
