@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo } from './helpers.js';
-import { mergeSettings, SETTINGS } from '../src/sync/index.js';
+import { mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
 const read = (dir, f) => readFileSync(path.join(dir, f), 'utf8');
@@ -166,4 +166,20 @@ test('mergeSettings: removes entries reins no longer wants, keeps everything els
   assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit']);
   assert.deepEqual(r.owned.deny, SETTINGS.deny);
   assert.equal(mergeSettings(r.text, r.owned).changed, false);
+});
+
+test('notes index: parts of a module go on its line, so AGENTS.md does not grow a line per part', () => {
+  const n = (file, ...paths) => ({ file: `.reins/notes/${file}.md`, paths });
+  const block = renderNotesIndex([
+    n('companies', 'src/app/(companies)/**'),
+    n('companies/reviews', 'src/app/(companies)/companies/[slug]/reviews/**'),
+    n('companies/salaries', 'src/app/(companies)/companies/[slug]/salaries/**'),
+    n('jobs', 'src/app/jobs/**'),
+    n('orphan/part', 'src/x/**'),
+  ]);
+  assert.equal(block, [
+    '- `src/app/(companies)/**` → `.reins/notes/companies.md`; parts in `.reins/notes/companies/`: reviews, salaries\n',
+    '- `src/app/jobs/**` → `.reins/notes/jobs.md`\n',
+    '- `src/x/**` → `.reins/notes/orphan/part.md`\n',
+  ].join(''));
 });

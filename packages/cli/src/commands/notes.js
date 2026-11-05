@@ -3,7 +3,7 @@
 // per note and session. It never blocks the agent: any problem means "no note".
 import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, NOTES_DIR } from '@agentreins/core';
+import { matchesAny, notesFor, NOTES_DIR } from '@agentreins/core';
 import { CliError, toRepoPath } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
@@ -29,8 +29,9 @@ Prints the module notes (.reins/notes/*.md) whose "paths" match each path.
 
 new     Drafts .reins/notes/<name>.md for a domain of architecture.yml or a folder: the import graph fills in
         the public API, the most imported files, who uses the module and what it depends on; the rest are TODO
-        lines for the agent or a person to fill in. --name sets the file name (default: the domain or the
-        folder name), --paths overrides the globs, --force overwrites.
+        lines for the agent or a person to fill in. A folder inside a domain is a part of it and its note goes
+        to .reins/notes/<domain>/<part>.md. --name sets the file name (<name> or <module>/<part>; default: the
+        domain or the folder name), --paths overrides the globs, --force overwrites.
 --hook  For the Claude Code PreToolUse hook that reins sync installs: reads the tool call from stdin and
         returns the notes as additional context, once per note and session.`;
 
@@ -67,13 +68,18 @@ async function newNote(ctx, target) {
       const known = domains.map((d) => d.name).join(', ');
       throw new CliError(`"${target}" is not a domain of architecture.yml nor a folder.${known ? ` Domains: ${known}.` : ''}`);
     }
-    name = path.basename(rel);
+    // a folder inside a domain is a part of it: its note goes to .reins/notes/<domain>/<part>.md
+    const owner = domains.find((d) => matchesAny(`${rel}/x.js`, d.paths) && !d.paths.includes(`${rel}/**`));
+    const base = path.basename(rel).replace(/^\((.+)\)$/, '$1').replace(/[^\w.-]/g, '-');
+    name = owner ? `${owner.name}/${base}` : base;
     paths = [`${rel}/**`];
     api = [`${rel}/index.{js,jsx,ts,tsx}`];
   }
   if (values.paths) paths = values.paths.split(',').map((p) => p.trim()).filter(Boolean);
   if (values.name) {
-    if (!/^[\w.-]+$/.test(values.name)) throw new CliError(`--name must be a plain file name (letters, digits, ".", "_", "-"), got "${values.name}".`);
+    if (!/^[\w-][\w.-]*(\/[\w-][\w.-]*)?$/.test(values.name)) {
+      throw new CliError(`--name must be a file name (letters, digits, ".", "_", "-"), or <module>/<part> for a part of a module, got "${values.name}".`);
+    }
     name = values.name.replace(/\.md$/, '');
   }
   const file = `${NOTES_DIR}/${name}.md`;

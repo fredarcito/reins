@@ -184,3 +184,23 @@ test('note-draft and note-size: for the notes of what the branch touched', () =>
   assert.deepEqual(rules(tuned), []);
   assert.ok(DOCTOR_RULES.includes('note-outdated'));
 });
+
+test('note-layout: parts live one folder deep, next to their module note and inside its folders', () => {
+  const mod = note('.reins/notes/companies.md', ['src/app/(companies)/**'], 'ok');
+  const part = note('.reins/notes/companies/salaries.md', ['src/app/(companies)/companies/[slug]/salaries/**'], 'ok');
+  const outside = note('.reins/notes/companies/lib.md', ['src/lib/**'], 'ok');
+  const orphan = note('.reins/notes/jobs/list.md', ['src/app/jobs/list/**'], 'ok');
+  const deep = note('.reins/notes/a/b/c.md', ['src/app/(companies)/a/**'], 'ok');
+  const changed = ['src/app/(companies)/companies/[slug]/salaries/page.js', 'src/lib/x.js', 'src/app/jobs/list/a.js', 'src/app/(companies)/a/x.js'];
+  const r = doctor({ changedFiles: changed, notes: [mod, part, outside, orphan, deep] });
+  const layout = r.violations.filter((v) => v.rule === 'note-layout');
+  assert.deepEqual(layout.map((v) => [v.rule, v.from]), [
+    ['note-layout', '.reins/notes/companies/lib.md'],
+    ['note-layout', '.reins/notes/jobs/list.md'],
+    ['note-layout', '.reins/notes/a/b/c.md'],
+  ]);
+  assert.match(layout[0].message, /are not inside the folders of \.reins\/notes\/companies\.md/);
+  assert.match(layout[1].message, /\.reins\/notes\/jobs\.md does not exist/);
+  assert.match(layout[2].message, /at most one folder deep/);
+  assert.ok(DOCTOR_RULES.includes('note-layout'));
+});

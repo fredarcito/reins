@@ -328,7 +328,19 @@ A **decision** answers "why is it like this?"; a **trap** warns "careful: this l
 
 **A conversation gets compacted.** Claude Code fires the `SessionStart` hook with `compact`; `reins resume --hook` puts back the branch notebook, the files changed on the branch and their module notes. Verified with Claude Code: after a compaction the model quoted a notebook and a note that had changed on disk in the meantime ([details](docs/VERIFIED.md#p9-sessionstart-hook-after-a-compaction--pass)). Other agents get the same text with `npx reins resume`.
 
-**Adding one.** `init` drafts a note per domain (a `features/*` folder, or each route folder when there are none). For any other module, `reins notes new <folder>` drafts one, or write `.reins/notes/<name>.md` yourself: only the `paths` frontmatter is required, and it decides when the note is delivered, so include the module's folders outside its route too (e.g. `src/components/jobs/**`). Then run `reins sync` to list it in the `AGENTS.md` index; the Claude Code hook reads `.reins/notes/` directly, so it delivers the note right away.
+**Modules with parts.** A big module keeps the notes of its parts in a folder named after it, one level deep. The module's note holds what every part shares and lists the parts; each part's note holds only what is specific to it. In the `AGENTS.md` index the parts go on their module's line, so it doesn't grow a line per part.
+
+```
+.reins/notes/
+  auth.md
+  companies.md          the module: shared context, lists its parts
+  companies/
+    salaries.md         a part: only what is specific to salaries
+    reviews.md
+  jobs.md
+```
+
+**Adding one.** `init` drafts a note per domain (a `features/*` folder, or each route folder when there are none). A route domain with several parts (say `(companies)` with `companies/[slug]/salaries`, `reviews`, `jobs`…) also gets one note per part with two or more source files, up to 12 per domain. Notes stack: an agent working in `salaries/` reads the `companies` note first, for the shared context, and then the `salaries` note, for what is specific there. Parts are only notes, not domains, so they add no rules. For any other module, `reins notes new <folder>` drafts one (a folder inside a domain becomes one of its parts), or write `.reins/notes/<name>.md` yourself: only the `paths` frontmatter is required, and it decides when the note is delivered, so include the module's folders outside its route too (e.g. `src/components/jobs/**`). Then run `reins sync` to list it in the `AGENTS.md` index; the Claude Code hook reads `.reins/notes/` directly, so it delivers the note right away.
 
 **Filling them in.** `/reins-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
 
@@ -438,7 +450,7 @@ flowchart LR
     scan --> domains["Domains: one per<br/>features/* folder,<br/>public API = its index"]
     domains -. "no features/" .-> routes["Domains: one per<br/>route folder<br/>(app/*, src/routes/*…)"]
     routes --> draft
-    routes --> notes["Module notes<br/>(one draft per domain)"]
+    routes --> notes["Module notes<br/>(one draft per domain,<br/>plus one per part<br/>of a route domain)"]
     domains --> notes
     layers --> draft["architecture.yml<br/>(draft)"]
     domains --> draft
@@ -502,6 +514,7 @@ flowchart LR
 | `note-outdated` | A medium or large diff changed a module's files but not its note |
 | `note-draft` | A note of a touched module still has `TODO` lines from `notes new` |
 | `note-size` | A note of a touched module is longer than 60 lines |
+| `note-layout` | A note of a touched module is more than one folder deep, or is a part whose module note is missing or whose paths are outside that module |
 
 Thresholds are starting values in `.reins/doctor.yml`; tune them to your team:
 

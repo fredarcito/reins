@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0 · 2026-11-05
+
+- Notes for the parts of a module. `reins init` drafts, for each route domain, one note per part with its own logic (e.g. `(companies)/companies/[slug]/salaries`): it looks through `(group)` and `[param]` folders and single-folder chains, needs 2+ source files, at most 12 per domain (the rest are listed). Parts are notes, not domains: no new rules.
+- Layout: `.reins/notes/<module>.md` (shared context, lists its parts) plus `.reins/notes/<module>/<part>.md` (only what is specific), one level deep. Notes are read from those folders; existing flat notes keep working.
+- An agent working in a part gets the module's note first, then the part's (`notesFor` orders from general to specific). The `AGENTS.md` index puts the parts on their module's line.
+- `reins notes new <folder>` on a folder inside a domain drafts a part (`.reins/notes/<domain>/<part>.md`); `--name` accepts `<module>/<part>`.
+- New doctor rule `note-layout` (warn): a note more than one folder deep, a part without its module note, or a part whose paths are outside its module.
+- Skills `reins-notes` and `reins-done` know about parts. `reins install` never overwrites, so repos installed with 0.3.0 get the new text by deleting `.reins/skills/notes/` and `.reins/skills/done/`, then running `reins install` and `reins sync`.
+
 ## 0.3.0 · 2026-11-04
 
 - `reins init` on a repo organized by routes (no `features/` or `modules/`): each route folder becomes a domain and gets a module note. Presets gained `route_domains_from`: `src/routes/*`, `src/pages/*`, `src/views/*`, `src/screens/*` (Vite), `app/*` (Next app) and `pages/*` (Next pages), with or without `src/`. Next `[param]` folders are looked through (`app/[lang]/flights` → `flights`), catch-alls and `_private` folders are skipped, `(group)` folders are named without parentheses. A route's public API is its `index.*`, or else what the router imports plus its entry files (`page.tsx`).

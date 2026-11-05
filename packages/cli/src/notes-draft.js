@@ -12,12 +12,14 @@ export const labeler = (domains) => (f) => {
 };
 
 /**
- * Writes .reins/notes/<name>.md unless it exists (or `force`).
+ * Writes .reins/notes/<name>.md unless it exists (or `force`). A part's name is `<module>/<part>`.
  * @param {string} root
  * @param {object} m
  * @param {string} m.name
  * @param {string[]} m.paths
  * @param {string[]} m.publicApi globs of the public API
+ * @param {{ name: string, folder: string }[]} [m.submodules] parts of this module that get their own note
+ * @param {string} [m.parent] name of the module this one is a part of
  * @param {{ files: string[], edges: { from: string, to: string }[] } | null} graph null: no graph, only the public API
  * @param {string[]} files every file of the repo (used when there is no graph)
  * @param {{ name: string, paths: string[] }[]} domains for labels
@@ -32,7 +34,7 @@ export function writeNoteDraft(root, m, graph, files, domains, date, opts = {}) 
   if (existsSync(path.join(root, file)) && !opts.force) return { file, written: false, empty };
   const summary = graph ? summarizeModule({ paths: m.paths, files: graph.files, edges: graph.edges, label: labeler(domains) }) : null;
   const publicApi = all.filter((f) => matchesAny(f, m.publicApi)).sort();
-  mkdirSync(path.join(root, NOTES_DIR), { recursive: true });
-  writeFileSync(path.join(root, file), draftNote({ name: m.name, paths: m.paths, publicApi, summary, date }));
+  mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+  writeFileSync(path.join(root, file), draftNote({ name: m.name, paths: m.paths, publicApi, summary, date, submodules: m.submodules, parent: m.parent }));
   return { file, written: true, empty };
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo } from './helpers.js';
 import { hookResponse } from '../src/commands/notes.js';
@@ -122,5 +122,20 @@ test('notes new --name: chooses the file name; rejects paths', async () => {
   assert.match(readFileSync(path.join(dir, '.reins/notes/shared-lib.md'), 'utf8'), /^---\npaths: \["src\/lib\/\*\*"\]\n---\n# shared-lib\n/);
   const bad = await cli(dir, ['notes', 'new', 'src/lib', '--name', '../x']);
   assert.equal(bad.code, 2);
-  assert.match(bad.stderr, /--name must be a plain file name/);
+  assert.match(bad.stderr, /--name must be a file name .*or <module>\/<part>/);
+  assert.equal((await cli(dir, ['notes', 'new', 'src/lib', '--name', 'a/b/c'])).code, 2);
+  assert.equal((await cli(dir, ['notes', 'new', 'src/lib', '--name', 'shared/lib'])).code, 0);
+  assert.ok(existsSync(path.join(dir, '.reins/notes/shared/lib.md')));
+});
+
+test('notes new <folder inside a domain>: the note is a part of it, in the domain folder; notes are read from folders', async () => {
+  const dir = exampleRepo('next-app');
+  mkdirSync(path.join(dir, 'src/features/orders/history'), { recursive: true });
+  writeFileSync(path.join(dir, 'src/features/orders/history/List.ts'), 'export const List = 1;\n');
+  const r = await cli(dir, ['notes', 'new', 'src/features/orders/history']);
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /Drafted \.reins\/notes\/orders\/history\.md/);
+  await cli(dir, ['notes', 'new', 'orders']);
+  const shown = (await cli(dir, ['notes', 'src/features/orders/history/List.ts'])).stdout;
+  assert.match(shown, /Note \.reins\/notes\/orders\.md[\s\S]*Note \.reins\/notes\/orders\/history\.md/);
 });

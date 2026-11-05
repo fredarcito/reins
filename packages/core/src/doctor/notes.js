@@ -3,12 +3,13 @@
 // fix doesn't have to write anything.
 import { matchesAny } from '../glob.js';
 import { NOTE_TODO_RE } from '../notes/draft.js';
+import { NOTES_DIR, parentNoteFile, pathsInside } from '../notes/index.js';
 import { isReinsFile } from './triage.js';
 
 const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {const} */ ('warn'), key: `${rule}|${from}`, from, message, fix });
 
 /**
- * note-missing, note-outdated, note-draft, note-size.
+ * note-missing, note-outdated, note-draft, note-size, note-layout.
  * @param {object} input
  * @param {string[]} input.changedFiles
  * @param {{ file: string, paths: string[], body: string }[]} input.notes
@@ -51,6 +52,7 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
     if (NOTE_TODO_RE.test(n.body)) {
       findings.push(finding('note-draft', n.file, 'The note still has TODO lines from its draft.', 'Ask your agent to fill it in (in Claude Code: /reins-notes), or replace each TODO yourself; delete a TODO line if there is nothing true to say.'));
     }
+    findings.push(...checkLayout(n, notes));
     const lines = n.body.split('\n').length;
     if (lines > maxLines) {
       findings.push(
@@ -63,4 +65,26 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
     }
   }
   return findings;
+}
+
+/**
+ * note-layout: parts of a module live one folder deep, next to the module's note, and inside its folders.
+ * @param {{ file: string, paths: string[] }} n
+ * @param {{ file: string, paths: string[] }[]} notes
+ */
+function checkLayout(n, notes) {
+  const depth = n.file.slice(NOTES_DIR.length + 1).split('/').length - 1;
+  if (depth > 1) {
+    return [finding('note-layout', n.file, 'Notes go at most one folder deep: `.reins/notes/<module>.md` and `.reins/notes/<module>/<part>.md`.', 'Move it to the folder of the module it belongs to, or to the top level if it is a module of its own.')];
+  }
+  const parentFile = parentNoteFile(n.file);
+  if (!parentFile) return [];
+  const parent = notes.find((x) => x.file === parentFile);
+  if (!parent) {
+    return [finding('note-layout', n.file, `It sits in a module folder, but ${parentFile} does not exist, so nothing gives the shared context of this part.`, `Create ${parentFile} (\`npx reins notes new <domain|folder>\`), or move this note to the top level if it is a module of its own.`)];
+  }
+  if (!pathsInside(n, parent)) {
+    return [finding('note-layout', n.file, `Its paths (${n.paths.join(', ')}) are not inside the folders of ${parentFile}, so it is not a part of that module.`, `Fix its paths, add the folder to ${parentFile}, or move the note to the top level.`)];
+  }
+  return [];
 }

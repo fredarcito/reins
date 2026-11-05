@@ -28,6 +28,7 @@ Version 0.3.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 | Skills `notes`, `arch`, `agent` and `check --coverage` | templates + cli | experimental | Yes, tested; each skill run once with Claude Code (haiku) |
 | `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
 | Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
+| Notes for the parts of a module (`.reins/notes/<module>/<part>.md`), drafted by `init` for route domains; `note-layout` | core + cli | experimental | Tested; not yet tried on a real repo |
 
 ## Repo tooling
 

@@ -6,6 +6,10 @@
 //   - 2026-11-01: prices are integer cents; never use floats.
 //
 // Files starting with "_" (templates, drafts) are not notes.
+//
+// A module with parts keeps their notes in a folder named after it, one level deep:
+//   .reins/notes/companies.md            the module (shared context)
+//   .reins/notes/companies/salaries.md   one of its parts (only what is specific to it)
 import { parse } from 'yaml';
 import { matchesAny } from '../glob.js';
 
@@ -55,8 +59,32 @@ export function parseNote(file, text) {
 export const isNoteFile = (name) => name.endsWith('.md') && !name.startsWith('_');
 
 /**
- * Notes that apply to a repo-relative file, in note order.
+ * Notes that apply to a repo-relative file, most general first (a module's note before the note of one of its
+ * parts): ordered by the length of the longest glob that matches the file, ties in note order.
  * @param {string} file
  * @param {Note[]} notes
  */
-export const notesFor = (file, notes) => notes.filter((n) => matchesAny(file, n.paths));
+export function notesFor(file, notes) {
+  const reach = (n) => Math.max(...n.paths.filter((p) => matchesAny(file, [p])).map((p) => p.length));
+  return notes.filter((n) => matchesAny(file, n.paths)).map((n) => ({ n, r: reach(n) })).sort((a, b) => a.r - b.r).map((x) => x.n);
+}
+
+/**
+ * The module note a part belongs to, from its location: `.reins/notes/companies/salaries.md` ->
+ * `.reins/notes/companies.md`. Null for a note at the top level (or nested deeper, which is not a valid layout).
+ * @param {string} file repo-relative path of the note
+ */
+export function parentNoteFile(file) {
+  const rel = file.slice(NOTES_DIR.length + 1).split('/');
+  return rel.length === 2 ? `${NOTES_DIR}/${rel[0]}.md` : null;
+}
+
+/**
+ * True if every glob of `part` lies inside a folder of `module` (one of its `<dir>/**` globs).
+ * @param {{ paths: string[] }} part
+ * @param {{ paths: string[] }} module
+ */
+export function pathsInside(part, module) {
+  const dirs = module.paths.filter((p) => p.endsWith('/**')).map((p) => p.slice(0, -2));
+  return part.paths.every((p) => dirs.some((d) => p.startsWith(d)));
+}

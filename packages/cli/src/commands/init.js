@@ -1,5 +1,5 @@
 // reins init: scans the repo and drafts .reins/architecture.yml, .reins/baseline.json, a review report and
-// one module note per inferred domain that has none.
+// one module note per inferred domain that has none (route domains also get one per sub-module).
 // Never overwrites existing files without confirmation (or --force).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -7,7 +7,7 @@ import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBasel
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
-import { inferLayers, inferDomains, findOrphans, hasTypeScript } from '../init/infer.js';
+import { inferLayers, inferDomains, inferSubmodules, findOrphans, hasTypeScript, MAX_SUBMODULES } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { loadNotes } from '../project.js';
@@ -84,17 +84,25 @@ export async function init(ctx) {
     files: graph.files.length, edges: graph.edges.length, typescript,
   });
 
-  // module notes to draft: one per inferred domain that no note covers yet
+  // module notes to draft: one per inferred domain that no note covers yet and, for route domains, one per
+  // sub-module (e.g. companies/[slug]/salaries) that has no note of its own; notes stack, the domain's note comes first
   const existingNotes = loadNotes(root).notes;
-  const toDraft = domains.filter((d) => {
+  const noteExists = (name) => existsSync(path.join(root, NOTES_DIR, `${name}.md`));
+  const used = new Set(domains.map((d) => d.name));
+  const plans = domains.map((d) => {
     const own = graph.files.filter((f) => matchesAny(f, d.paths));
-    return !existsSync(path.join(root, NOTES_DIR, `${d.name}.md`)) && !own.some((f) => notesFor(f, existingNotes).length);
+    const draftDomain = !noteExists(d.name) && !own.some((f) => notesFor(f, existingNotes).length);
+    const found = fromRoutes ? inferSubmodules(d, graph.files, { edges: graph.edges, entries: graph.entries, used }) : { submodules: [], more: [] };
+    const subs = found.submodules.filter((s) => !noteExists(s.name) && !existingNotes.some((n) => n.paths.some((p) => p.startsWith(`${s.folder}/`))));
+    return { domain: d, draftDomain, subs, more: found.more };
   });
+  const toDraft = plans.flatMap((x) => [...(x.draftDomain ? [x.domain.name] : []), ...x.subs.map((s) => s.name)]);
+  const leftOut = plans.flatMap((x) => x.more);
 
   if (values['dry-run']) {
     out(`--- ${ARCHITECTURE_FILE} (not written)\n${yml}`);
     out(report);
-    if (toDraft.length) out(`Would draft module notes: ${toDraft.map((d) => `${NOTES_DIR}/${d.name}.md`).join(', ')}`);
+    if (toDraft.length) out(`Would draft module notes: ${toDraft.map((n) => `${NOTES_DIR}/${n}.md`).join(', ')}`);
     return 0;
   }
 
@@ -112,7 +120,10 @@ export async function init(ctx) {
   writeFileSync(path.join(root, ARCHITECTURE_FILE), yml);
   writeFileSync(path.join(root, BASELINE_FILE), baseline);
   writeFileSync(path.join(root, INIT_REPORT_FILE), report);
-  const drafted = toDraft.map((d) => writeNoteDraft(root, { name: d.name, paths: d.paths, publicApi: d.publicApi }, analysis.graph, [], domains, date).file);
+  const drafted = plans.flatMap(({ domain: d, draftDomain, subs }) => [
+    ...(draftDomain ? [writeNoteDraft(root, { name: d.name, paths: d.paths, publicApi: d.publicApi, submodules: subs }, analysis.graph, [], domains, date)] : []),
+    ...subs.map((s) => writeNoteDraft(root, { name: s.name, paths: s.paths, publicApi: s.publicApi, parent: d.name }, analysis.graph, [], domains, date)),
+  ].map((r) => r.file));
   // once reins install has run, keep the AGENTS.md notes index in step with the new notes
   if (drafted.length && existsSync(path.join(root, MANIFEST_FILE))) runSync(root);
 
@@ -122,6 +133,7 @@ export async function init(ctx) {
       `Wrote ${ARCHITECTURE_FILE} (draft), ${BASELINE_FILE} (${s} existing violation${s === 1 ? '' : 's'} frozen) and ${INIT_REPORT_FILE}.`,
       `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains${fromRoutes ? ' (one per route folder)' : ''}: ${domains.map((x) => x.name).join(', ') || 'none'}`,
       ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines (in Claude Code: /reins-notes).`] : []),
+      ...(leftOut.length ? [`More than ${MAX_SUBMODULES} sub-modules in a domain; no note drafted for: ${leftOut.join(', ')}. Draft the ones worth it with \`reins notes new <folder>\`.`] : []),
       ...(domains.length ? [] : ['No domains found, so no module notes were drafted. Draft one per module folder with `reins notes new <folder>`, or declare domains in architecture.yml.']),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
       `Next: review ${INIT_REPORT_FILE} and adjust ${ARCHITECTURE_FILE} (in Claude Code: /reins-arch), run \`reins check --update-baseline\`, then \`reins check\`.`,

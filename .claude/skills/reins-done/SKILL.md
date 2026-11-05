@@ -11,6 +11,7 @@ description: Close a coding task. Use it when the person says the task is done, 
    - add the decisions you took, each with its why, and the traps you found;
    - update "Map" and "How it works" if they changed;
    - a domain without a note: `npx reins notes new <domain>`, then fill in every TODO;
+   - a module with parts (`.reins/notes/<module>/<part>.md`): what only concerns one part goes in that part's note, what every part shares goes in the module's note. A part with its own logic and no note: `npx reins notes new <folder>` drafts it in the module's folder;
    - nothing durable changed: leave the note as it is.
    The doctor warns about `note-outdated`, `note-missing` and `note-draft`.
 4. Never commit, push or open a PR. Leave the changes uncommitted.

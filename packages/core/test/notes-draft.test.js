@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { draftNote, summarizeModule, parseNote, NOTE_TODO_RE } from '@agentreins/core';
+import { draftNote, summarizeModule, parseNote, notesFor, parentNoteFile, pathsInside, NOTE_TODO_RE } from '@agentreins/core';
 
 const edges = [
   { from: 'src/app/page.js', to: 'src/features/cart/index.js' },
@@ -36,4 +36,35 @@ test('draftNote: a valid note with the graph facts filled in and TODO lines for 
   const bare = draftNote({ name: 'x', paths: ['src/x/**'], publicApi: [], summary: null, date: '2026-11-04' });
   assert.doesNotMatch(bare, /Used by|Public API/);
   assert.ok(!NOTE_TODO_RE.test('## Purpose\nCart totals. The TODO list lives elsewhere.\n'), 'a word TODO inside a sentence is not a draft marker');
+});
+
+test('notesFor: most general note first, whatever the file order', () => {
+  const notes = [
+    { file: '.reins/notes/companies/salaries.md', paths: ['src/app/(companies)/companies/[slug]/salaries/**'], body: '' },
+    { file: '.reins/notes/companies.md', paths: ['src/app/(companies)/**'], body: '' },
+    { file: '.reins/notes/jobs.md', paths: ['src/app/jobs/**'], body: '' },
+  ];
+  const f = 'src/app/(companies)/companies/[slug]/salaries/countries/page.js';
+  assert.deepEqual(notesFor(f, notes).map((n) => n.file), ['.reins/notes/companies.md', '.reins/notes/companies/salaries.md']);
+  assert.deepEqual(notesFor('src/app/(companies)/x.js', notes).map((n) => n.file), ['.reins/notes/companies.md']);
+});
+
+test('draftNote: a module lists its parts with their notes; a part points to its module for the shared context', () => {
+  const parentText = draftNote({ name: 'companies', paths: ['src/app/(companies)/**'], publicApi: [], summary: null, date: '2026-11-05',
+    submodules: [{ name: 'companies/salaries', folder: 'src/app/(companies)/companies/[slug]/salaries' }, { name: 'companies/reviews', folder: 'src/app/(companies)/companies/[slug]/reviews' }] });
+  assert.match(parentText, /- Parts with their own note \(read it too when working there\): `salaries\/`, `reviews\/` -> `\.reins\/notes\/companies\/<part>\.md`/);
+  const odd = draftNote({ name: 'companies', paths: ['x/**'], publicApi: [], summary: null, date: '2026-11-05', submodules: [{ name: 'companies/jobs-2', folder: 'x/(b)/jobs' }] });
+  assert.match(odd, /`jobs\/` -> `\.reins\/notes\/companies\/jobs-2\.md`/, 'a renamed part is listed with its own file');
+  const partText = draftNote({ name: 'companies/salaries', paths: ['src/app/(companies)/companies/[slug]/salaries/**'], publicApi: [], summary: null, date: '2026-11-05', parent: 'companies' });
+  assert.match(partText, /TODO: what this part of companies does, in one or two lines\. `\.reins\/notes\/companies\.md` has the shared context/);
+  assert.ok(parseNote('x.md', partText).note);
+});
+
+test('parts of a module: parent note from the location, paths inside its folders', () => {
+  assert.equal(parentNoteFile('.reins/notes/companies/salaries.md'), '.reins/notes/companies.md');
+  assert.equal(parentNoteFile('.reins/notes/companies.md'), null);
+  assert.equal(parentNoteFile('.reins/notes/a/b/c.md'), null);
+  const mod = { paths: ['src/app/(companies)/**', 'src/components/company/**'] };
+  assert.ok(pathsInside({ paths: ['src/app/(companies)/companies/[slug]/salaries/**', 'src/components/company/salary/**'] }, mod));
+  assert.ok(!pathsInside({ paths: ['src/app/(companies)/x/**', 'src/lib/**'] }, mod));
 });

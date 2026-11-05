@@ -1,6 +1,7 @@
 // Drafting a module note from the import graph: what the graph already knows (files, public API, who uses the
 // module and what it depends on) is filled in; what only a person or agent knows is left as TODO lines.
 import { matchesAny } from '../glob.js';
+import { NOTES_DIR } from './index.js';
 
 /** Lines starting with "TODO" (optionally as a list item) mark a section of a note that is still a draft. */
 export const NOTE_TODO_RE = /^\s*(?:- )?TODO\b/m;
@@ -52,10 +53,21 @@ export function summarizeModule({ paths, files, edges, label }) {
  * @param {string[]} input.publicApi files of the public API that exist
  * @param {ReturnType<typeof summarizeModule> | null} input.summary null when there is no graph
  * @param {string} input.date YYYY-MM-DD
+ * @param {{ name: string, folder: string }[]} [input.submodules] parts with their own note (listed in the map);
+ *   a part's name is `<module>/<part>`, its note `.reins/notes/<module>/<part>.md`
+ * @param {string} [input.parent] the module this one is a part of: its note covers the shared context
  */
-export function draftNote({ name, paths, publicApi, summary, date }) {
+export function draftNote({ name, paths, publicApi, summary, date, submodules = [], parent }) {
   const code = (f) => `\`${f}\``;
   const map = [];
+  if (submodules.length) {
+    const seg = (s) => s.folder.split('/').pop();
+    const plain = submodules.every((s) => s.name === `${name}/${seg(s)}`);
+    const list = plain
+      ? `${submodules.map((s) => code(`${seg(s)}/`)).join(', ')} -> ${code(`${NOTES_DIR}/${name}/<part>.md`)}`
+      : submodules.map((s) => `${code(`${seg(s)}/`)} -> ${code(`${NOTES_DIR}/${s.name}.md`)}`).join(', ');
+    map.push(`- Parts with their own note (read it too when working there): ${list}`);
+  }
   if (publicApi.length) map.push(`- Public API: ${publicApi.map(code).join(', ')}`);
   if (summary) {
     const n = summary.files.length;
@@ -73,7 +85,9 @@ export function draftNote({ name, paths, publicApi, summary, date }) {
     `<!-- Drafted by reins notes new on ${date}. Replace every TODO line; keep the note short (it is read whenever an agent works here). -->`,
     '',
     '## Purpose',
-    'TODO: what this module does and for whom, in one or two lines.',
+    parent
+      ? `TODO: what this part of ${parent} does, in one or two lines. ${code(`${NOTES_DIR}/${parent}.md`)} has the shared context: write here only what is specific to this part.`
+      : 'TODO: what this module does and for whom, in one or two lines.',
     '',
     '## Map',
     ...map,

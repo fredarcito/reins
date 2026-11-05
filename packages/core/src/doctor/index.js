@@ -7,7 +7,7 @@ import { checkNotes } from './notes.js';
 import { checkNotebook, countLines } from './progress.js';
 
 export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 'agents-size', 'progress-hot-size', 'progress-format', 'progress-closed',
-  'note-missing', 'note-outdated', 'note-draft', 'note-size']);
+  'note-missing', 'note-outdated', 'note-draft', 'note-size', 'note-layout']);
 
 /**
  * @param {object} input

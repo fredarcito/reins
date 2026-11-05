@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseFrontmatter } from '@agentreins/core';
+import { parentNoteFile, parseFrontmatter } from '@agentreins/core';
 import { REINS_DIR, runScriptCommand } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate, renderAgentsMd } from '../templates.js';
@@ -120,9 +120,27 @@ export function planSync(root) {
   // notes index
   const { notes, problems: noteProblems } = loadNotes(root);
   problems.push(...noteProblems);
-  const notesBlock = notes.map((n) => `- ${n.paths.map((p) => `\`${p}\``).join(', ')} → \`${n.file}\`\n`).join('');
+  return { files, notesBlock: renderNotesIndex(notes), problems };
+}
 
-  return { files, notesBlock, problems };
+/**
+ * One line per module note. The notes of a module's parts (`.reins/notes/<module>/<part>.md`) go on the line of
+ * `<module>.md`, so AGENTS.md does not grow a line per part; the notes hook delivers both anyway. A part whose
+ * module note is missing gets a line of its own.
+ * @param {{ file: string, paths: string[] }[]} notes
+ */
+export function renderNotesIndex(notes) {
+  const files = new Set(notes.map((n) => n.file));
+  const grouped = (n) => {
+    const parent = parentNoteFile(n.file);
+    return parent !== null && files.has(parent);
+  };
+  return notes.filter((n) => !grouped(n)).map((n) => {
+    const own = notes.filter((x) => grouped(x) && parentNoteFile(x.file) === n.file);
+    const folder = n.file.replace(/\.md$/, '/');
+    const tail = own.length ? `; parts in \`${folder}\`: ${own.map((x) => x.file.slice(folder.length, -3)).join(', ')}` : '';
+    return `- ${n.paths.map((p) => `\`${p}\``).join(', ')} → \`${n.file}\`${tail}\n`;
+  }).join('');
 }
 
 /** @returns {{ version: 1, files: Record<string, string>, blocks: Record<string, string>, settings: { deny: string[], hooks: typeof SETTINGS.hooks } }} */

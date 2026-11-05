@@ -150,6 +150,31 @@ test('next-app without features/: one domain and one note per route folder, look
   assert.equal(check.code, 0, check.stdout + check.stderr);
 });
 
+test('next-app route domain with parts: one note per part, the domain note lists them', async () => {
+  const b = 'src/app/(companies)/companies/[slug]';
+  const page = 'export default function Page() { return null; }\n';
+  const dir = routesRepo('next-app', {
+    [`${b}/page.tsx`]: page,
+    [`${b}/salaries/page.tsx`]: 'import { Table } from "./Table";\nexport default function Page() { return Table; }\n',
+    [`${b}/salaries/Table.tsx`]: 'export const Table = 1;\n',
+    [`${b}/reviews/page.tsx`]: 'import { R } from "./R";\nexport default function Page() { return R; }\n',
+    [`${b}/reviews/R.tsx`]: 'export const R = 1;\n',
+    [`${b}/culture/page.tsx`]: page,
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Module notes drafted from the code: .*\.reins\/notes\/companies\.md, \.reins\/notes\/companies\/reviews\.md, \.reins\/notes\/companies\/salaries\.md/);
+  assert.equal(existsSync(path.join(dir, '.reins/notes/companies/culture.md')), false, 'a lone page is not worth a note');
+  assert.match(read(dir, '.reins/notes/companies.md'), /Parts with their own note .*`reviews\/`, `salaries\/` -> `\.reins\/notes\/companies\/<part>\.md`/);
+  const part = read(dir, '.reins/notes/companies/salaries.md');
+  assert.match(part, /^---\npaths: \["src\/app\/\(companies\)\/companies\/\[slug\]\/salaries\/\*\*"\]\n---\n# companies\/salaries/);
+  assert.match(part, /TODO: what this part of companies does/);
+  assert.doesNotMatch(read(dir, '.reins/architecture.yml'), /^\s+[\w/-]*salaries[\w/-]*:/m, 'parts are notes, not domains');
+
+  const notes = await cli(dir, ['notes', `${b}/salaries/Table.tsx`]);
+  assert.match(notes.stdout, /companies\.md[\s\S]*companies\/salaries\.md/);
+});
+
 test('vite-react without features/: route folders become domains, public API = what the router imports', async () => {
   const dir = routesRepo('vite-react', {
     'src/App.jsx': "import { Jobs } from './routes/jobs/Jobs';\nimport { Profile } from './routes/profile/Profile';\nexport function App() { return [Jobs, Profile]; }\n",

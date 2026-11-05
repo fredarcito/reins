@@ -6,7 +6,7 @@ description: Fill in or improve the module notes in .reins/notes/ (purpose, map,
 
 A note is for someone who has never seen the module and has to change it safely today. If the code says something plainly, it doesn't go in the note.
 
-1. Find the notes to fill: the lines starting with `TODO` in `.reins/notes/*.md` (`npx reins doctor` reports them as `note-draft`). If the person named a module, do only that one.
+1. Find the notes to fill: the lines starting with `TODO` in `.reins/notes/*.md` and `.reins/notes/<module>/*.md` (`npx reins doctor` reports them as `note-draft`). If the person named a module, do only that one.
 2. For each note, read the code under its `paths`: the public API first, then the most imported files listed in its Map. Stop when you can explain the module; don't read all of it.
 3. Replace every `TODO` line:
    - **Purpose:** what the module does and for whom, in one or two lines.
@@ -16,6 +16,7 @@ A note is for someone who has never seen the module and has to change it safely 
    - **Traps:** what looks wrong but is intentional, and the invariants that must hold.
    - A section with nothing true to say: delete its `TODO` line instead of writing generic text.
    - When no `TODO` is left, delete the `<!-- Drafted by reins notes new … -->` comment line.
+   - **Modules with parts** (`<module>.md` plus `<module>/<part>.md`): fill the module's note first. It holds what every part shares (layout, data loading, conventions); each part's note holds only what is specific to it and never repeats the module's note.
 4. Keep each note under 60 lines. Don't change the `paths` in the frontmatter; if they look wrong, say so.
 5. If you created or renamed a note, run `npx reins sync` (it updates the index in `AGENTS.md`). Then `npx reins doctor`: no `note-draft` should remain.
 6. Reply with: the notes you filled, the open questions (`?` lines) for the person, and anything you are unsure about.

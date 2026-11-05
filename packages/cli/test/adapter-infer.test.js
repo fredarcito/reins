@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveAdapter, candidates } from '../src/adapter.js';
-import { inferLayers, inferDomains, findOrphans } from '../src/init/infer.js';
+import { inferLayers, inferDomains, inferSubmodules, findOrphans } from '../src/init/infer.js';
 import { tempDir } from './helpers.js';
 
 const fakeAdapter = (pkgName, { contract = 1, exportsPkg = true, body } = {}) => ({
@@ -104,4 +104,30 @@ test('orphans: not imported, not entries, not tests, not config, not .d.ts', () 
     [{ from: 'src/a.js', to: 'src/b.js' }],
   );
   assert.deepEqual(o, ['src/a.js', 'src/c.ts']);
+});
+
+test('sub-modules of a route domain: follow single folders and [param], one per folder with 2+ source files', () => {
+  const base = 'src/app/(companies)/companies/[slug]';
+  const files = [
+    `${base}/index.js`, `${base}/layout.js`, `${base}/page.js`,
+    `${base}/culture/index.js`, `${base}/culture/page.js`, `${base}/culture/culture.module.scss`,
+    `${base}/questions/index.js`, `${base}/questions/page.js`, `${base}/questions/[question_slug]/page.js`,
+    `${base}/salaries/[...role]/page.js`, `${base}/salaries/countries/page.js`, `${base}/salaries/countries/List.js`,
+    `${base}/benefits/page.js`, `${base}/benefits/page.test.js`,
+    `${base}/_lib/a.js`, `${base}/_lib/b.js`,
+  ];
+  const used = new Set(['companies', 'companies/culture']);
+  const { submodules, more } = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { entries: [`${base}/culture/page.js`], used });
+  assert.deepEqual(submodules.map((s) => [s.name, s.folder, s.files, s.publicApi.join(',')]), [
+    ['companies/culture-2', `${base}/culture`, 2, `${base}/culture/index.js`],
+    ['companies/questions', `${base}/questions`, 3, `${base}/questions/index.js`],
+    ['companies/salaries', `${base}/salaries`, 3, `${base}/salaries/index.js`],
+  ]);
+  assert.deepEqual(more, []);
+  assert.ok(used.has('companies/salaries'));
+
+  const capped = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { max: 2 });
+  assert.deepEqual(capped.submodules.map((s) => s.name), ['companies/questions', 'companies/salaries']);
+  assert.deepEqual(capped.more, [`${base}/culture`]);
+  assert.deepEqual(inferSubmodules({ name: 'jobs', folder: 'src/app/jobs' }, ['src/app/jobs/page.js', 'src/app/jobs/list/a.js', 'src/app/jobs/list/b.js']).submodules, []);
 });

@@ -16,7 +16,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 - `check/baseline.js`, `check/integrity.js`: baseline file format; integrity compares with the merge base via `git.js`.
 - `glob.js`: own glob matcher (`*`, `**`, `?`, `{a,b}`), shared with adapters.
 - `doctor/`: process rules (triage, notebook, notes, AGENTS.md size); `progress-edit.js` edits the notebook safely.
-- `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format.
+- `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format. `notesFor` returns the most general note first (shortest matching glob), so a module's note comes before its parts'. Parts live in `.reins/notes/<module>/<part>.md` (`parentNoteFile`, `pathsInside`); doctor's `note-layout` checks that layout.
 
 ## How it works
 The CLI reads files, git state and the adapter's graph, and passes them in. `evaluate` drops `ignore`d edges, merges duplicates (one edge per from/to with all its kinds) and runs each rule; `runCheck` adds `extra` violations (integrity, adapter rules), compares keys with the baseline and returns `ok` = no new error. `report/` formats the result. `doctor` and the notes/backlog/progress helpers follow the same pattern: pure functions over text the caller loads.

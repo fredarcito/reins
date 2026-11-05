@@ -40,19 +40,26 @@ export function readDoctorConfig(root) {
 }
 
 /**
- * Every module note in .reins/notes/, sorted by file name.
+ * Every module note in .reins/notes/ and its folders (parts of a module: `<module>/<part>.md`), sorted by path.
+ * Folders and files starting with "_" or "." are skipped. Deeper folders are read too; doctor flags them.
  * @returns {{ notes: import('@agentreins/core').Note[], problems: string[] }}
  */
 export function loadNotes(root) {
-  const dir = path.join(root, NOTES_DIR);
   const notes = [];
   const problems = [];
-  if (!existsSync(dir)) return { notes, problems };
-  for (const name of readdirSync(dir).filter(isNoteFile).sort()) {
-    const file = `${NOTES_DIR}/${name}`;
-    const { note, problem } = parseNote(file, readFileSync(path.join(dir, name), 'utf8'));
-    if (note) notes.push(note);
-    else problems.push(problem);
-  }
+  const visit = (rel) => {
+    for (const entry of readdirSync(path.join(root, rel), { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      if (/^[_.]/.test(entry.name)) continue;
+      const file = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) visit(file);
+      else if (isNoteFile(entry.name)) {
+        const { note, problem } = parseNote(file, readFileSync(path.join(root, file), 'utf8'));
+        if (note) notes.push(note);
+        else problems.push(problem);
+      }
+    }
+  };
+  if (existsSync(path.join(root, NOTES_DIR))) visit(NOTES_DIR);
+  notes.sort((a, b) => (a.file < b.file ? -1 : 1));
   return { notes, problems };
 }
