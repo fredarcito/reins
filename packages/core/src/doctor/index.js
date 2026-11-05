@@ -66,4 +66,4 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
 
 export { parseDoctorConfig, DOCTOR_DEFAULTS } from './config.js';
 export { LEVELS, parseTriageLog, scopeSignals, suggestLevel } from './triage.js';
-export { parseNotebook, formatProblems, notebookFile, MARKERS } from './progress.js';
+export { parseNotebook, formatProblems, notebookFile, MARKERS, countLines } from './progress.js';

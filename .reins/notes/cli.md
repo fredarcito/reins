@@ -27,6 +27,7 @@ The `reins` command line: wires the core and the language adapter to a consumer 
 - 2026-11-04: `sync` only touches what its manifest records; third-party skills, agents and settings are never overwritten or deleted. Hand-edited generated files are overwritten with a message.
 - 2026-11-04: Claude Code hooks (`notes --hook`, `resume --hook`) must never fail: any error means no output and exit 0.
 - 2026-11-04: on `compact`/`clear`, `resume --hook` forgets the session's seen-notes record so notes are delivered again.
+- 2026-11-05: `sync` never writes an AGENTS.md that doctor rejects: the notes index fits in `agents_md.max_lines` minus the hand-written lines, or becomes one line of module names (`fitNotesIndex`).
 
 ## Traps
 - `cwd` and root are real paths on purpose: macOS `/var` -> `/private/var` would break `--files` repo-relative paths.

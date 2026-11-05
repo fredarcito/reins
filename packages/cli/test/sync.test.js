@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo } from './helpers.js';
-import { mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
+import { fitNotesIndex, mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
 const read = (dir, f) => readFileSync(path.join(dir, f), 'utf8');
@@ -187,4 +187,29 @@ test('notes index: parts of a module go on its line, so AGENTS.md does not grow 
 test('notes index: at most two paths per note, so a big module does not flood AGENTS.md', () => {
   const block = renderNotesIndex([{ file: '.reins/notes/companies.md', paths: ['src/app/(companies)/companies/**', 'src/components/pages/companies/**', 'src/components/a.js', 'src/components/b.js'] }]);
   assert.equal(block, '- `src/app/(companies)/companies/**`, `src/components/pages/companies/**` (+2 more) → `.reins/notes/companies.md`\n');
+});
+
+test('notes index: falls back to one line of module names when the full index would break the AGENTS.md limit', () => {
+  const n = (file, ...paths) => ({ file: `.reins/notes/${file}.md`, paths });
+  const notes = [n('a', 'src/a/**'), n('a/x', 'src/a/x/**'), n('b', 'src/b/**'), n('c', 'src/c/**')];
+  assert.deepEqual(fitNotesIndex(notes, 3), { block: renderNotesIndex(notes), compact: false });
+  const fit = fitNotesIndex(notes, 2);
+  assert.equal(fit.compact, true);
+  assert.match(fit.block, /^- `\.reins\/notes\/<module>\.md` for: a, b, c \(4 notes;/);
+  assert.equal(fit.block.split('\n').length, 2, 'one line');
+});
+
+test('sync never writes an AGENTS.md that doctor rejects: 40 notes still fit in the limit', async () => {
+  const dir = repo();
+  for (let i = 0; i < 40; i++) write(dir, `.reins/notes/m${i}.md`, `---\npaths: ["src/m${i}/**"]\n---\nok\n`);
+  const r = await cli(dir, ['sync']);
+  assert.match(r.stdout + r.stderr, /module names only/);
+  assert.ok(read(dir, 'AGENTS.md').replace(/\s+$/, '').split('\n').length <= 30);
+  assert.equal((await cli(dir, ['sync', '--check'])).code, 0);
+  const doctor = await cli(dir, ['doctor', '--json'], { env: {} });
+  assert.ok(!doctor.stdout.includes('agents-size'), doctor.stdout);
+
+  write(dir, '.reins/doctor.yml', 'agents_md: { max_lines: 80 }\n');
+  await cli(dir, ['sync']);
+  assert.match(read(dir, 'AGENTS.md'), /- `src\/m0\/\*\*` → `\.reins\/notes\/m0\.md`/, 'a higher limit gets the full index back');
 });

@@ -8,7 +8,7 @@ export { REPORT_SCHEMA, formatText, formatJson } from './report/index.js';
 export { globToRegExp, matchesAny } from './glob.js';
 export {
   DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, scopeSignals, suggestLevel,
-  parseNotebook, formatProblems, notebookFile, MARKERS,
+  parseNotebook, formatProblems, notebookFile, MARKERS, countLines,
 } from './doctor/index.js';
 export { NOTES_DIR, parseNote, parseFrontmatter, isNoteFile, notesFor, parentNoteFile, pathsInside } from './notes/index.js';
 export { NOTE_TODO_RE, summarizeModule, draftNote } from './notes/draft.js';

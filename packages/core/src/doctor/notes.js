@@ -48,10 +48,9 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
     }
   }
 
+  const drafts = touching.filter((n) => NOTE_TODO_RE.test(n.body));
+  findings.push(...draftFindings(drafts));
   for (const n of touching) {
-    if (NOTE_TODO_RE.test(n.body)) {
-      findings.push(finding('note-draft', n.file, 'The note still has TODO lines from its draft.', 'Ask your agent to fill it in (in Claude Code: /reins-notes), or replace each TODO yourself; delete a TODO line if there is nothing true to say.'));
-    }
     findings.push(...checkLayout(n, notes));
     const lines = n.body.split('\n').length;
     if (lines > maxLines) {
@@ -65,6 +64,29 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
     }
   }
   return findings;
+}
+
+const DRAFT_FIX = 'Ask your agent to fill it in (in Claude Code: /reins-notes), or replace each TODO yourself; delete a TODO line if there is nothing true to say.';
+/** Draft notes named in the grouped note-draft warning. */
+const MAX_DRAFTS_NAMED = 5;
+
+/**
+ * note-draft. Drafts are templates nobody has filled in yet (`init` writes one per module), not debt: one warning
+ * for all of them, so dozens of fresh drafts don't bury the warnings that matter.
+ * @param {{ file: string }[]} drafts
+ */
+function draftFindings(drafts) {
+  if (drafts.length === 0) return [];
+  if (drafts.length === 1) return [finding('note-draft', drafts[0].file, 'The note still has TODO lines from its draft.', DRAFT_FIX)];
+  const names = drafts.slice(0, MAX_DRAFTS_NAMED).map((n) => n.file.slice(NOTES_DIR.length + 1, -3));
+  const more = drafts.length > MAX_DRAFTS_NAMED ? `, +${drafts.length - MAX_DRAFTS_NAMED} more` : '';
+  return [
+    finding(
+      'note-draft', `${NOTES_DIR}/`,
+      `${drafts.length} notes are still drafts with TODO lines (${names.join(', ')}${more}): templates waiting to be filled in, not problems in the code.`,
+      'Ask your agent to fill them in (in Claude Code: /reins-notes), one module at a time if you prefer; delete a TODO line if there is nothing true to say.',
+    ),
+  ];
 }
 
 /**

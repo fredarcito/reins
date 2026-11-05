@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 · 2026-11-05
+
+Fixes found running 0.6.0 on a real Next.js app. Run `reins sync` after updating.
+
+- Fix: `reins sync` no longer writes an `AGENTS.md` that `reins doctor` rejects. The notes index fits in doctor's `agents_md.max_lines` (30 by default, set in `.reins/doctor.yml`) minus the hand-written lines; when one line per note does not fit, the index becomes a single line naming the modules. The notes hook still delivers every note when its paths are touched. If the hand-written part alone is over the limit, `sync` says so.
+- `reins doctor`: draft notes make one `note-draft` warning for all of them (count and the first names), instead of one per note. Drafts are templates waiting to be filled in, not problems in the code.
+
 ## 0.6.0 · 2026-11-05
 
 From running 0.5.1 on a real Next.js app (1204 files). Re-run `reins init --dry-run` after updating.

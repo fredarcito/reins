@@ -516,13 +516,13 @@ flowchart LR
 | --- | --- |
 | `triage-missing` | The branch has changes but no line in `triage.log` (or a line can't be read) |
 | `triage-mismatch` | The diff exceeds the declared level: `small` = ≤ 3 files in 1 domain; `medium` = 1 domain; more domains, a public API or `architecture.yml` = `large` |
-| `agents-size` | `AGENTS.md` is longer than 30 lines |
+| `agents-size` | `AGENTS.md` is longer than 30 lines (`sync` keeps its notes index inside this limit) |
 | `progress-hot-size` | The hot notebook is longer than 40 lines |
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
 | `progress-closed` | `status: closed` with done criteria not checked |
 | `note-missing` | A medium or large diff touched a domain that has no module note |
 | `note-outdated` | A medium or large diff changed a module's files but not its note |
-| `note-draft` | A note of a touched module still has `TODO` lines from `notes new` |
+| `note-draft` | A note of a touched module still has `TODO` lines from its draft; many drafts make a single warning |
 | `note-size` | A note of a touched module is longer than 60 lines |
 | `note-layout` | A note of a touched module is more than one folder deep, or is a part whose module note is missing or whose paths are outside that module |
 
@@ -583,6 +583,7 @@ flowchart LR
 | A generated file edited by hand | Overwritten, with a message (edit the source instead); `--check` fails |
 | A source deleted | Its generated files are removed (kept if edited by hand) |
 | `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only the notes block is managed) |
+| More notes than fit in `AGENTS.md` | The index becomes one line of module names, so `AGENTS.md` stays within doctor's `agents_md.max_lines`; the notes hook still delivers every note |
 
 `sync --check` writes nothing and fails if anything differs. Once `.generated.json` exists, `reins check` reports the same differences under `integrity`.
 

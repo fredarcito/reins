@@ -185,6 +185,14 @@ test('note-draft and note-size: for the notes of what the branch touched', () =>
   assert.ok(DOCTOR_RULES.includes('note-outdated'));
 });
 
+test('note-draft: many drafts make one warning, not one per note', () => {
+  const drafts = Array.from({ length: 7 }, (_, i) => note(`.reins/notes/m${i}.md`, [`src/m${i}/**`], 'TODO: x'));
+  const r = doctor({ changedFiles: drafts.map((n) => n.file), notes: drafts });
+  assert.deepEqual(rules(r), ['note-draft']);
+  assert.equal(r.violations[0].from, '.reins/notes/');
+  assert.match(r.violations[0].message, /^7 notes are still drafts with TODO lines \(m0, m1, m2, m3, m4, \+2 more\)/);
+});
+
 test('note-layout: parts live one folder deep, next to their module note and inside its folders', () => {
   const mod = note('.reins/notes/companies.md', ['src/app/(companies)/**'], 'ok');
   const part = note('.reins/notes/companies/salaries.md', ['src/app/(companies)/companies/[slug]/salaries/**'], 'ok');

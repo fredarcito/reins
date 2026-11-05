@@ -11,9 +11,9 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parentNoteFile, parseFrontmatter } from '@agentreins/core';
+import { countLines, DOCTOR_DEFAULTS, parentNoteFile, parseFrontmatter } from '@agentreins/core';
 import { REINS_DIR, runScriptCommand } from '../context.js';
-import { loadNotes, readText } from '../project.js';
+import { loadNotes, readDoctorConfig, readText } from '../project.js';
 import { readTemplate, renderAgentsMd } from '../templates.js';
 
 export const MANIFEST_FILE = `${REINS_DIR}/.generated.json`;
@@ -53,7 +53,7 @@ function listFiles(root, rel) {
 /**
  * What sync should produce, from the sources. No writes.
  * @param {string} root
- * @returns {{ files: { path: string, content: string, source: string }[], notesBlock: string, problems: string[] }}
+ * @returns {{ files: { path: string, content: string, source: string }[], notes: import('@agentreins/core').Note[], problems: string[] }}
  */
 export function planSync(root) {
   const files = [];
@@ -120,8 +120,20 @@ export function planSync(root) {
   // notes index
   const { notes, problems: noteProblems } = loadNotes(root);
   problems.push(...noteProblems);
-  return { files, notesBlock: renderNotesIndex(notes), problems };
+  return { files, notes, problems };
 }
+
+/** Paths shown per note in the AGENTS.md index. */
+export const MAX_INDEX_PATHS = 2;
+
+/** Notes not shown on their own line: parts whose module note exists (they go on the module's line). */
+const groupedInto = (notes) => {
+  const files = new Set(notes.map((n) => n.file));
+  return (n) => {
+    const parent = parentNoteFile(n.file);
+    return parent !== null && files.has(parent);
+  };
+};
 
 /**
  * One line per module note. The notes of a module's parts (`.reins/notes/<module>/<part>.md`) go on the line of
@@ -129,15 +141,8 @@ export function planSync(root) {
  * module note is missing gets a line of its own.
  * @param {{ file: string, paths: string[] }[]} notes
  */
-/** Paths shown per note in the AGENTS.md index. */
-export const MAX_INDEX_PATHS = 2;
-
 export function renderNotesIndex(notes) {
-  const files = new Set(notes.map((n) => n.file));
-  const grouped = (n) => {
-    const parent = parentNoteFile(n.file);
-    return parent !== null && files.has(parent);
-  };
+  const grouped = groupedInto(notes);
   return notes.filter((n) => !grouped(n)).map((n) => {
     const own = notes.filter((x) => grouped(x) && parentNoteFile(x.file) === n.file);
     const folder = n.file.replace(/\.md$/, '/');
@@ -147,6 +152,25 @@ export function renderNotesIndex(notes) {
     const more = n.paths.length > MAX_INDEX_PATHS ? ` (+${n.paths.length - MAX_INDEX_PATHS} more)` : '';
     return `- ${shown}${more} → \`${n.file}\`${tail}\n`;
   }).join('');
+}
+
+/**
+ * The notes index that fits in `budget` lines: the full index when it fits, otherwise one line naming the modules.
+ * Doctor's `agents-size` limit counts every line of AGENTS.md, so sync must never write an index that breaks it;
+ * the notes hook delivers each note when its paths are touched, so the full list is a convenience, not a need.
+ * @param {{ file: string, paths: string[] }[]} notes
+ * @param {number} budget lines available for the index
+ * @returns {{ block: string, compact: boolean }}
+ */
+export function fitNotesIndex(notes, budget) {
+  const full = renderNotesIndex(notes);
+  const lines = full ? full.split('\n').length - 1 : 0;
+  if (lines <= Math.max(budget, 1)) return { block: full, compact: false };
+  const modules = notes.filter((n) => !groupedInto(notes)(n)).map((n) => n.file.slice(`${REINS_DIR}/notes/`.length, -3));
+  return {
+    block: `- \`${REINS_DIR}/notes/<module>.md\` for: ${modules.join(', ')} (${notes.length} notes; each note's \`paths\` says what it covers, and the notes hook delivers it when you touch them)\n`,
+    compact: true,
+  };
 }
 
 /** @returns {{ version: 1, files: Record<string, string>, blocks: Record<string, string>, settings: { deny: string[], hooks: typeof SETTINGS.hooks } }} */
@@ -307,16 +331,33 @@ export function sync(root, opts = {}) {
     divergences.push('AGENTS.md: missing');
   }
   const m = NOTES_BLOCK_RE.exec(agents);
+  let notesBlock = '';
+  if (m) {
+    let maxLines = DOCTOR_DEFAULTS.agents_md.max_lines;
+    try {
+      maxLines = readDoctorConfig(root).agents_md.max_lines;
+    } catch (e) {
+      warnings.push(`${e.message} Using the default AGENTS.md limit (${maxLines} lines).`);
+    }
+    const fixed = countLines(agents.replace(NOTES_BLOCK_RE, '$1$3'));
+    const fit = fitNotesIndex(plan.notes, maxLines - fixed);
+    notesBlock = fit.block;
+    if (countLines(agents.replace(NOTES_BLOCK_RE, `$1${notesBlock}$3`)) > maxLines) {
+      warnings.push(`AGENTS.md has ${fixed} lines without the notes index; the limit is ${maxLines} (.reins/doctor.yml). Move what is not needed always to a policy or a note.`);
+    } else if (fit.compact && m[2] !== notesBlock) {
+      warnings.push(`The notes index lists module names only: one line per note would take AGENTS.md over its ${maxLines}-line limit.`);
+    }
+  }
   if (!m) {
     warnings.push('AGENTS.md has no notes index markers; run `reins install` to append them, or add `<!-- reins:notes:start -->` and `<!-- reins:notes:end -->` where the index should go.');
     if (check) divergences.push('AGENTS.md: notes index markers missing');
   } else {
-    if (m[2] !== plan.notesBlock) {
-      agents = agents.replace(NOTES_BLOCK_RE, `$1${plan.notesBlock}$3`);
+    if (m[2] !== notesBlock) {
+      agents = agents.replace(NOTES_BLOCK_RE, `$1${notesBlock}$3`);
       changes.push('updated the notes index in AGENTS.md');
       divergences.push('AGENTS.md: notes index out of date with .reins/notes/');
     }
-    next.blocks['AGENTS.md#notes'] = sha(plan.notesBlock);
+    next.blocks['AGENTS.md#notes'] = sha(notesBlock);
   }
   if (agents !== readText(root, 'AGENTS.md')) write('AGENTS.md', agents);
 
