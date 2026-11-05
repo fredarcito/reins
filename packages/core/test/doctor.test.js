@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, scopeSignals, suggestLevel, runDoctor,
-  parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES,
+  parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES, rankStaleNotes,
 } from '@agentreins/core';
 
 const domains = [
@@ -211,4 +211,45 @@ test('note-layout: parts live one folder deep, next to their module note and ins
   assert.match(layout[1].message, /\.reins\/notes\/jobs\.md does not exist/);
   assert.match(layout[2].message, /at most one folder deep/);
   assert.ok(DOCTOR_RULES.includes('note-layout'));
+});
+
+test('note-dead-paths and note-dead-refs: for every note, only when the repo files are known', () => {
+  const repoFiles = ['src/features/billing/price.js', 'src/features/billing/index.js', 'package.json'];
+  const moved = note('.reins/notes/search.md', ['src/features/search/**'], 'ok');
+  const half = note('.reins/notes/billing.md', ['src/features/billing/**', 'src/old/**'],
+    '- `src/features/billing/price.js:12` and `src/features/billing/` exist; `src/features/billing/tax.js` is gone.\n'
+    + '- Not paths: `@agentreins/core`, `node:fs`, `reviews/`, `src/**/*.js`, `.reins/notes/<part>.md`, `lib/x.js` (no lib/ at the root).');
+  assert.deepEqual(rules(doctor({ notes: [moved, half] })), [], 'without repoFiles the rules are skipped');
+
+  const r = doctor({ notes: [moved, half], repoFiles });
+  assert.deepEqual(rules(r).sort(), ['note-dead-paths', 'note-dead-refs']);
+  const paths = r.violations.find((v) => v.rule === 'note-dead-paths');
+  assert.equal(paths.from, '.reins/notes/', 'two notes: one grouped warning');
+  assert.match(paths.message, /^2 notes have paths that match no file of the repo \(search: src\/features\/search\/\*\*; billing: src\/old\/\*\*\)/);
+  const refs = r.violations.find((v) => v.rule === 'note-dead-refs');
+  assert.equal(refs.from, '.reins/notes/billing.md');
+  assert.equal(refs.message, 'It names files or folders that no longer exist (src/features/billing/tax.js).');
+
+  const one = doctor({ notes: [moved], repoFiles });
+  assert.match(one.violations[0].message, /^None of its paths match a file of the repo \(src\/features\/search\/\*\*\), so the note reaches nobody/);
+  assert.ok(DOCTOR_RULES.includes('note-dead-paths') && DOCTOR_RULES.includes('note-dead-refs'));
+});
+
+test('rankStaleNotes: commits to a note\'s paths since the note last changed, most behind first', () => {
+  const notes = [note('.reins/notes/a.md', ['src/a/**']), note('.reins/notes/b.md', ['src/b/**']), note('.reins/notes/new.md', ['src/n/**'])];
+  const history = [ // newest first
+    { hash: '5', date: '2026-11-05', files: ['src/a/x.js', 'src/b/y.js'] },
+    { hash: '4', date: '2026-11-04', files: ['src/a/x.js'] },
+    { hash: '3', date: '2026-11-03', files: ['src/a/z.js', '.reins/notes/b.md'] },
+    { hash: '2', date: '2026-11-02', files: ['.reins/notes/a.md', 'src/a/x.js'] },
+    { hash: '1', date: '2026-11-01', files: ['src/a/old.js'] },
+  ];
+  const ranked = rankStaleNotes(notes, history);
+  assert.deepEqual(ranked.map((e) => [e.file, e.commits, e.files, e.lastChange]), [
+    ['.reins/notes/a.md', 3, 2, '2026-11-02'],
+    ['.reins/notes/b.md', 1, 1, '2026-11-03'],
+    ['.reins/notes/new.md', 0, 0, null],
+  ]);
+  const editing = rankStaleNotes(notes, history, { dirty: ['.reins/notes/a.md'] });
+  assert.deepEqual(editing.find((e) => e.file === '.reins/notes/a.md'), { file: '.reins/notes/a.md', lastChange: '2026-11-02', commits: 0, files: 0, uncommitted: true });
 });

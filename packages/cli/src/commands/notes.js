@@ -1,13 +1,13 @@
 // reins notes <path…>: prints the module notes that apply to a path.
 // reins notes --hook: the same, as a Claude Code PreToolUse hook (JSON in on stdin, JSON out), at most once
 // per note and session. It never blocks the agent: any problem means "no note".
-import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { matchesAny, notesFor, NOTES_DIR } from '@agentreins/core';
-import { CliError, toRepoPath } from '../context.js';
+import { matchesAny, notesFor, NOTES_DIR, rankStaleNotes } from '@agentreins/core';
+import { CliError, isGitRepo, toRepoPath } from '../context.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
-import { loadNotes, readDomains } from '../project.js';
+import { dirtyFiles, loadNotes, readDomains, readHistory, walk } from '../project.js';
 import { analyze } from './check.js';
 
 export { SEEN_FILE } from '../notes-seen.js';
@@ -18,11 +18,13 @@ export const options = {
   paths: { type: 'string' },
   name: { type: 'string' },
   force: { type: 'boolean' },
+  limit: { type: 'string' },
 };
 export const positionals = true;
 
 export const help = `Usage: reins notes <path…> [--json]
        reins notes new <domain|folder> [--name <name>] [--paths <glob,…>] [--force]
+       reins notes stale [--limit <n>] [--json]
        reins notes --hook
 
 Prints the module notes (.reins/notes/*.md) whose "paths" match each path.
@@ -32,22 +34,11 @@ new     Drafts .reins/notes/<name>.md for a domain of architecture.yml or a fold
         lines for the agent or a person to fill in. A folder inside a domain is a part of it and its note goes
         to .reins/notes/<domain>/<part>.md. --name sets the file name (<name> or <module>/<part>; default: the
         domain or the folder name), --paths overrides the globs, --force overwrites.
+stale   Lists the notes most behind their code: commits to a note's paths since the note last changed (from
+        git history). A signal, not proof: review the top ones (in Claude Code: /reins-notes review).
+        --limit shows the first <n> (default 10; 0 for all).
 --hook  For the Claude Code PreToolUse hook that reins sync installs: reads the tool call from stdin and
         returns the notes as additional context, once per note and session.`;
-
-const SKIP = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'out', 'coverage']);
-
-/** Every file under a repo folder (repo-relative), skipping build output and dependencies. */
-function walk(root, rel = '') {
-  const out = [];
-  for (const name of readdirSync(path.join(root, rel)).sort()) {
-    if (SKIP.has(name) || name.startsWith('.')) continue;
-    const r = rel ? `${rel}/${name}` : name;
-    if (statSync(path.join(root, r)).isDirectory()) out.push(...walk(root, r));
-    else out.push(r);
-  }
-  return out;
-}
 
 /** reins notes new <domain|folder> */
 async function newNote(ctx, target) {
@@ -100,6 +91,38 @@ async function newNote(ctx, target) {
   const r = writeNoteDraft(root, { name, paths, publicApi: api }, graph, files, domains, date, { force: true });
   if (r.empty) out(`! warning  No file matches ${paths.join(', ')}.`);
   out(`Drafted ${file}. Run \`reins sync\` to add it to the AGENTS.md index, then ask your agent to fill in its TODO lines (in Claude Code: /reins-notes).`);
+  return 0;
+}
+
+/** reins notes stale */
+function staleNotes(ctx) {
+  const { root, values, out } = ctx;
+  if (!isGitRepo(root)) throw new CliError('reins notes stale reads the git history: run it inside a git repository.');
+  const limit = values.limit === undefined ? 10 : Number(values.limit);
+  if (!Number.isInteger(limit) || limit < 0) throw new CliError(`--limit must be a whole number ≥ 0, got "${values.limit}".`);
+  const { notes: all, problems } = loadNotes(root);
+  const ranked = rankStaleNotes(all, readHistory(root), { dirty: dirtyFiles(root) });
+  const shown = limit ? ranked.slice(0, limit) : ranked;
+  if (values.json) {
+    out(JSON.stringify({ problems, notes: shown }, null, 2));
+    return 0;
+  }
+  for (const pr of problems) out(`! warning  ${pr}`);
+  if (!all.length) {
+    out('No module notes in .reins/notes/.');
+    return 0;
+  }
+  const behind = ranked.filter((e) => e.commits > 0).length;
+  out(`reins notes stale: ${behind} of ${all.length} notes have commits to their paths since they last changed.`);
+  for (const e of shown) {
+    let why;
+    if (e.lastChange === null) why = 'never committed';
+    else if (e.uncommitted) why = 'being edited';
+    else why = `${e.commits} commit(s), ${e.files} file(s) since ${e.lastChange}`;
+    out(`  ${e.file}  ${why}`);
+  }
+  if (ranked.length > shown.length) out(`  … ${ranked.length - shown.length} more (--limit 0 for all)`);
+  if (behind) out('Review the top ones against the code (in Claude Code: /reins-notes review): fix what is no longer true.');
   return 0;
 }
 
@@ -174,6 +197,7 @@ export async function notes(ctx) {
     }
     return newNote(ctx, ctx.positionals[1]);
   }
+  if (ctx.positionals[0] === 'stale' && ctx.positionals.length === 1) return staleNotes(ctx);
   const { notes: all, problems } = loadNotes(root);
   const results = ctx.positionals.map((p) => {
     const file = toRepoPath(root, cwd, p);

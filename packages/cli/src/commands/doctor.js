@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { runDoctor, notebookFile, formatText, formatJson } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, REINS_DIR, isGitRepo } from '../context.js';
-import { DOCTOR_FILE, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
+import { DOCTOR_FILE, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { pickBaseRef } from './check.js';
 export const TRIAGE_LOG = `${REINS_DIR}/progress/triage.log`;
 const LOCAL_DIRS = [`${REINS_DIR}/progress/`, `${REINS_DIR}/backlog/`];
@@ -17,7 +17,8 @@ export const options = {
 export const help = `Usage: reins doctor [options]
 
 Local, informational checks of the workflow: triage log vs. the diff, AGENTS.md size, progress notebook
-format, and the module notes of what the branch touched (missing, not updated, still a draft, too long). Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
+format, the module notes of what the branch touched (missing, not updated, still a draft, too long) and, for every
+note, paths that match no file and files it names that no longer exist. Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
 Thresholds: ${DOCTOR_FILE}.
 
 Options:
@@ -79,6 +80,7 @@ export async function doctor(ctx) {
     agentsMd: { file: 'AGENTS.md', text: read(root, 'AGENTS.md') },
     notebooks: nbText === null ? [] : [{ file: nbFile, text: nbText }],
     notes: loadNotes(root).notes,
+    repoFiles: listRepoFiles(root),
   });
 
   if (values.json) out(formatJson(result, { warnings: notes }));

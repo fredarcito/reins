@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { cli, exampleRepo } from './helpers.js';
+import { cli, exampleRepo, git } from './helpers.js';
 import { hookResponse } from '../src/commands/notes.js';
 
 const write = (dir, f, text) => {
@@ -138,4 +138,28 @@ test('notes new <folder inside a domain>: the note is a part of it, in the domai
   await cli(dir, ['notes', 'new', 'orders']);
   const shown = (await cli(dir, ['notes', 'src/features/orders/history/List.ts'])).stdout;
   assert.match(shown, /Note \.reins\/notes\/orders\.md[\s\S]*Note \.reins\/notes\/orders\/history\.md/);
+});
+
+test('notes stale: ranks notes by commits to their paths since they last changed', async () => {
+  const dir = repo();
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'notes');
+  write(dir, 'src/features/billing/tax.ts', 'export const tax = 1;\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'billing change');
+  const r = await cli(dir, ['notes', 'stale']);
+  assert.equal(r.code, 0);
+  assert.match(r.stdout, /^reins notes stale: 1 of 2 notes have commits to their paths since they last changed\.\n  \.reins\/notes\/billing\.md  1 commit\(s\), 1 file\(s\) since \d{4}-\d\d-\d\d\n  \.reins\/notes\/lib\.md  0 commit/);
+  assert.match(r.stdout, /\/reins-notes review/);
+  const json = JSON.parse((await cli(dir, ['notes', 'stale', '--json', '--limit', '1'])).stdout);
+  assert.deepEqual(json.notes.map((n) => [n.file, n.commits]), [['.reins/notes/billing.md', 1]]);
+  assert.equal((await cli(dir, ['notes', 'stale', '--limit', 'x'])).code, 2);
+});
+
+test('doctor: a note whose paths match nothing is reported even if the branch did not touch it', async () => {
+  const dir = repo();
+  write(dir, '.reins/notes/gone.md', '---\npaths: ["src/features/gone/**"]\n---\n- x\n');
+  const r = await cli(dir, ['doctor']);
+  assert.match(r.stdout, /note-dead-paths +\.reins\/notes\/gone\.md/);
+  assert.match(r.stdout, /reaches nobody/);
 });

@@ -16,7 +16,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 - `check/baseline.js`, `check/integrity.js`: baseline file format; integrity compares with the merge base via `git.js`.
 - `glob.js`: own glob matcher (`*`, `**`, `?`, `{a,b}`), shared with adapters.
 - `doctor/`: process rules (triage, notebook, notes, AGENTS.md size); `progress-edit.js` edits the notebook safely.
-- `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format. `notesFor` returns the most general note first (shortest matching glob), so a module's note comes before its parts'. Parts live in `.reins/notes/<module>/<part>.md` (`parentNoteFile`, `pathsInside`); doctor's `note-layout` checks that layout.
+- `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format. `notesFor` returns the most general note first (shortest matching glob), so a module's note comes before its parts'. Parts live in `.reins/notes/<module>/<part>.md` (`parentNoteFile`, `pathsInside`); doctor's `note-layout` checks that layout. `notes/stale.js`: `rankStaleNotes` (commits to a note's paths since the note last changed, from history the CLI reads).
 
 ## How it works
 The CLI reads files, git state and the adapter's graph, and passes them in. `evaluate` drops `ignore`d edges, merges duplicates (one edge per from/to with all its kinds) and runs each rule; `runCheck` adds `extra` violations (integrity, adapter rules), compares keys with the baseline and returns `ok` = no new error. `report/` formats the result. `doctor` and the notes/backlog/progress helpers follow the same pattern: pure functions over text the caller loads.
@@ -29,6 +29,7 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - 2026-11-04: contract grew with optional fields (`files`, `entries`, `warnings`, `rules`/`evaluate`, presets) while staying at version 1. 2026-11-05: `barrels` and `uses`, read only by `init`.
 
 ## Traps
+- `note-dead-refs` only checks backticked paths whose first folder exists at the repo root: paths relative to a module (`src/main.js` in a package's note) are skipped, not checked.
 - Keep `check` and `doctor` pure: no fs/git reads there (except `check/integrity.js` and `git.js`). The CLI does the I/O.
 - Never import from `cli` or adapters. Anything adapters need must be exported from `contract/` (that is why `matchesAny` is re-exported there).
 - Integrity findings never go into the baseline and are never marked `baseline`.

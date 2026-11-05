@@ -9,15 +9,17 @@ import { isReinsFile } from './triage.js';
 const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {const} */ ('warn'), key: `${rule}|${from}`, from, message, fix });
 
 /**
- * note-missing, note-outdated, note-draft, note-size, note-layout.
+ * note-missing, note-outdated, note-draft, note-size, note-layout; with `repoFiles`, also note-dead-paths and
+ * note-dead-refs, for every note (not only the touched ones).
  * @param {object} input
  * @param {string[]} input.changedFiles
  * @param {{ file: string, paths: string[], body: string }[]} input.notes
  * @param {{ name: string, paths: string[] }[]} input.domains
  * @param {'small'|'medium'|'large'} input.level level suggested by the diff
  * @param {number} input.maxLines
+ * @param {string[] | null} [input.repoFiles] every file of the repo, repo-relative; null skips the dead-* rules
  */
-export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
+export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null }) {
   const code = changedFiles.filter((f) => !isReinsFile(f));
   const changed = new Set(changedFiles);
   const findings = [];
@@ -63,7 +65,81 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines }) {
       );
     }
   }
+  if (repoFiles) findings.push(...checkDead(notes, repoFiles));
   return findings;
+}
+
+/**
+ * One warning per note, or a single one for all of them when there are several: a long list of the same
+ * warning buries the ones that matter.
+ * @param {string} rule
+ * @param {{ file: string, detail: string }[]} items
+ * @param {(item: { file: string, detail: string }) => string} one message for a single note
+ * @param {(count: number, list: string) => string} many message for several notes
+ * @param {string} fix
+ */
+function grouped(rule, items, one, many, fix) {
+  if (items.length === 0) return [];
+  if (items.length === 1) return [finding(rule, items[0].file, one(items[0]), fix)];
+  const shown = items.slice(0, MAX_DRAFTS_NAMED).map((i) => `${noteName(i.file)}: ${i.detail}`);
+  const more = items.length > MAX_DRAFTS_NAMED ? `; +${items.length - MAX_DRAFTS_NAMED} more` : '';
+  return [finding(rule, `${NOTES_DIR}/`, many(items.length, `${shown.join('; ')}${more}`), fix)];
+}
+
+const noteName = (file) => file.slice(NOTES_DIR.length + 1, -3);
+const GLOB_CHARS = /[*?{}<>]/;
+// a repo path written in backticks: segments without spaces, an optional trailing "/" or ":<line>"
+const REF_RE = /`([^`\s]+)`/g;
+const PATH_RE = /^[\w.@()[\]$+-]+(\/[\w.@()[\]$+-]+)+\/?$/;
+
+/**
+ * Backticked repo paths in a note body that point nowhere. Only paths whose first folder exists at the repo
+ * root count, so package names (`@scope/pkg`), module ids (`node:fs`) and relative examples are left alone.
+ * @param {string} body
+ * @param {Set<string>} files
+ * @param {Set<string>} dirs every folder of the repo
+ * @param {Set<string>} top first segment of every repo file
+ */
+export function deadRefs(body, files, dirs, top) {
+  const dead = new Set();
+  for (const [, raw] of body.matchAll(REF_RE)) {
+    const ref = raw.replace(/:\d+(-\d+)?$/, '');
+    if (GLOB_CHARS.test(ref) || !PATH_RE.test(ref) || !top.has(ref.split('/')[0])) continue;
+    const clean = ref.replace(/\/$/, '');
+    if (!files.has(clean) && !dirs.has(clean)) dead.add(ref);
+  }
+  return [...dead];
+}
+
+/** note-dead-paths and note-dead-refs over every note. */
+function checkDead(notes, repoFiles) {
+  const files = new Set(repoFiles);
+  const dirs = new Set();
+  for (const f of repoFiles) for (let i = f.indexOf('/'); i !== -1; i = f.indexOf('/', i + 1)) dirs.add(f.slice(0, i));
+  const top = new Set(repoFiles.map((f) => f.split('/')[0]));
+
+  const deadPaths = [];
+  const deadRefList = [];
+  for (const n of notes) {
+    const unmatched = n.paths.filter((g) => !repoFiles.some((f) => matchesAny(f, [g])));
+    if (unmatched.length) deadPaths.push({ file: n.file, detail: unmatched.join(', '), all: unmatched.length === n.paths.length });
+    const refs = deadRefs(n.body, files, dirs, top);
+    if (refs.length) deadRefList.push({ file: n.file, detail: refs.slice(0, 3).join(', ') + (refs.length > 3 ? `, +${refs.length - 3} more` : '') });
+  }
+  return [
+    ...grouped(
+      'note-dead-paths', deadPaths,
+      (i) => `${i.all ? 'None of its paths match' : 'Some of its paths match'} a file of the repo (${i.detail})${i.all ? ', so the note reaches nobody: not the hook, not `reins notes <path>`.' : '.'}`,
+      (count, list) => `${count} notes have paths that match no file of the repo (${list}). A note whose paths match nothing reaches nobody.`,
+      'The module was probably moved or renamed: update `paths` in the frontmatter, or delete the note if the module is gone. Then run `npx reins sync`.',
+    ),
+    ...grouped(
+      'note-dead-refs', deadRefList,
+      (i) => `It names files or folders that no longer exist (${i.detail}).`,
+      (count, list) => `${count} notes name files or folders that no longer exist (${list}).`,
+      'Fix the names (in Claude Code: /reins-notes review), or remove the lines if what they described is gone.',
+    ),
+  ];
 }
 
 const DRAFT_FIX = 'Ask your agent to fill it in (in Claude Code: /reins-notes), or replace each TODO yourself; delete a TODO line if there is nothing true to say.';

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0 · 2026-11-05
+
+Catching module notes that no longer match the code. Run `reins sync` after updating. The `notes` and `done` skills changed: if you never edited `.reins/skills/notes/` and `.reins/skills/done/`, delete them and run `npx reins install` to get the new ones (see Updating in the README).
+
+- `reins doctor`, for every note (not only the ones the branch touched), warn only:
+  - `note-dead-paths`: a glob in a note's `paths` matches no file. A module that was moved or renamed leaves its note reaching nobody, silently.
+  - `note-dead-refs`: a note names, in backticks, a repo file or folder that no longer exists. Only paths whose first folder exists at the repo root are checked.
+  - Several notes with the same problem make one warning.
+- `reins notes stale`: notes ranked by commits to their paths since the note last changed, from git history. A signal, not proof. `--limit <n>`, `--json`.
+- `/reins-notes review`: the agent checks the notes named, or the top of `reins notes stale`, against the code and fixes what is no longer true. It costs tokens, so it only runs when asked.
+
 ## 0.6.2 · 2026-11-05
 
 Run `reins sync` after updating.

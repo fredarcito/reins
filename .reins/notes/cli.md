@@ -10,7 +10,7 @@ The `reins` command line: wires the core and the language adapter to a consumer 
 - Files: 33. Used by: nothing outside the module. Depends on: domain core (13), only through `@agentreins/core`; adapters are loaded at runtime, never imported
 - `src/main.js`: `run(argv, io)` — command table, `parseArgs`, repo root, `CliError` -> exit code. Everything in `io` is injectable for tests.
 - `src/context.js`: `.reins/` file paths, repo root, package-manager commands, `CliError`.
-- `src/project.js`: reads `architecture.yml` domains, `doctor.yml` and notes without loading the adapter.
+- `src/project.js`: reads `architecture.yml` domains, `doctor.yml` and notes without loading the adapter; `listRepoFiles` (git ls-files, or a walk without git), `readHistory` and `dirtyFiles` for doctor's `note-dead-*` and `notes stale`.
 - `src/adapter.js`: resolves `@agentreins/adapter-<x>` / `reins-adapter-<x>` from the repo root, checks `reins.contract`, validates it.
 - `src/commands/*.js`: one file per command exporting `options`, `help` and the run function.
 - `src/sync/index.js`: generates `.claude/` and the AGENTS.md notes index from `.reins/`; manifest `.reins/.generated.json`.

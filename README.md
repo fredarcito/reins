@@ -55,7 +55,46 @@ Between `init` and `check --update-baseline`:
 
 Later, after you add or edit a note, skill or agent in `.reins/` (by hand, with `reins notes new` or with `/reins-agent`), run `npx reins sync` so `AGENTS.md` and `.claude/` pick it up. `init` already does it for the notes it drafts.
 
-Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). Already installed? See [Updating](#updating). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+
+## Updating
+
+```bash
+# 1. Update the packages (@agentreins/core comes along with the CLI)
+npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest
+
+# 2. Regenerate what reins owns, then check
+npx reins sync
+npx reins doctor
+npx reins check
+```
+
+Then read the [changelog](CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
+
+```mermaid
+flowchart LR
+    pkg["npm install -D<br/>@agentreins/*@latest"] --> sync["reins sync"]
+    sync --> gen["regenerated<br/>.claude/ · AGENTS.md notes index"]
+    pkg -.-> tpl["new templates<br/>in node_modules"]
+    tpl -. "you merge by hand" .-> src[".reins/ sources<br/>skills · policies · agents"]
+    src --> sync
+```
+
+What updates by itself and what doesn't:
+
+| What | On update |
+| --- | --- |
+| `.claude/skills/reins-*`, `.claude/agents/reins-*`, the hooks in `.claude/settings.json`, the notes index in `AGENTS.md` | `reins sync` regenerates them from `.reins/` |
+| `.reins/skills/`, `.reins/policies/`, `.reins/agents/` and the rest of what `install` copied | Kept: they are your sources and you may have edited them |
+| `AGENTS.md` outside the notes index, `architecture.yml`, `baseline.json`, your notes | Never touched |
+
+When a version changes the templates, the changelog says so. To bring them in, compare your copy with the new one and merge what you want:
+
+```bash
+diff -ru node_modules/@agentreins/cli/templates/.reins .reins
+```
+
+A file you never edited can simply be deleted and copied again by `npx reins install`. Then run `npx reins sync`.
 
 ## Skills for your agent
 
@@ -75,6 +114,7 @@ Commands for your agent, installed by `reins install`. In Claude Code, type them
 - [Without and with reins](#without-and-with-reins)
 - [Why use it](#why-use-it)
 - [Quick start](#quick-start)
+- [Updating](#updating)
 - [Skills for your agent](#skills-for-your-agent)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works)
@@ -346,6 +386,20 @@ A **decision** answers "why is it like this?"; a **trap** warns "careful: this l
 
 **Notes stay current.** The `reins-done` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
 
+**Catching notes that fell behind.** Code moves on in small fixes too, which never trigger the warnings above. Three checks cover that, from free to paid:
+
+```mermaid
+flowchart LR
+    doctor["reins doctor<br/>every note, no tokens"] --> dead["note-dead-paths<br/>paths match no file"]
+    doctor --> refs["note-dead-refs<br/>names files that are gone"]
+    stale["reins notes stale<br/>git history, no tokens"] --> rank["notes ranked by commits<br/>since they last changed"]
+    rank --> review["/reins-notes review<br/>agent checks the top ones<br/>against the code (tokens)"]
+    dead --> review
+    refs --> review
+```
+
+`note-dead-paths` matters most: a note whose paths match nothing reaches nobody, silently. `reins notes stale` is a signal, not proof; the review is what checks that a note is still true, and it only runs when you ask for it.
+
 ### How the skills fit in
 
 After `init`, two skills turn the drafts into something you can trust; you approve the architecture changes one by one.
@@ -525,6 +579,8 @@ flowchart LR
 | `note-draft` | A note of a touched module still has `TODO` lines from its draft; many drafts make a single warning |
 | `note-size` | A note of a touched module is longer than 60 lines |
 | `note-layout` | A note of a touched module is more than one folder deep, or is a part whose module note is missing or whose paths are outside that module |
+| `note-dead-paths` | Any note: a glob in its `paths` matches no file, so the note may reach nobody (several notes: one warning) |
+| `note-dead-refs` | Any note: it names, in backticks, a repo file or folder that no longer exists (several notes: one warning) |
 
 Thresholds are starting values in `.reins/doctor.yml`; tune them to your team:
 
@@ -608,6 +664,7 @@ The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the
 | --- | --- |
 | `reins notes <path…>` | Prints the notes that apply to each path |
 | `reins notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
+| `reins notes stale` | Notes ranked by commits to their paths since the note last changed (git history). `--limit <n>` (default 10, 0 for all), `--json` |
 | `reins notes new <domain\|folder>` | Drafts `.reins/notes/<name>.md` from the import graph: public API, most imported files, who uses the module, what it depends on. The rest are `TODO` lines to fill in. `--paths` sets the globs, `--force` overwrites |
 | `reins resume` | Branch notebook, files changed on the branch and their notes: what an agent needs to pick a task up. `--json` for agents |
 | `reins resume --hook` | The same, as the Claude Code `SessionStart` hook (startup, `/clear`, compaction). After a compaction the notes are delivered again |
@@ -686,45 +743,6 @@ flowchart LR
 `reins install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`; an existing `AGENTS.md` only gets the notes index block appended at the end), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
 
 Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
-
-### Updating
-
-```bash
-# 1. Update the packages (@agentreins/core comes along with the CLI)
-npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest
-
-# 2. Regenerate what reins owns, then check
-npx reins sync
-npx reins doctor
-npx reins check
-```
-
-Then read the [changelog](CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
-
-```mermaid
-flowchart LR
-    pkg["npm install -D<br/>@agentreins/*@latest"] --> sync["reins sync"]
-    sync --> gen["regenerated<br/>.claude/ · AGENTS.md notes index"]
-    pkg -.-> tpl["new templates<br/>in node_modules"]
-    tpl -. "you merge by hand" .-> src[".reins/ sources<br/>skills · policies · agents"]
-    src --> sync
-```
-
-What updates by itself and what doesn't:
-
-| What | On update |
-| --- | --- |
-| `.claude/skills/reins-*`, `.claude/agents/reins-*`, the hooks in `.claude/settings.json`, the notes index in `AGENTS.md` | `reins sync` regenerates them from `.reins/` |
-| `.reins/skills/`, `.reins/policies/`, `.reins/agents/` and the rest of what `install` copied | Kept: they are your sources and you may have edited them |
-| `AGENTS.md` outside the notes index, `architecture.yml`, `baseline.json`, your notes | Never touched |
-
-When a version changes the templates, the changelog says so. To bring them in, compare your copy with the new one and merge what you want:
-
-```bash
-diff -ru node_modules/@agentreins/cli/templates/.reins .reins
-```
-
-A file you never edited can simply be deleted and copied again by `npx reins install`. Then run `npx reins sync`.
 
 ## Roadmap
 
