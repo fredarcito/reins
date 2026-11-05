@@ -7,7 +7,6 @@ coverage/
 .reins/progress/
 .tarballs/
 packages/cli/templates/
-packages/cli/README.md
 packages/*/LICENSE
 packages/adapters/*/LICENSE
 

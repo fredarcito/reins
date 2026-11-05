@@ -25,8 +25,8 @@
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
-    "prepack": "node -e \"require('fs').copyFileSync('../../LICENSE','LICENSE');require('fs').copyFileSync('../../README.md','README.md');require('fs').cpSync('../../templates','templates',{recursive:true})\"",
-    "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true});require('fs').rmSync('README.md',{force:true})\""
+    "prepack": "node -e \"require('fs').copyFileSync('../../LICENSE','LICENSE');require('fs').cpSync('../../templates','templates',{recursive:true})\"",
+    "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true})\""
   },
   "devDependencies": {
     "@agentreins/adapter-js": "workspace:^"

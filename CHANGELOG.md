@@ -7,6 +7,7 @@
 - An agent working in a part gets the module's note first, then the part's (`notesFor` orders from general to specific). The `AGENTS.md` index puts the parts on their module's line.
 - `reins notes new <folder>` on a folder inside a domain drafts a part (`.reins/notes/<domain>/<part>.md`); `--name` accepts `<module>/<part>`.
 - New doctor rule `note-layout` (warn): a note more than one folder deep, a part without its module note, or a part whose paths are outside its module.
+- npm pages: the CLI has its own README (install, quick start, commands, skills) instead of a copy of the repository's, which npm showed empty and whose diagrams and relative links did not work there. The core and adapter READMEs gained install steps and what each package does.
 - Skills `reins-notes` and `reins-done` know about parts. `reins install` never overwrites, so repos installed with 0.3.0 get the new text by deleting `.reins/skills/notes/` and `.reins/skills/done/`, then running `reins install` and `reins sync`.
 
 ## 0.3.0 · 2026-11-04
