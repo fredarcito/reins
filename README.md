@@ -462,7 +462,7 @@ flowchart LR
 
 **Repos organized by routes.** With no `features/*` or `modules/*` folder, each route folder becomes a domain:
 
-- Next route groups `(main)` and parameters `[slug]` are looked through: they share a layout or a URL segment, they are not features. `(companies)/companies/[slug]` gives a domain `companies`.
+- Next route groups `(main)` and parameters `[slug]` are looked through: they share a layout or a URL segment, they are not features. `(companies)/companies/[slug]` gives a domain `companies`, and a route split across groups (`(companies)/companies` and `(main)/companies`, both `/companies`) is one domain with several folders.
 - A route folder with a single source file (a lone `page.js`: about, terms…) is left out and listed in the report.
 - A route's logic often lives outside its folder (`components/pages/companies/`, `components/JobBoard/`…). A folder that only one route domain imports joins that domain, whatever its name: the import graph decides, not naming conventions. Folders imported by several domains (`Button/`, `Modal/`) stay shared. A folder mostly, but not only, used by one domain is listed in the report instead, since adding it would turn the other imports into violations.
 - Imports through a re-export file (`import { JobBoard } from '@/components'` with `components/index.js` re-exporting everything) count as imports of the file behind it, so a barrel doesn't make every page look like it uses every component.

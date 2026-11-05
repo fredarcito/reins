@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1 · 2026-11-05
+
+Fixes found running 0.5.0 on a real Next.js app. Re-run `reins init --dry-run` after updating.
+
+- Fix, `reins init` on a repo organized by routes: folders with the same route path in different groups (`(companies)/companies` and `(main)/companies`, both `/companies`) are one domain with several folders, and their parts are merged the same way, instead of `companies`, `companies-2`, `companies-3`.
+- Fix: `reins init` drafts the note of a domain even when a broader note covers it (e.g. `emptyLayout.md` for a whole route group, left by an older init); before, such a domain got its parts' notes (`rating/…`) but no `rating.md`. A note under another name counts as the domain's note only if all its paths lie inside the domain, and then the parts go in that note's folder.
+- Fix, parts of a route domain: a parameter folder that is a page itself (`rating/[slug]/page.js` + `index.js`, the page at `/rating/acme`) gets its own note (`rating/slug.md`) covering only its files (`[slug]/*`); before, its files only had the domain's note.
+
 ## 0.5.0 · 2026-11-05
 
 - `reins init` on a repo organized by routes: Next route groups `(main)` are looked through like `[param]` folders (they share a layout, they are not features), so `(main)/jobs` becomes the domain `jobs`. A route folder with a single source file (a lone page) is no longer a domain; the report lists it.

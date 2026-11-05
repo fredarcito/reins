@@ -146,5 +146,6 @@ function domainLine(x, facts) {
   if (x.missingIndex) guard = ' — **no index file: create it or change public_api**';
   else if (facts?.closed) guard = ` — closed: its public API is only route entry files, which nobody imports, so \`domain-boundary\` flags any import of its files from outside (today: ${facts.importedFrom}). Shared code belongs in a lower layer`;
   else if (facts) guard = ` — imported from outside: ${facts.importedFrom} time(s)`;
-  return `\`${x.name}\`: \`${x.folder}/\` (${x.files} files)${owned}, ${api}${guard}${loose}`;
+  const where = (x.folders ?? [x.folder]).map((f) => `\`${f}/\``).join(' + ');
+  return `\`${x.name}\`: ${where} (${x.files} files)${owned}, ${api}${guard}${loose}`;
 }

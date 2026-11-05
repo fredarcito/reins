@@ -3,7 +3,7 @@
 // Never overwrites existing files without confirmation (or --force).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, NOTES_DIR } from '@agentreins/core';
+import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, parentNoteFile, pathsInside, NOTES_DIR } from '@agentreins/core';
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
@@ -104,9 +104,14 @@ export async function init(ctx) {
   const used = new Set(domains.map((d) => d.name));
   const plans = domains.map((d) => {
     const own = graph.files.filter((f) => matchesAny(f, d.paths));
-    const draftDomain = !noteExists(d.name) && !own.some((f) => notesFor(f, existingNotes).length);
-    const found = fromRoutes ? inferSubmodules(d, graph.files, { edges: graph.edges, entries: graph.entries, used }) : { submodules: [], more: [] };
-    const subs = found.submodules.filter((s) => !noteExists(s.name) && !existingNotes.some((n) => n.paths.some((p) => p.startsWith(`${s.folder}/`))));
+    // the domain's note: one named after it, or a top-level note whose paths all lie inside it (written under
+    // another name). A broader note (a whole route group, a layer) is context for many domains, not this one's.
+    const sameModule = existingNotes.find((n) => !parentNoteFile(n.file) && n.file.split('/').length === 3 && pathsInside(n, d) && own.some((f) => notesFor(f, [n]).length));
+    const draftDomain = !noteExists(d.name) && !sameModule;
+    // parts go in the folder of the domain's note, whatever its name, so they never lack their module note
+    const noteName = noteExists(d.name) || !sameModule ? d.name : sameModule.file.slice(NOTES_DIR.length + 1, -3);
+    const found = fromRoutes ? inferSubmodules({ ...d, name: noteName }, graph.files, { edges: graph.edges, entries: graph.entries, used }) : { submodules: [], more: [] };
+    const subs = found.submodules.filter((s) => !noteExists(s.name) && !existingNotes.some((n) => n.paths.some((p) => s.folders.some((f) => p.startsWith(`${f}/`)))));
     return { domain: d, draftDomain, subs, more: found.more };
   });
   const toDraft = plans.flatMap((x) => [...(x.draftDomain ? [x.domain.name] : []), ...x.subs.map((s) => s.name)]);

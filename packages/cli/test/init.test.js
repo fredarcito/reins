@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, tempDir } from './helpers.js';
 
@@ -186,6 +186,57 @@ test('next-app by routes: imports through a barrel count for the file behind it;
   const notes = await cli(dir, ['notes', 'src/components/paginaContacto.tsx']);
   assert.match(notes.stdout, /Note \.reins\/notes\/companies\.md/);
   assert.equal((await cli(dir, ['check'])).code, 0);
+});
+
+test('next-app: /companies split across (groups) gives one companies domain and its parts, never companies-2 or companies-3', async () => {
+  const page = (imp) => `${imp ? `import { x } from "./${imp}";\n` : ''}export default function Page() { return null; }\n`;
+  const dir = routesRepo('next-app', {
+    'src/app/(companies)/companies/[slug]/page.tsx': page(),
+    'src/app/(companies)/companies/[slug]/layout.tsx': page(),
+    'src/app/(main)/companies/sizes/page.tsx': page('Sizes'),
+    'src/app/(main)/companies/sizes/Sizes.tsx': 'export const x = 1;\n',
+    'src/app/(main)/companies/funding-sources/page.tsx': page('List'),
+    'src/app/(main)/companies/funding-sources/List.tsx': 'export const x = 1;\n',
+    'src/app/(staticMain)/companies/page.tsx': page(),
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): companies\n/);
+  assert.match(read(dir, '.reins/architecture.yml'), /companies: \{ paths: \["src\/app\/\(companies\)\/companies\/\*\*", "src\/app\/\(main\)\/companies\/\*\*", "src\/app\/\(staticMain\)\/companies\/\*\*"\]/);
+  assert.ok(existsSync(path.join(dir, '.reins/notes/companies/sizes.md')));
+  assert.ok(existsSync(path.join(dir, '.reins/notes/companies/funding-sources.md')));
+  assert.ok(!existsSync(path.join(dir, '.reins/notes/companies-2.md')) && !existsSync(path.join(dir, '.reins/notes/companies-3')));
+  assert.match(read(dir, '.reins/init-report.md'), /`companies`: `src\/app\/\(companies\)\/companies\/` \+ `src\/app\/\(main\)\/companies\/` \+ `src\/app\/\(staticMain\)\/companies\/`/);
+  assert.equal((await cli(dir, ['check'])).code, 0);
+});
+
+test('a broader note (a whole route group) does not stop the domain note; parts never lack their module note', async () => {
+  const page = 'import View from "./index";\nexport default function Page() { return View; }\n';
+  const view = 'export default function View() { return null; }\n';
+  const r = 'src/app/(emptyLayout)/rating';
+  const dir = routesRepo('next-app', {
+    [`${r}/[slug]/index.js`]: view, [`${r}/[slug]/page.js`]: page,
+    [`${r}/success/index.js`]: view, [`${r}/success/page.js`]: page,
+    [`${r}/re-rate/index.js`]: view, [`${r}/re-rate/page.js`]: page,
+    'src/app/(main)/jobs/page.js': page, 'src/app/(main)/jobs/index.js': view,
+    'src/app/(main)/jobs/list/page.js': page, 'src/app/(main)/jobs/list/index.js': view,
+    'src/app/(main)/jobs/saved/page.js': page, 'src/app/(main)/jobs/saved/index.js': view,
+  });
+  // left by an older init, when route groups were domains
+  mkdirSync(path.join(dir, '.reins/notes'), { recursive: true });
+  writeFileSync(path.join(dir, '.reins/notes/emptyLayout.md'), '---\npaths: ["src/app/(emptyLayout)/**"]\n---\nold\n');
+  // a hand-written note for jobs under another name
+  writeFileSync(path.join(dir, '.reins/notes/job-board.md'), '---\npaths: ["src/app/(main)/jobs/**"]\n---\nmine\n');
+  const res = await cli(dir, ['init']);
+  assert.equal(res.code, 0, res.stderr);
+  assert.ok(existsSync(path.join(dir, '.reins/notes/rating.md')), 'the group note is broader than rating');
+  assert.ok(existsSync(path.join(dir, '.reins/notes/rating/slug.md')));
+  assert.equal(existsSync(path.join(dir, '.reins/notes/jobs.md')), false, 'jobs already has its note, as job-board');
+  assert.ok(existsSync(path.join(dir, '.reins/notes/job-board/list.md')), 'its parts go next to that note');
+  assert.equal(read(dir, '.reins/notes/job-board.md'), '---\npaths: ["src/app/(main)/jobs/**"]\n---\nmine\n');
+  for (const entry of readdirSync(path.join(dir, '.reins/notes'), { withFileTypes: true })) {
+    if (entry.isDirectory()) assert.ok(existsSync(path.join(dir, '.reins/notes', `${entry.name}.md`)), `${entry.name}/ has no ${entry.name}.md`);
+  }
 });
 
 test('vite-react by routes: a components folder only one route uses joins it; a one-file route is left out', async () => {

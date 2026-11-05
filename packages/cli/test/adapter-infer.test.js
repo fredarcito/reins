@@ -99,6 +99,42 @@ test('domains from routes: look through [param] and (group), skip catch-alls, pr
   assert.deepEqual(small, ['src/app/(main)/(legal)/terms', 'src/app/[lang]/[id]/edit', 'src/app/[lang]/shared', 'src/app/api']);
 });
 
+test('a route split across (groups) is one domain with several folders, and so are its parts', () => {
+  const files = [
+    'src/app/(companies)/companies/[slug]/page.js', 'src/app/(companies)/companies/[slug]/layout.js',
+    'src/app/(companies)/companies/[slug]/salaries/page.js', 'src/app/(companies)/companies/[slug]/salaries/index.js',
+    'src/app/(main)/companies/sizes/page.js', 'src/app/(main)/companies/sizes/index.js',
+    'src/app/(main)/companies/funding-sources/page.js', 'src/app/(main)/companies/funding-sources/List.js',
+    'src/app/(staticMain)/companies/salaries/x/page.js', 'src/app/(staticMain)/companies/salaries/x/Extra.js',
+    'src/app/(main)/jobs/page.js', 'src/app/(main)/jobs/List.js',
+  ];
+  const d = inferDomains(['src/app/*'], files, { routes: true });
+  assert.deepEqual(d.map((x) => [x.name, x.folders, x.paths]), [
+    ['companies', ['src/app/(companies)/companies', 'src/app/(main)/companies', 'src/app/(staticMain)/companies'],
+      ['src/app/(companies)/companies/**', 'src/app/(main)/companies/**', 'src/app/(staticMain)/companies/**']],
+    ['jobs', ['src/app/(main)/jobs'], ['src/app/(main)/jobs/**']],
+  ]);
+  const { submodules } = inferSubmodules(d[0], files);
+  assert.deepEqual(submodules.map((x) => [x.name, x.folders, x.files]), [
+    ['companies/slug', ['src/app/(companies)/companies/[slug]'], 2],
+    ['companies/salaries', ['src/app/(companies)/companies/[slug]/salaries'], 2],
+    ['companies/funding-sources', ['src/app/(main)/companies/funding-sources'], 2],
+    ['companies/sizes', ['src/app/(main)/companies/sizes'], 2],
+    ['companies/salaries-2', ['src/app/(staticMain)/companies/salaries'], 2],
+  ], 'salaries under [slug] and salaries under /companies are different URLs, so different parts');
+});
+
+test('a parameter folder that is a page itself is a part, covering only its own files', () => {
+  const r = 'src/app/(emptyLayout)/rating';
+  const files = [`${r}/[slug]/index.js`, `${r}/[slug]/page.js`, `${r}/success/index.js`, `${r}/success/page.js`, `${r}/re-rate/index.js`, `${r}/re-rate/page.js`];
+  const { submodules } = inferSubmodules({ name: 'rating', folder: r }, files, { entries: [`${r}/[slug]/page.js`] });
+  assert.deepEqual(submodules.map((x) => [x.name, x.paths, x.publicApi]), [
+    ['rating/slug', [`${r}/[slug]/*`], [`${r}/[slug]/index.js`]],
+    ['rating/re-rate', [`${r}/re-rate/**`], [`${r}/re-rate/index.js`]],
+    ['rating/success', [`${r}/success/**`], [`${r}/success/index.js`]],
+  ]);
+});
+
 test('owned folders: a folder only one route domain imports joins it, decided by imports, never by names', () => {
   const route = (name) => ({ name, folder: `src/app/(main)/${name}`, paths: [`src/app/(main)/${name}/**`], publicApi: [`src/app/(main)/${name}/page.js`], missingIndex: false, files: 2, owned: [] });
   const domains = [route('companies'), route('jobs')];
@@ -163,6 +199,7 @@ test('sub-modules of a route domain: follow single folders and [param], one per 
   const used = new Set(['companies', 'companies/culture']);
   const { submodules, more } = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { entries: [`${base}/culture/page.js`], used });
   assert.deepEqual(submodules.map((s) => [s.name, s.folder, s.files, s.publicApi.join(',')]), [
+    ['companies/slug', base, 3, `${base}/index.js`],
     ['companies/culture-2', `${base}/culture`, 2, `${base}/culture/index.js`],
     ['companies/questions', `${base}/questions`, 3, `${base}/questions/index.js`],
     ['companies/salaries', `${base}/salaries`, 3, `${base}/salaries/index.js`],
@@ -171,7 +208,7 @@ test('sub-modules of a route domain: follow single folders and [param], one per 
   assert.ok(used.has('companies/salaries'));
 
   const capped = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { max: 2 });
-  assert.deepEqual(capped.submodules.map((s) => s.name), ['companies/questions', 'companies/salaries']);
-  assert.deepEqual(capped.more, [`${base}/culture`]);
+  assert.deepEqual(capped.submodules.map((s) => s.name), ['companies/slug', 'companies/questions']);
+  assert.deepEqual(capped.more, [`${base}/salaries`, `${base}/culture`]);
   assert.deepEqual(inferSubmodules({ name: 'jobs', folder: 'src/app/jobs' }, ['src/app/jobs/page.js', 'src/app/jobs/list/a.js', 'src/app/jobs/list/b.js']).submodules, []);
 });

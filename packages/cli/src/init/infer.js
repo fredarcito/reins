@@ -96,14 +96,19 @@ export function inferLayers(presetLayers, files, edges) {
 const PARAM = /^\[[^.[\]][^\]]*\]$/;
 const GROUP = /^\(.+\)$/;
 const SKIPPED = /^(\[\[?\.\.\.|_)/;
+/**
+ * Route path of a folder: groups dropped. `(main)/companies` and `(companies)/companies` are the same URL
+ * (`/companies`) split across layouts, so they are one domain (or one part) with several folders.
+ */
+const routeKey = (dir) => dir.split('/').filter((s) => !GROUP.test(s)).join('/');
 /** A route folder needs at least this many source files to be a domain (a lone page.js is not a module). */
 export const MIN_ROUTE_FILES = 2;
 
 /**
  * Proposes one domain per folder matching `domains_from` (e.g. every child of src/features/).
  * With `routes`, a matching folder that is a route parameter (`[lang]`) or a route group (`(main)`) is looked
- * through to its children, and a route folder with fewer than MIN_ROUTE_FILES source files is left out (listed
- * in `opts.small` when given).
+ * through to its children; route folders with the same route path in different groups are one domain; and a
+ * route with fewer than MIN_ROUTE_FILES source files is left out (its folders listed in `opts.small` when given).
  * Public API: the folder's `index.*`; for routes without one, the files imported from outside the folder plus
  * the entry points inside it (e.g. Next's page.tsx); otherwise an `index.js` placeholder flagged as missing.
  * @param {string[]} domainsFrom globs of domain folders
@@ -131,25 +136,39 @@ export function inferDomains(domainsFrom, files, opts = {}) {
       break;
     }
   }
+  /** @type {Map<string, { folders: string[], count: number }>} */
+  const byRoute = new Map();
+  for (const [dir, n] of folders) {
+    const key = routes ? routeKey(dir) : dir;
+    const g = byRoute.get(key) ?? { folders: [], count: 0 };
+    g.folders.push(dir);
+    g.count += n;
+    byRoute.set(key, g);
+  }
   const used = new Set();
   const entrySet = new Set(entries);
-  const sorted = [...folders].sort(([a], [b]) => (a < b ? -1 : 1));
-  if (routes) small.push(...sorted.filter(([, n]) => n < MIN_ROUTE_FILES).map(([f]) => f));
-  return sorted.filter(([, n]) => !routes || n >= MIN_ROUTE_FILES).map(([folder, count]) => {
+  const sorted = [...byRoute.values()].map((g) => ({ ...g, folders: g.folders.sort() })).sort((a, b) => (a.folders[0] < b.folders[0] ? -1 : 1));
+  if (routes) small.push(...sorted.filter((g) => g.count < MIN_ROUTE_FILES).flatMap((g) => g.folders));
+  return sorted.filter((g) => !routes || g.count >= MIN_ROUTE_FILES).map((g) => {
+    const folder = g.folders[0];
     const name = uniqueName(segmentName(folder.split('/').pop()), used);
-    return { name, folder, paths: [`${folder}/**`], ...publicApiOf(folder, files, edges, entrySet, routes), files: count, owned: [] };
+    const apis = g.folders.map((f) => publicApiOf(f, files, edges, entrySet, routes));
+    const missingIndex = apis.every((a) => a.missingIndex);
+    const publicApi = missingIndex ? apis[0].publicApi : apis.filter((a) => !a.missingIndex).flatMap((a) => a.publicApi);
+    return { name, folder, folders: g.folders, paths: g.folders.map((f) => `${f}/**`), publicApi, missingIndex, files: g.count, owned: [] };
   });
 }
 
 /**
- * @typedef {{ name: string, folder: string, paths: string[], publicApi: string[], missingIndex: boolean, files: number,
+ * @typedef {{ name: string, folder: string, folders?: string[], paths: string[], publicApi: string[], missingIndex: boolean, files: number,
  *   owned: { folder: string, files: number, imports: number }[], loose?: string[] }} Domain
+ *   `folder`: the first of `folders` (a route split across groups has several)
  *   `owned`: folders outside the domain folder that only it imports (see inferOwnedFolders)
  *   `loose`: single files outside every domain that only it imports: added to its note, never to its rules
  */
 
-/** `(search)` -> `search`, `tech stack` -> `tech-stack`. */
-const segmentName = (seg) => seg.replace(/^\((.+)\)$/, '$1').replace(/[^\w-]/g, '-');
+/** `(search)` -> `search`, `[slug]` -> `slug`, `tech stack` -> `tech-stack`. */
+const segmentName = (seg) => seg.replace(/^\((.+)\)$/, '$1').replace(/^\[(.+)\]$/, '$1').replace(/[^\w-]/g, '-');
 
 /** `base`, or `base-2`, `base-3`… if taken; records the name as taken. */
 function uniqueName(base, used) {
@@ -185,16 +204,20 @@ export const MAX_SUBMODULES = 12;
  * is followed down to the first level with several folders; those folders are the sub-modules. Notes stack, so an
  * agent working in a sub-module reads the domain's note and the sub-module's. Sub-modules are not domains: no rules.
  * Names are `<domain>/<part>`: the note goes to `.reins/notes/<domain>/<part>.md`.
- * @param {{ name: string, folder: string }} domain
+ * @param {{ name: string, folder: string, folders?: string[] }} domain
  * @param {string[]} files
  * @param {{ edges?: { from: string, to: string }[], entries?: string[], used?: Set<string>, max?: number }} [opts]
  *   `used`: names already taken (domains, other sub-modules); new names are added to it
- * @returns {{ submodules: { name: string, folder: string, paths: string[], publicApi: string[], files: number }[], more: string[] }}
+ * Parts with the same route path in different groups are one part with several folders. A parameter folder with
+ * files of its own (`rating/[slug]/page.js` + `index.js`, the page at `/rating/acme`) is a part too, covering
+ * only those files (`[slug]/*`): its subfolders are parts of their own.
+ * @returns {{ submodules: { name: string, folder: string, folders: string[], paths: string[], publicApi: string[], files: number }[], more: string[] }}
  *   `more`: folders left out by `max` (fewest files first out)
  */
 export function inferSubmodules(domain, files, opts = {}) {
   const { edges = [], entries = [], used = new Set(), max = MAX_SUBMODULES } = opts;
-  const own = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && f.startsWith(`${domain.folder}/`));
+  const roots = domain.folders ?? [domain.folder];
+  const own = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && roots.some((r) => f.startsWith(`${r}/`)));
   const count = (dir) => own.filter((f) => f.startsWith(`${dir}/`)).length;
   const childDirs = (dir) => {
     const names = new Set();
@@ -205,28 +228,44 @@ export function inferSubmodules(domain, files, opts = {}) {
     }
     return [...names].sort().map((n) => `${dir}/${n}`);
   };
-  /** child folders, looking through groups and parameters */
+  const directIn = (dir) => own.filter((f) => f.startsWith(`${dir}/`) && !f.slice(dir.length + 1).includes('/'));
+  /**
+   * Candidate parts under a folder, looking through groups and parameters. `direct`: only the files directly in
+   * the folder (a parameter folder that is a page itself).
+   * @returns {{ dir: string, direct: boolean }[]}
+   */
   const expand = (dir) => childDirs(dir).flatMap((d) => {
     const seg = d.split('/').pop();
-    return GROUP.test(seg) || PARAM.test(seg) ? expand(d) : [d];
+    if (!GROUP.test(seg) && !PARAM.test(seg)) return [{ dir: d, direct: false }];
+    return [...(PARAM.test(seg) && directIn(d).length ? [{ dir: d, direct: true }] : []), ...expand(d)];
   });
-  let level = expand(domain.folder);
-  for (let depth = 0; level.length === 1 && depth < 8; depth++) level = expand(level[0]);
-  if (level.length < 2) return { submodules: [], more: [] };
+  const keyOf = (x) => `${routeKey(x.dir)}${x.direct ? '/*' : ''}`;
+  const keys = (level) => new Set(level.map(keyOf)).size;
+  let level = roots.flatMap(expand);
+  for (let depth = 0; keys(level) === 1 && !level[0].direct && depth < 8; depth++) level = level.flatMap((x) => expand(x.dir));
+  if (keys(level) < 2) return { submodules: [], more: [] };
 
-  const ranked = level.map((folder) => ({ folder, files: count(folder) }))
-    .filter((x) => x.files >= MIN_SUBMODULE_FILES)
-    .sort((a, b) => b.files - a.files || (a.folder < b.folder ? -1 : 1));
-  const kept = ranked.slice(0, max).sort((a, b) => (a.folder < b.folder ? -1 : 1));
+  /** @type {Map<string, { dir: string, direct: boolean }[]>} */
+  const byRoute = new Map();
+  for (const x of level) byRoute.set(keyOf(x), [...(byRoute.get(keyOf(x)) ?? []), x]);
+  const sizeOf = (x) => (x.direct ? directIn(x.dir).length : count(x.dir));
+  const ranked = [...byRoute.values()].map((xs) => ({ xs: xs.sort((a, b) => (a.dir < b.dir ? -1 : 1)), files: xs.reduce((n, x) => n + sizeOf(x), 0) }))
+    .filter((g) => g.files >= MIN_SUBMODULE_FILES)
+    .sort((a, b) => b.files - a.files || (a.xs[0].dir < b.xs[0].dir ? -1 : 1));
+  const kept = ranked.slice(0, max).sort((a, b) => (a.xs[0].dir < b.xs[0].dir ? -1 : 1));
   const entrySet = new Set(entries);
-  const submodules = kept.map(({ folder, files: n }) => ({
-    name: uniqueName(`${domain.name}/${segmentName(folder.split('/').pop())}`, used),
-    folder,
-    paths: [`${folder}/**`],
-    publicApi: publicApiOf(folder, files, edges, entrySet, true).publicApi,
+  const submodules = kept.map(({ xs, files: n }) => ({
+    name: uniqueName(`${domain.name}/${segmentName(xs[0].dir.split('/').pop())}`, used),
+    folder: xs[0].dir,
+    folders: xs.map((x) => x.dir),
+    paths: xs.map((x) => `${x.dir}/${x.direct ? '*' : '**'}`),
+    publicApi: xs.flatMap((x) => {
+      const api = publicApiOf(x.dir, files, edges, entrySet, true).publicApi;
+      return x.direct ? api.filter((f) => !f.slice(x.dir.length + 1).includes('/')) : api;
+    }),
     files: n,
   }));
-  return { submodules, more: ranked.slice(max).map((x) => x.folder) };
+  return { submodules, more: ranked.slice(max).flatMap((g) => g.xs.map((x) => x.dir)) };
 }
 
 /**
