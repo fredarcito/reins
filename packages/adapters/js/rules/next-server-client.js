@@ -5,6 +5,9 @@
 // Enable it in architecture.yml:  - { id: next-server-client, severity: error }
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { stripComments } from '../src/source.js';
+
+export { stripComments };
 
 export const id = 'next-server-client';
 
@@ -22,11 +25,12 @@ export function isClientComponent(source) {
   return /^(['"])use client\1/.test(body);
 }
 
-/** The server-only module a file imports, if any. */
+/** The server-only module a file imports, if any. Imports inside comments don't count. */
 export function serverOnlyImport(source) {
+  const code = stripComments(source);
   for (const mod of SERVER_ONLY_IMPORTS) {
     const re = new RegExp(`(?:from\\s*|import\\s*\\(?\\s*|require\\(\\s*)(['"])${mod.replace('/', '\\/')}\\1`);
-    if (re.test(source)) return mod;
+    if (re.test(code)) return mod;
   }
   return null;
 }

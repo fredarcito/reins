@@ -4,6 +4,7 @@ import path from 'node:path';
 import { cruise, getAvailableTranspilers } from 'dependency-cruiser';
 import { matchesAny } from '@agentreins/core/contract';
 import { readAliases } from './aliases.js';
+import { resolveBarrels } from './barrels.js';
 import { detectFramework } from './detect.js';
 import { loadPreset } from './presets.js';
 
@@ -66,7 +67,7 @@ function kindOf(dependencyTypes) {
 /**
  * @param {string} repoPath
  * @param {{ preset?: string, ignore?: string[] }} [config] the parsed architecture.yml (uses `preset` and `ignore`)
- * @returns {Promise<{ edges: import('@agentreins/core/contract').Edge[], files: string[], entries: string[], warnings: string[] }>}
+ * @returns {Promise<{ edges: import('@agentreins/core/contract').Edge[], files: string[], entries: string[], warnings: string[], barrels: string[], uses: { from: string, to: string }[] }>}
  */
 export async function graph(repoPath, config = {}) {
   // Real path: symlinked workspaces resolve to real paths, which must stay inside the root (macOS /var -> /private/var).
@@ -97,6 +98,8 @@ export async function graph(repoPath, config = {}) {
   const files = output.modules.filter(isLocalFile).map((m) => toPosix(m.source)).sort();
   const edges = [];
   const unresolved = [];
+  /** @type {Map<string, Map<string, string>>} per file: import specifier -> local file it resolves to */
+  const specs = new Map();
   for (const m of output.modules) {
     if (!isLocalFile(m)) continue;
     for (const d of m.dependencies) {
@@ -108,6 +111,8 @@ export async function graph(repoPath, config = {}) {
       if (/(^|\/)node_modules\//.test(d.resolved)) continue;
       if (ignored(toPosix(d.resolved))) continue;
       edges.push({ from: toPosix(m.source), to: toPosix(d.resolved), kind: kindOf(d.dependencyTypes) });
+      if (!specs.has(toPosix(m.source))) specs.set(toPosix(m.source), new Map());
+      /** @type {Map<string, string>} */ (specs.get(toPosix(m.source))).set(d.module, toPosix(d.resolved));
     }
   }
   if (unresolved.length) {
@@ -121,5 +126,7 @@ export async function graph(repoPath, config = {}) {
   const presetName = config.preset ?? detectFramework(root)?.suggestedPreset;
   const entryGlobs = presetName ? loadPreset(presetName).entries : [];
   const entries = files.filter((f) => matchesAny(f, entryGlobs));
-  return { edges, files, entries, warnings };
+  // what each importer really uses through re-export files, for reins init (the rules keep the real edges)
+  const { barrels, uses } = resolveBarrels(root, edges, specs);
+  return { edges, files, entries, warnings, barrels, uses };
 }

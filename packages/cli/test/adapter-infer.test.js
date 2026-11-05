@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveAdapter, candidates } from '../src/adapter.js';
-import { inferLayers, inferDomains, inferSubmodules, findOrphans } from '../src/init/infer.js';
+import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans } from '../src/init/infer.js';
 import { tempDir } from './helpers.js';
 
 const fakeAdapter = (pkgName, { contract = 1, exportsPkg = true, body } = {}) => ({
@@ -75,26 +75,70 @@ test('domains: one per folder, public API from its index, missing index flagged,
   ]);
 });
 
-test('domains from routes: look through [param], skip catch-alls and private folders, public API = what is reached', () => {
+test('domains from routes: look through [param] and (group), skip catch-alls, private folders and lone files', () => {
   const files = [
     'src/app/layout.tsx', 'src/app/[lang]/layout.tsx', 'src/app/[lang]/flights/page.tsx', 'src/app/[lang]/flights/Row.tsx',
-    'src/app/[lang]/flights/Row.test.tsx', 'src/app/[lang]/(search)/page.tsx', 'src/app/[lang]/[...rest]/page.tsx',
-    'src/app/[lang]/[[...opt]]/page.tsx', 'src/app/[lang]/_lib/x.ts', 'src/app/[lang]/[id]/edit/page.tsx', 'src/app/api/ping/route.ts',
+    'src/app/[lang]/flights/Row.test.tsx', 'src/app/[lang]/(search)/page.tsx', 'src/app/[lang]/(search)/results/page.tsx',
+    'src/app/[lang]/(search)/results/Filters.tsx', 'src/app/[lang]/[...rest]/page.tsx',
+    'src/app/[lang]/[[...opt]]/page.tsx', 'src/app/[lang]/_lib/x.ts', 'src/app/[lang]/_lib/y.ts', 'src/app/[lang]/[id]/edit/page.tsx', 'src/app/api/ping/route.ts',
     'src/app/[lang]/shared/util.ts', 'src/app/[lang]/trips/index.ts', 'src/app/[lang]/trips/List.tsx',
+    'src/app/(main)/(legal)/terms/page.tsx',
   ];
+  const small = [];
   const d = inferDomains(['src/app/*'], files, {
     routes: true,
-    entries: ['src/app/[lang]/flights/page.tsx', 'src/app/[lang]/(search)/page.tsx', 'src/app/api/ping/route.ts', 'src/app/[lang]/[id]/edit/page.tsx'],
+    small,
+    entries: ['src/app/[lang]/flights/page.tsx', 'src/app/[lang]/(search)/results/page.tsx', 'src/app/api/ping/route.ts', 'src/app/[lang]/[id]/edit/page.tsx'],
     edges: [{ from: 'src/app/[lang]/trips/List.tsx', to: 'src/app/[lang]/shared/util.ts' }],
   });
   assert.deepEqual(d.map((x) => [x.name, x.folder, x.publicApi.join(','), x.missingIndex, x.files]), [
-    ['search', 'src/app/[lang]/(search)', 'src/app/[lang]/(search)/page.tsx', false, 1],
-    ['edit', 'src/app/[lang]/[id]/edit', 'src/app/[lang]/[id]/edit/page.tsx', false, 1],
+    ['results', 'src/app/[lang]/(search)/results', 'src/app/[lang]/(search)/results/page.tsx', false, 2],
     ['flights', 'src/app/[lang]/flights', 'src/app/[lang]/flights/page.tsx', false, 2],
-    ['shared', 'src/app/[lang]/shared', 'src/app/[lang]/shared/util.ts', false, 1],
     ['trips', 'src/app/[lang]/trips', 'src/app/[lang]/trips/index.ts', false, 2],
-    ['api', 'src/app/api', 'src/app/api/ping/route.ts', false, 1],
   ]);
+  assert.deepEqual(small, ['src/app/(main)/(legal)/terms', 'src/app/[lang]/[id]/edit', 'src/app/[lang]/shared', 'src/app/api']);
+});
+
+test('owned folders: a folder only one route domain imports joins it, decided by imports, never by names', () => {
+  const route = (name) => ({ name, folder: `src/app/(main)/${name}`, paths: [`src/app/(main)/${name}/**`], publicApi: [`src/app/(main)/${name}/page.js`], missingIndex: false, files: 2, owned: [] });
+  const domains = [route('companies'), route('jobs')];
+  const files = [
+    'src/app/(main)/companies/page.js', 'src/app/(main)/companies/index.js', 'src/app/(main)/jobs/page.js', 'src/app/(main)/jobs/index.js',
+    // logic of companies, under a name that has nothing to do with it
+    'src/components/pages/CompanyProfile/Header.js', 'src/components/pages/CompanyProfile/Tabs.js',
+    'src/components/pages/CompanyProfile/charts/Bar.js', 'src/components/pages/CompanyProfile/charts/Line.js',
+    // used only by an owned folder: follows it
+    'src/components/widgets/Rating.js', 'src/components/widgets/Stars.js',
+    // shared for real
+    'src/components/ui/Button.js', 'src/components/ui/Modal.js',
+    // mostly jobs, once from companies
+    'src/components/jobs-list/List.js', 'src/components/jobs-list/Row.js',
+    'src/components/pages/CompanyProfile/Header.test.js',
+  ];
+  const edges = [
+    { from: 'src/app/(main)/companies/index.js', to: 'src/components/pages/CompanyProfile/Header.js' },
+    { from: 'src/app/(main)/companies/index.js', to: 'src/components/pages/CompanyProfile/Tabs.js' },
+    { from: 'src/components/pages/CompanyProfile/Tabs.js', to: 'src/components/pages/CompanyProfile/charts/Bar.js' },
+    { from: 'src/components/pages/CompanyProfile/Header.js', to: 'src/components/widgets/Rating.js' },
+    { from: 'src/components/widgets/Rating.js', to: 'src/components/widgets/Stars.js' },
+    { from: 'src/app/(main)/companies/index.js', to: 'src/components/ui/Button.js' },
+    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/ui/Modal.js' },
+    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/jobs-list/List.js' },
+    { from: 'src/app/(main)/jobs/page.js', to: 'src/components/jobs-list/Row.js' },
+    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/jobs-list/Row.js' },
+    { from: 'src/app/(main)/companies/index.js', to: 'src/components/jobs-list/Row.js' },
+    { from: 'src/components/pages/CompanyProfile/Header.test.js', to: 'src/components/jobs-list/List.js' },
+  ];
+  const { doubtful } = inferOwnedFolders(domains, files, edges, ['src/app/**', 'src/components/**']);
+  assert.deepEqual(domains[0].owned.map((o) => [o.folder, o.files]), [
+    ['src/components/pages/CompanyProfile', 4],
+    ['src/components/widgets', 2],
+  ]);
+  assert.deepEqual(domains[0].paths, ['src/app/(main)/companies/**', 'src/components/pages/CompanyProfile/**', 'src/components/widgets/**']);
+  assert.deepEqual(domains[1].owned, [], 'ui/ is shared, jobs-list/ is also used by companies');
+  assert.deepEqual(doubtful, [{ folder: 'src/components/jobs-list', domain: 'jobs', share: 0.75, imports: 3 }]);
+  assert.equal(importsFromOutside(domains[0], edges), 0);
+  assert.equal(importsFromOutside(domains[0], [...edges, { from: 'src/app/(main)/jobs/index.js', to: 'src/components/widgets/Stars.js' }]), 1, 'owned folders count as the domain');
 });
 
 test('orphans: not imported, not entries, not tests, not config, not .d.ts', () => {

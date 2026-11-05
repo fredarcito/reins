@@ -7,7 +7,7 @@ import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBasel
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
-import { inferLayers, inferDomains, inferSubmodules, findOrphans, hasTypeScript, MAX_SUBMODULES } from '../init/infer.js';
+import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans, hasTypeScript, MAX_SUBMODULES } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { loadNotes } from '../project.js';
@@ -70,7 +70,20 @@ export async function init(ctx) {
   // domain folders first (features/*); a repo organized by routes gets one domain per route folder instead
   let domains = inferDomains(p.domains_from ?? [], graph.files);
   const fromRoutes = !domains.length && Boolean(p.route_domains_from?.length);
-  if (fromRoutes) domains = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true });
+  /** @type {string[]} route folders too small to be domains */
+  const smallRoutes = [];
+  let doubtfulOwned = [];
+  if (fromRoutes) {
+    domains = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true, small: smallRoutes });
+    // a route's logic often lives outside its folder (components/pages/x, components/x…): the graph says where
+    doubtfulOwned = inferOwnedFolders(domains, graph.files, graph.edges, layerInfo.layers.flatMap((l) => l.paths), graph).doubtful;
+  }
+  const entrySet = new Set(graph.entries);
+  const domainFacts = domains.map((d) => ({
+    name: d.name,
+    importedFrom: importsFromOutside(d, graph.edges),
+    closed: fromRoutes && d.publicApi.every((f) => entrySet.has(f)),
+  }));
   const adapterRules = (p.default_rules ?? []).filter((r) => (adapter.rules ?? []).includes(r));
   const yml = renderArchitecture({ adapter: adapterName, preset, date, layers: layerInfo.layers, domains, typescript, adapterRules });
 
@@ -79,7 +92,7 @@ export async function init(ctx) {
   const result = runCheck({ edges: analysis.graph.edges, config: analysis.config, baseline: emptyBaseline(), extra: analysis.extra });
   const baseline = serializeBaseline(createBaseline(result.violations));
   const report = renderReport({
-    date, adapterPackage: packageName, preset, presetReason, detected, layerInfo, domains, fromRoutes, result,
+    date, adapterPackage: packageName, preset, presetReason, detected, layerInfo, domains, fromRoutes, result, smallRoutes, doubtfulOwned, domainFacts,
     orphans: findOrphans(graph.files, graph.entries, graph.edges), warnings: graph.warnings,
     files: graph.files.length, edges: graph.edges.length, typescript,
   });
@@ -121,7 +134,8 @@ export async function init(ctx) {
   writeFileSync(path.join(root, BASELINE_FILE), baseline);
   writeFileSync(path.join(root, INIT_REPORT_FILE), report);
   const drafted = plans.flatMap(({ domain: d, draftDomain, subs }) => [
-    ...(draftDomain ? [writeNoteDraft(root, { name: d.name, paths: d.paths, publicApi: d.publicApi, submodules: subs }, analysis.graph, [], domains, date)] : []),
+    // loose files only this domain uses go in its note (context), not in its rules
+    ...(draftDomain ? [writeNoteDraft(root, { name: d.name, paths: [...d.paths, ...(d.loose ?? [])], publicApi: d.publicApi, submodules: subs }, analysis.graph, [], domains, date)] : []),
     ...subs.map((s) => writeNoteDraft(root, { name: s.name, paths: s.paths, publicApi: s.publicApi, parent: d.name }, analysis.graph, [], domains, date)),
   ].map((r) => r.file));
   // once reins install has run, keep the AGENTS.md notes index in step with the new notes

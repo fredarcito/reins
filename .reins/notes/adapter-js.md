@@ -14,6 +14,7 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - `src/detect.js`: Vite vs Next (and which router) from config files and folders; suggests a preset.
 - `src/presets.js` + `presets/*.yml`: `vite-react`, `next-app`, `next-pages` (layers, `domains_from`, `route_domains_from`, `entries`, `default_rules`).
 - `rules/next-server-client.js`: a `'use client'` file must not reach a module importing `server-only` or `next/headers`.
+- `src/barrels.js`: finds `index.*` files that only re-export and what each importer uses through them (`barrels`, `uses` in the graph result, for `init` only). `src/source.js`: `stripComments`, shared with the rule.
 
 ## How it works
 `graph(repoPath, config)` resolves the real root, refuses to run if there are TS files but no `typescript`, reads aliases, and calls dependency-cruiser with them. It keeps edges between local, non-ignored files, tags each as `static`/`dynamic`/`type`, warns about local-looking imports that did not resolve, and marks entry files from the preset (configured or detected). `evaluate` runs `next-server-client` on the normalized graph when it is enabled in `architecture.yml`.
@@ -28,5 +29,7 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - Silent edge loss is the main risk: an unresolved alias or missing TS just removes edges and `check` passes. Keep the loud failure and the unresolved-import warning.
 - Import nothing from core except `@agentreins/core/contract`.
 - Only `prefix/*` and exact `paths` keys are supported; others warn. Vite `/src` means `<root>/src`.
+- `next-server-client` and `barrels.js` read source text: always match on `stripComments(source)`, never the raw text, or commented-out imports count. Clause regexes must not cross quotes, or one import swallows the next in code without semicolons.
+- `uses` must stay conservative: when an import through a barrel can't be resolved to names, it counts as using every file behind the barrel.
 - Edge paths must be repo-relative POSIX (`validateEdges` rejects anything else).
 - Tests run `node --test "test/**/*.test.js"` explicitly so fixtures under `test/fixtures/` are not executed.

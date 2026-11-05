@@ -128,26 +128,82 @@ function routesRepo(name, files) {
   return dir;
 }
 
-test('next-app without features/: one domain and one note per route folder, looking through [lang]', async () => {
+test('next-app by routes: (groups) are looked through, lone pages left out, logic elsewhere joins its route by imports', async () => {
+  const page = 'export default function Page() { return null; }\n';
   const dir = routesRepo('next-app', {
-    'src/app/orders/page.tsx': 'export default function Page() { return null; }\n',
-    'src/app/[lang]/layout.tsx': 'export default function L({ children }: { children: unknown }) { return children; }\n',
-    'src/app/[lang]/flights/page.tsx': 'import { Row } from "./Row";\nexport default function Page() { return Row; }\n',
-    'src/app/[lang]/flights/Row.tsx': 'export const Row = 1;\n',
-    'src/app/[lang]/(search)/results/page.tsx': 'export default function Page() { return null; }\n',
-    'src/app/[lang]/[...rest]/page.tsx': 'export default function Page() { return null; }\n',
-    'src/app/[lang]/_private/x.ts': 'export const x = 1;\n',
+    'src/app/(main)/layout.tsx': 'export default function L({ children }: { children: unknown }) { return children; }\n',
+    'src/app/(main)/about/page.tsx': page,
+    'src/app/(main)/terms/page.tsx': page,
+    'src/app/(main)/jobs/page.tsx': 'import { JobBoard } from "@/components/JobBoard/JobBoard";\nimport { Button } from "@/components/Button";\nimport { f } from "./filters";\nexport default function Page() { return [JobBoard, Button, f]; }\n',
+    'src/app/(main)/jobs/filters.ts': 'export const f = 1;\n',
+    'src/app/(companies)/companies/[slug]/layout.tsx': 'export default function L({ children }: { children: unknown }) { return children; }\n',
+    'src/app/(companies)/companies/[slug]/page.tsx': 'import { CompanyView } from "@/components/pages/companies/CompanyView";\nimport { Button } from "@/components/Button";\nexport default function Page() { return [CompanyView, Button]; }\n',
+    // the logic of each route lives in components/, under any name: the import graph decides
+    'src/components/pages/companies/CompanyView.tsx': 'import { Header } from "./Header";\nexport const CompanyView = Header;\n',
+    'src/components/pages/companies/Header.tsx': 'export const Header = 1;\n',
+    'src/components/JobBoard/JobBoard.tsx': 'import { JobRow } from "./JobRow";\nexport const JobBoard = JobRow;\n',
+    'src/components/JobBoard/JobRow.tsx': 'export const JobRow = 1;\n',
   });
   const r = await cli(dir, ['init']);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /Domains \(one per route folder\): search, flights, api, orders\n/);
-  assert.match(r.stdout, /Module notes drafted from the code: .*\.reins\/notes\/flights\.md/);
+  assert.match(r.stdout, /Domains \(one per route folder\): companies, jobs\n/, '(main) is a layout group, not a domain');
   const yml = read(dir, '.reins/architecture.yml');
-  assert.match(yml, /flights: \{ paths: \["src\/app\/\[lang\]\/flights\/\*\*"\], public_api: \["src\/app\/\[lang\]\/flights\/page\.tsx"\] \}/);
-  assert.match(read(dir, '.reins/init-report.md'), /each route folder is proposed as a domain/);
-  assert.match(read(dir, '.reins/notes/search.md'), /paths: \["src\/app\/\[lang\]\/\(search\)\/\*\*"\]/);
+  assert.match(yml, /companies: \{ paths: \["src\/app\/\(companies\)\/companies\/\*\*", "src\/components\/pages\/companies\/\*\*"\]/);
+  assert.match(yml, /jobs: \{ paths: \["src\/app\/\(main\)\/jobs\/\*\*", "src\/components\/JobBoard\/\*\*"\]/);
+  assert.doesNotMatch(yml, /components\/Button/, 'shared components stay out of every domain');
+  const report = read(dir, '.reins/init-report.md');
+  assert.match(report, /also `src\/components\/pages\/companies\/` \(2 files, imported only from this domain\)/);
+  assert.match(report, /Route folders left out[^\n]*\n\n- `src\/app\/\(main\)\/about\/`\n- `src\/app\/\(main\)\/terms\/`/);
+  assert.match(report, /`companies`[^\n]* — closed: its public API is only route entry files/);
+  assert.match(read(dir, '.reins/notes/companies.md'), /paths: \["src\/app\/\(companies\)\/companies\/\*\*","src\/components\/pages\/companies\/\*\*"\]/);
   const check = await cli(dir, ['check']);
   assert.equal(check.code, 0, check.stdout + check.stderr);
+});
+
+test('next-app by routes: imports through a barrel count for the file behind it; loose files only one route uses go in its note', async () => {
+  const dir = routesRepo('next-app', {
+    'src/app/(main)/jobs/page.tsx': 'import { JobBoard, Button } from "@/components";\nimport { f } from "./filters";\nexport default function Page() { return [JobBoard, Button, f]; }\n',
+    'src/app/(main)/jobs/filters.ts': 'export const f = 1;\n',
+    'src/app/(companies)/companies/[slug]/layout.tsx': 'export default function L({ children }: { children: unknown }) { return children; }\n',
+    'src/app/(companies)/companies/[slug]/page.tsx': 'import { CompanyView, Button } from "@/components";\nimport { paginaContacto } from "@/components/paginaContacto";\nexport default function Page() { return [CompanyView, Button, paginaContacto]; }\n',
+    'src/components/index.ts': "export * from './JobBoard/JobBoard';\nexport { CompanyView } from './pages/companies/CompanyView';\nexport { Button } from './Button';\n",
+    'src/components/JobBoard/JobBoard.tsx': 'import { JobRow } from "./JobRow";\nexport const JobBoard = JobRow;\n',
+    'src/components/JobBoard/JobRow.tsx': 'export const JobRow = 1;\n',
+    'src/components/pages/companies/CompanyView.tsx': 'import { Header } from "./Header";\nexport const CompanyView = Header;\n',
+    'src/components/pages/companies/Header.tsx': 'export const Header = 1;\n',
+    // flat files with any name, next to shared ones
+    'src/components/paginaContacto.tsx': 'import { hola } from "./hola";\nexport const paginaContacto = hola;\n',
+    'src/components/hola.ts': 'export const hola = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  const yml = read(dir, '.reins/architecture.yml');
+  assert.match(yml, /jobs: \{ paths: \["src\/app\/\(main\)\/jobs\/\*\*", "src\/components\/JobBoard\/\*\*"\]/, 'through the barrel, only jobs uses JobBoard');
+  assert.match(yml, /companies: \{ paths: \["src\/app\/\(companies\)\/companies\/\*\*", "src\/components\/pages\/companies\/\*\*"\]/);
+  assert.doesNotMatch(yml, /hola|paginaContacto|Button/, 'loose files and shared components never go into the rules');
+  assert.match(read(dir, '.reins/notes/companies.md'), /paths: \[[^\]]*"src\/components\/hola\.ts","src\/components\/paginaContacto\.tsx"\]/);
+  assert.match(read(dir, '.reins/init-report.md'), /its note also covers 2 loose file\(s\) only this domain uses: `src\/components\/hola\.ts`, `src\/components\/paginaContacto\.tsx`/);
+  const notes = await cli(dir, ['notes', 'src/components/paginaContacto.tsx']);
+  assert.match(notes.stdout, /Note \.reins\/notes\/companies\.md/);
+  assert.equal((await cli(dir, ['check'])).code, 0);
+});
+
+test('vite-react by routes: a components folder only one route uses joins it; a one-file route is left out', async () => {
+  const dir = routesRepo('vite-react', {
+    'src/App.jsx': "import { Jobs } from './routes/jobs/Jobs';\nimport { Profile } from './routes/profile/Profile';\nexport function App() { return [Jobs, Profile]; }\n",
+    'src/routes/jobs/Jobs.jsx': "import { JobRow } from './JobRow';\nimport { JobList } from '../../components/jobs/JobList';\nimport { Button } from '../../components/Button';\nexport const Jobs = [JobRow, JobList, Button];\n",
+    'src/routes/jobs/JobRow.jsx': 'export const JobRow = 1;\n',
+    'src/routes/profile/Profile.jsx': "import { Button } from '../../components/Button';\nexport const Profile = Button;\n",
+    'src/components/jobs/JobList.jsx': "import { JobItem } from './JobItem';\nexport const JobList = JobItem;\n",
+    'src/components/jobs/JobItem.jsx': 'export const JobItem = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): jobs\n/);
+  assert.match(read(dir, '.reins/architecture.yml'), /jobs: \{ paths: \["src\/routes\/jobs\/\*\*", "src\/components\/jobs\/\*\*"\], public_api: \["src\/routes\/jobs\/Jobs\.jsx"\] \}/);
+  assert.match(read(dir, '.reins/init-report.md'), /Route folders left out[^\n]*\n\n- `src\/routes\/profile\/`/);
+  assert.equal(existsSync(path.join(dir, '.reins/notes/profile.md')), false);
+  assert.equal((await cli(dir, ['check'])).code, 0);
 });
 
 test('next-app route domain with parts: one note per part, the domain note lists them', async () => {
@@ -173,20 +229,6 @@ test('next-app route domain with parts: one note per part, the domain note lists
 
   const notes = await cli(dir, ['notes', `${b}/salaries/Table.tsx`]);
   assert.match(notes.stdout, /companies\.md[\s\S]*companies\/salaries\.md/);
-});
-
-test('vite-react without features/: route folders become domains, public API = what the router imports', async () => {
-  const dir = routesRepo('vite-react', {
-    'src/App.jsx': "import { Jobs } from './routes/jobs/Jobs';\nimport { Profile } from './routes/profile/Profile';\nexport function App() { return [Jobs, Profile]; }\n",
-    'src/routes/jobs/Jobs.jsx': "import { JobRow } from './JobRow';\nexport const Jobs = JobRow;\n",
-    'src/routes/jobs/JobRow.jsx': 'export const JobRow = 1;\n',
-    'src/routes/profile/Profile.jsx': 'export const Profile = 1;\n',
-  });
-  const r = await cli(dir, ['init']);
-  assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /Domains \(one per route folder\): jobs, profile\n/);
-  assert.match(read(dir, '.reins/architecture.yml'), /jobs: \{ paths: \["src\/routes\/jobs\/\*\*"\], public_api: \["src\/routes\/jobs\/Jobs\.jsx"\] \}/);
-  assert.ok(existsSync(path.join(dir, '.reins/notes/profile.md')));
 });
 
 test('no domains at all: init says why there are no notes and how to draft them', async () => {

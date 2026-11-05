@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { isClientComponent, serverOnlyImport, run } from '../rules/next-server-client.js';
+import { isClientComponent, serverOnlyImport, stripComments, run } from '../rules/next-server-client.js';
 
 test('isClientComponent: directive must be the first statement', () => {
   assert.equal(isClientComponent("'use client';\nexport const a = 1;"), true);
@@ -17,6 +17,21 @@ test('serverOnlyImport: server-only and next/headers', () => {
   assert.equal(serverOnlyImport("import { cookies } from 'next/headers';"), 'next/headers');
   assert.equal(serverOnlyImport("const h = await import('next/headers');"), 'next/headers');
   assert.equal(serverOnlyImport("import { NextResponse } from 'next/server';"), null);
+});
+
+test('serverOnlyImport: imports inside comments are not imports', () => {
+  assert.equal(serverOnlyImport("// we used to do: import('next/headers')\nexport const x = 1;"), null);
+  assert.equal(serverOnlyImport("/* import 'server-only' */\nexport const x = 1;"), null);
+  assert.equal(serverOnlyImport("/**\n * Example:\n * import { cookies } from 'next/headers';\n */\nexport const x = 1;"), null);
+  assert.equal(serverOnlyImport("const url = 'https://example.com'; // see docs\nimport 'server-only';"), 'server-only', 'a // inside a string is not a comment');
+  assert.equal(serverOnlyImport("/* old */ import { cookies } from 'next/headers';"), 'next/headers');
+});
+
+test('stripComments: keeps strings and template literals, drops line and block comments', () => {
+  assert.equal(stripComments("a // x\nb /* y */ c"), 'a \nb   c');
+  assert.equal(stripComments("const s = '/* not a comment */'; // gone"), "const s = '/* not a comment */'; ");
+  assert.equal(stripComments('const t = `line // kept\n${x}`;'), 'const t = `line // kept\n${x}`;');
+  assert.equal(stripComments("const e = 'it\\'s // kept';"), "const e = 'it\\'s // kept';");
 });
 
 function repo(files) {

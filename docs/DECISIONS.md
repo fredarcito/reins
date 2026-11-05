@@ -249,6 +249,19 @@ They come from [`VERIFIED.md`](VERIFIED.md). Pending your OK.
 | `note-layout` (warn) | Flags notes deeper than one folder, parts without their module note, and parts whose paths are outside the module's folders | Cheap checks that keep the layout meaningful |
 | Feature domains | Only route domains get parts drafted | Inside `features/x` the subfolders are usually `components/`, `hooks/`: a note per folder would be noise |
 
+## Route domains: groups, lone pages, owned folders (2026-11-05)
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Route groups | `(x)` folders are looked through like `[param]` | In Next a group only shares a layout; `(main)` as a domain mixed unrelated routes. A group holding one feature (`(companies)/companies`) still gives that feature |
+| Lone pages | A route folder needs 2+ source files to be a domain; the rest are listed in the report | Looking through groups would otherwise turn every legal page into a domain with an empty note |
+| Logic outside the route | A folder outside every domain joins a route domain when it has 2+ source files and every runtime import into it (tests and stories excluded) comes from that domain. The highest such folder, skipping layer roots and single-folder containers (`components/pages/` holding only `CompanyProfile/`). Repeats until stable | Decided by the import graph so it works for any convention (`components/pages/x`, `components/x`, `views/x`). Matching folder names was rejected: it breaks on `CompanyProfile/` vs `companies` and covers one convention only |
+| Partial majorities | Above 50% but below 100% only goes to the report; ties are ignored | Adding such a folder would turn the other domains' imports into violations frozen in the baseline |
+| Closed domains | Reported, not warned | A route domain whose public API is only `page.js` is not "unchecked": `domain-boundary` flags any outside import of its files |
+| Feature domains | Unchanged | `features/x` already holds its own components |
+| Barrels | The JS adapter reads `index.*` files that only re-export, and the named imports of their importers, and returns `uses` (importer → file behind the barrel). `init` uses them instead of the edges into and out of barrels; rules keep the real edges. Anything it can't resolve (default or namespace import, dynamic import) counts as using everything behind the barrel | With a `components/index.js` barrel every page imports the same file, so no folder could ever look owned. Text, not a parser, because it is JS-specific (adapter) and the conservative fallback keeps mistakes on the safe side |
+| Loose files | A file outside every owned folder that only one domain uses (directly or through other such files) joins the domain's note paths, never its `architecture.yml` paths | Notes are context and cannot block anyone; a rule built on "used once today" would break the day a second route uses the file |
+
 ## Open
 
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

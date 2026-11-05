@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 · 2026-11-05
+
+- `reins init` on a repo organized by routes: Next route groups `(main)` are looked through like `[param]` folders (they share a layout, they are not features), so `(main)/jobs` becomes the domain `jobs`. A route folder with a single source file (a lone page) is no longer a domain; the report lists it.
+- `reins init` on a repo organized by routes: a folder outside every domain that only one route domain imports (e.g. `components/pages/companies/`, `components/JobBoard/`) joins that domain, decided by the import graph, not by names. Shared folders stay out; folders mostly used by one domain are listed in the report. Notes of those domains include the folders.
+- `reins init` sees through re-export files: with `import { JobBoard } from '@/components'` and a `components/index.js` barrel, the import counts for `components/JobBoard/`, not for every component. The JS adapter returns two new optional fields, `barrels` and `uses` (adapter contract still version 1); rules keep checking the real imports.
+- `reins init`: a loose file only one route uses (`components/paginaContacto.js`) is added to that route's note, never to its rules; the report lists it.
+- The init report says, for each domain, how many imports reach it from outside, and marks domains whose public API is only route files (`page.js`) as closed.
+- Fix: the `next-server-client` rule no longer counts `import 'server-only'` or `import('next/headers')` written inside a comment, which reported client components as reaching server-only code when they didn't. The import graph was not affected (it never read comments).
+- Repos that already ran `reins init`: nothing changes until you run it again. Re-running it proposes different route domains than 0.4.0 (no `(group)` domains, no one-file routes, extra folders per domain); compare with `reins init --dry-run` first.
+
 ## 0.4.0 · 2026-11-05
 
 - Notes for the parts of a module. `reins init` drafts, for each route domain, one note per part with its own logic (e.g. `(companies)/companies/[slug]/salaries`): it looks through `(group)` and `[param]` folders and single-folder chains, needs 2+ source files, at most 12 per domain (the rest are listed). Parts are notes, not domains: no new rules.

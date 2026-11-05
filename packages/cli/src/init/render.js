@@ -54,6 +54,9 @@ const capped = (items) => (items.length > MAX ? [...items.slice(0, MAX), `… an
  * @param {ReturnType<import('./infer.js').inferLayers>} d.layerInfo
  * @param {ReturnType<import('./infer.js').inferDomains>} d.domains
  * @param {boolean} [d.fromRoutes] the domains are route folders (the repo has no domain folders)
+ * @param {string[]} [d.smallRoutes] route folders left out for having too few files
+ * @param {{ folder: string, domain: string, share: number, imports: number }[]} [d.doubtfulOwned]
+ * @param {{ name: string, importedFrom: number, closed: boolean }[]} [d.domainFacts]
  * @param {{ violations: { rule: string, from: string, to?: string, message: string }[] }} d.result
  * @param {string[]} d.orphans
  * @param {string[]} d.warnings
@@ -98,9 +101,9 @@ Folders with source files outside every layer (add them to a layer, or leave the
 ${bullet(capped(d.layerInfo.unclassified.map((u) => `\`${u.folder}/\` (${u.files} files)`)), 'none')}
 
 ## Domains
-${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
-${bullet(d.domains.map((x) => `\`${x.name}\`: \`${x.folder}/\` (${x.files} files), public API ${x.publicApi.map((p) => `\`${p}\``).join(', ')}${x.missingIndex ? ' — **no index file: create it or change public_api**' : ''}`), 'none proposed (no folders matching the preset, e.g. `src/features/*`)')}
-
+${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Route groups `(x)` and parameters `[x]` are looked through, and a route folder with a single source file is left out. Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
+${bullet(d.domains.map((x) => domainLine(x, d.domainFacts?.find((f) => f.name === x.name))), 'none proposed (no folders matching the preset, e.g. `src/features/*`)')}
+${d.smallRoutes?.length ? `\nRoute folders left out (a single source file, e.g. a lone page):\n\n${bullet(capped(d.smallRoutes.map((f) => `\`${f}/\``)), '')}\n` : ''}${d.doubtfulOwned?.length ? `\nFolders mostly used by one domain, but not only: not added to it, since the other imports would become violations. Add them by hand if they belong to it:\n\n${bullet(capped(d.doubtfulOwned.map((x) => `\`${x.folder}/\` → \`${x.domain}\` (${x.imports} of ${Math.round(x.imports / x.share)} imports into it come from that domain)`)), '')}\n` : ''}
 ## Cycles
 
 ${bullet(capped(cycles), 'none')}
@@ -128,4 +131,20 @@ ${bullet(d.warnings, 'none')}
 3. \`reins check\` must pass. Commit \`.reins/architecture.yml\` and \`.reins/baseline.json\`.
 4. This report is only for review; you don't need to commit it.
 `;
+}
+
+/** One domain in the report: folder, extra folders it owns, public API, and what domain-boundary guards. */
+function domainLine(x, facts) {
+  const owned = x.owned?.length
+    ? `; also ${x.owned.map((o) => `\`${o.folder}/\` (${o.files} files, imported only from this domain)`).join(', ')}`
+    : '';
+  const loose = x.loose?.length
+    ? `; its note also covers ${x.loose.length} loose file(s) only this domain uses: ${x.loose.slice(0, 5).map((f) => `\`${f}\``).join(', ')}${x.loose.length > 5 ? ', …' : ''} (not its rules; move them into a folder to make them part of the domain)`
+    : '';
+  const api = `public API ${x.publicApi.map((p) => `\`${p}\``).join(', ')}`;
+  let guard = '';
+  if (x.missingIndex) guard = ' — **no index file: create it or change public_api**';
+  else if (facts?.closed) guard = ` — closed: its public API is only route entry files, which nobody imports, so \`domain-boundary\` flags any import of its files from outside (today: ${facts.importedFrom}). Shared code belongs in a lower layer`;
+  else if (facts) guard = ` — imported from outside: ${facts.importedFrom} time(s)`;
+  return `\`${x.name}\`: \`${x.folder}/\` (${x.files} files)${owned}, ${api}${guard}${loose}`;
 }

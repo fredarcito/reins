@@ -26,7 +26,7 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - 2026-11-04: own glob matcher instead of a dependency (`path.matchesGlob` is experimental in Node 22). First matching layer/domain wins.
 - 2026-11-04: baseline is sorted, has no timestamps, keys are `rule|from|to` (cycles: `no-cycles|<sorted files>`), so diffs in PRs are clean and a growing cycle counts as new.
 - 2026-11-04: integrity only makes changes visible (warn by default); it reports a changed `architecture.yml` and a growing baseline, never first adoption or shrinking.
-- 2026-11-04: contract grew with optional fields (`files`, `entries`, `warnings`, `rules`/`evaluate`, presets) while staying at version 1.
+- 2026-11-04: contract grew with optional fields (`files`, `entries`, `warnings`, `rules`/`evaluate`, presets) while staying at version 1. 2026-11-05: `barrels` and `uses`, read only by `init`.
 
 ## Traps
 - Keep `check` and `doctor` pure: no fs/git reads there (except `check/integrity.js` and `git.js`). The CLI does the I/O.

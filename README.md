@@ -449,7 +449,8 @@ flowchart LR
     scan["Scan the repo<br/>(adapter graph)"] --> layers["Layers: preset folders<br/>that exist, ordered by<br/>dominant import direction"]
     scan --> domains["Domains: one per<br/>features/* folder,<br/>public API = its index"]
     domains -. "no features/" .-> routes["Domains: one per<br/>route folder<br/>(app/*, src/routes/*…)"]
-    routes --> draft
+    routes --> owned["+ folders only that<br/>route imports<br/>(components/…)"]
+    owned --> draft
     routes --> notes["Module notes<br/>(one draft per domain,<br/>plus one per part<br/>of a route domain)"]
     domains --> notes
     layers --> draft["architecture.yml<br/>(draft)"]
@@ -458,6 +459,15 @@ flowchart LR
     run --> baseline["baseline.json<br/>(today's violations)"]
     run --> report["init-report.md<br/>cycles · doubtful deps<br/>orphans · warnings"]
 ```
+
+**Repos organized by routes.** With no `features/*` or `modules/*` folder, each route folder becomes a domain:
+
+- Next route groups `(main)` and parameters `[slug]` are looked through: they share a layout or a URL segment, they are not features. `(companies)/companies/[slug]` gives a domain `companies`.
+- A route folder with a single source file (a lone `page.js`: about, terms…) is left out and listed in the report.
+- A route's logic often lives outside its folder (`components/pages/companies/`, `components/JobBoard/`…). A folder that only one route domain imports joins that domain, whatever its name: the import graph decides, not naming conventions. Folders imported by several domains (`Button/`, `Modal/`) stay shared. A folder mostly, but not only, used by one domain is listed in the report instead, since adding it would turn the other imports into violations.
+- Imports through a re-export file (`import { JobBoard } from '@/components'` with `components/index.js` re-exporting everything) count as imports of the file behind it, so a barrel doesn't make every page look like it uses every component.
+- A loose file only one route uses (`components/paginaContacto.js` next to shared ones) goes in that route's note, so the agent gets the context when it opens the file; it never goes into the rules.
+- The report says, for each domain, how many imports reach it from outside. A domain whose public API is only route files (`page.js`, `layout.js`) is closed: nothing outside may import its files.
 
 | Option | Effect |
 | --- | --- |

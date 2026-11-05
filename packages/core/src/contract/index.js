@@ -31,7 +31,10 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * - files:    every source file the adapter scanned (lets `init` find orphans)
  * - entries:  files that are entry points by convention (Next pages, main.jsx…), never orphans
  * - warnings: problems the user should see, e.g. imports that could not be resolved
- * @typedef {Edge[] | { edges: Edge[], files?: string[], entries?: string[], warnings?: string[] }} GraphResult
+ * - barrels:  files that only re-export other modules (e.g. components/index.js)
+ * - uses:     what an importer really uses through barrels ({ from: importer, to: file behind the barrel }).
+ *             Only `reins init` reads `barrels` and `uses` (to see which domain uses a folder); rules check `edges`.
+ * @typedef {Edge[] | { edges: Edge[], files?: string[], entries?: string[], warnings?: string[], barrels?: string[], uses?: { from: string, to: string }[] }} GraphResult
  */
 
 /**
@@ -65,12 +68,12 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
 /**
  * Normalizes a GraphResult into one shape.
  * @param {GraphResult} result
- * @returns {{ edges: Edge[], files: string[], entries: string[], warnings: string[] }}
+ * @returns {{ edges: Edge[], files: string[], entries: string[], warnings: string[], barrels: string[], uses: { from: string, to: string }[] }}
  */
 export function normalizeGraph(result) {
-  if (Array.isArray(result)) return { edges: result, files: [], entries: [], warnings: [] };
+  if (Array.isArray(result)) return { edges: result, files: [], entries: [], warnings: [], barrels: [], uses: [] };
   const r = /** @type {any} */ (result ?? {});
-  return { edges: r.edges, files: r.files ?? [], entries: r.entries ?? [], warnings: r.warnings ?? [] };
+  return { edges: r.edges, files: r.files ?? [], entries: r.entries ?? [], warnings: r.warnings ?? [], barrels: r.barrels ?? [], uses: r.uses ?? [] };
 }
 
 /**

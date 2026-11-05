@@ -90,23 +90,29 @@ export function inferLayers(presetLayers, files, edges) {
   return { layers, pairs, conflicts, unclassified };
 }
 
-// Route folder segments (Next conventions): `[lang]` is a parameter, not a module, so the domains are its
-// children; catch-alls (`[...rest]`, `[[...slug]]`) and private folders (`_x`) are never domains.
+// Route folder segments (Next conventions): `[lang]` is a parameter and `(main)` a route group (routes sharing a
+// layout), not modules, so the domains are their children; catch-alls (`[...rest]`, `[[...slug]]`) and private
+// folders (`_x`) are never domains.
 const PARAM = /^\[[^.[\]][^\]]*\]$/;
+const GROUP = /^\(.+\)$/;
 const SKIPPED = /^(\[\[?\.\.\.|_)/;
+/** A route folder needs at least this many source files to be a domain (a lone page.js is not a module). */
+export const MIN_ROUTE_FILES = 2;
 
 /**
  * Proposes one domain per folder matching `domains_from` (e.g. every child of src/features/).
- * With `routes`, a matching folder that is a route parameter (`[lang]`) is looked through to its children.
+ * With `routes`, a matching folder that is a route parameter (`[lang]`) or a route group (`(main)`) is looked
+ * through to its children, and a route folder with fewer than MIN_ROUTE_FILES source files is left out (listed
+ * in `opts.small` when given).
  * Public API: the folder's `index.*`; for routes without one, the files imported from outside the folder plus
  * the entry points inside it (e.g. Next's page.tsx); otherwise an `index.js` placeholder flagged as missing.
  * @param {string[]} domainsFrom globs of domain folders
  * @param {string[]} files
- * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean }} [opts]
- * @returns {{ name: string, folder: string, paths: string[], publicApi: string[], missingIndex: boolean, files: number }[]}
+ * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean, small?: string[] }} [opts]
+ * @returns {Domain[]}
  */
 export function inferDomains(domainsFrom, files, opts = {}) {
-  const { edges = [], entries = [], routes = false } = opts;
+  const { edges = [], entries = [], routes = false, small = [] } = opts;
   const folders = new Map();
   for (const f of files) {
     if (!SOURCE.test(f) || (routes && TEST.test(f))) continue;
@@ -114,10 +120,11 @@ export function inferDomains(domainsFrom, files, opts = {}) {
     for (let i = 1; i < parts.length; i++) {
       if (!matchesAny(parts.slice(0, i).join('/'), domainsFrom)) continue;
       let end = i;
-      while (routes && PARAM.test(parts[end - 1]) && end < parts.length - 1) end++;
+      const through = (seg) => PARAM.test(seg) || GROUP.test(seg);
+      while (routes && through(parts[end - 1]) && end < parts.length - 1) end++;
       const seg = parts[end - 1];
       const isFolder = end < parts.length;
-      if (isFolder && !(routes && (SKIPPED.test(seg) || PARAM.test(seg)))) {
+      if (isFolder && !(routes && (SKIPPED.test(seg) || through(seg)))) {
         const dir = parts.slice(0, end).join('/');
         folders.set(dir, (folders.get(dir) ?? 0) + 1);
       }
@@ -126,11 +133,20 @@ export function inferDomains(domainsFrom, files, opts = {}) {
   }
   const used = new Set();
   const entrySet = new Set(entries);
-  return [...folders].sort(([a], [b]) => (a < b ? -1 : 1)).map(([folder, count]) => {
+  const sorted = [...folders].sort(([a], [b]) => (a < b ? -1 : 1));
+  if (routes) small.push(...sorted.filter(([, n]) => n < MIN_ROUTE_FILES).map(([f]) => f));
+  return sorted.filter(([, n]) => !routes || n >= MIN_ROUTE_FILES).map(([folder, count]) => {
     const name = uniqueName(segmentName(folder.split('/').pop()), used);
-    return { name, folder, paths: [`${folder}/**`], ...publicApiOf(folder, files, edges, entrySet, routes), files: count };
+    return { name, folder, paths: [`${folder}/**`], ...publicApiOf(folder, files, edges, entrySet, routes), files: count, owned: [] };
   });
 }
+
+/**
+ * @typedef {{ name: string, folder: string, paths: string[], publicApi: string[], missingIndex: boolean, files: number,
+ *   owned: { folder: string, files: number, imports: number }[], loose?: string[] }} Domain
+ *   `owned`: folders outside the domain folder that only it imports (see inferOwnedFolders)
+ *   `loose`: single files outside every domain that only it imports: added to its note, never to its rules
+ */
 
 /** `(search)` -> `search`, `tech stack` -> `tech-stack`. */
 const segmentName = (seg) => seg.replace(/^\((.+)\)$/, '$1').replace(/[^\w-]/g, '-');
@@ -158,7 +174,6 @@ function publicApiOf(folder, files, edges, entrySet, routes) {
   return { publicApi, missingIndex: !index.length && !reached.length };
 }
 
-const GROUP = /^\(.+\)$/;
 /** A sub-module needs at least this many source files (a lone page.js is not worth a note). */
 const MIN_SUBMODULE_FILES = 2;
 /** At most this many sub-modules per domain get a note drafted; the rest are listed so they can be drafted by hand. */
@@ -230,3 +245,121 @@ export function findOrphans(files, entries, edges) {
 
 /** True if the repo has TypeScript sources. */
 export const hasTypeScript = (files) => files.some((f) => /\.(ts|tsx|mts|cts)$/.test(f) && !f.endsWith('.d.ts'));
+
+/** Below a share of 1, a folder used mostly by one domain is only reported (as doubtful) above this share: a tie is not ownership. */
+export const DOUBTFUL_SHARE = 0.5;
+
+/** Folders a layer glob starts from: `src/{lib,hooks}/**` -> `src/lib`, `src/hooks`. */
+function globRoots(glob) {
+  const m = /^([^{]*)\{([^}]*)\}(.*)$/.exec(glob);
+  const expanded = m ? m[2].split(',').map((alt) => `${m[1]}${alt}${m[3]}`) : [glob];
+  return expanded.map((g) => {
+    const cut = g.search(/[*?{]/);
+    const head = cut === -1 ? g : g.slice(0, cut);
+    return cut === -1 ? head.replace(/\/[^/]*$/, '') : head.replace(/\/$/, '');
+  });
+}
+
+/**
+ * Folders outside every domain that only one domain uses. In a repo organized by routes, the logic of a route
+ * often lives elsewhere (`components/pages/companies/`, `components/companies/`, `views/companies/`…), whatever
+ * its name: this is decided by the import graph, never by folder names.
+ * A folder belongs to a domain when it has 2+ source files and every import into it from outside it comes from
+ * that domain (tests and stories don't count). The highest such folder is taken; layer roots and the folders
+ * above them never are. It repeats until stable, so a folder used only by an owned folder follows it.
+ * A folder where one domain has most imports, but not all, is only returned as doubtful: putting it in the
+ * domain would turn the other imports into violations.
+ * Files outside every folder that could be owned (`components/paginaContacto.js` next to `components/Button.js`)
+ * that only one domain imports are returned in the domain's `loose`: they belong in its note (context), not in
+ * its rules, since one file used once today may be shared tomorrow.
+ * Imports through re-export files (`components/index.js`) count as imports of the file behind them, as the
+ * adapter resolved them (`barrels`, `uses`); otherwise a barrel would make every page seem to use every component.
+ * @param {Domain[]} domains mutated: owned folders are added to `paths` and `owned`, loose files to `loose`
+ * @param {string[]} files
+ * @param {{ from: string, to: string }[]} edges
+ * @param {string[]} layerGlobs paths of every layer
+ * @param {{ barrels?: string[], uses?: { from: string, to: string }[] }} [through] from the adapter
+ * @returns {{ doubtful: { folder: string, domain: string, share: number, imports: number }[] }}
+ */
+export function inferOwnedFolders(domains, files, edges, layerGlobs, through = {}) {
+  const barrels = new Set(through.barrels ?? []);
+  const sources = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && !barrels.has(f));
+  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !TEST.test(e.from));
+  const domainOf = (f) => domains.find((d) => matchesAny(f, d.paths));
+  const roots = [...new Set(layerGlobs.flatMap(globRoots))];
+  const rootOrAbove = (dir) => roots.some((r) => r === dir || r.startsWith(`${dir}/`));
+  /** @type {Map<string, { domain: string, share: number, imports: number }>} */
+  let mostly = new Map();
+  for (let round = 0; round < 5; round++) {
+    const free = sources.filter((f) => !domainOf(f));
+    const dirs = new Set();
+    for (const f of free) {
+      const parts = f.split('/');
+      for (let i = 2; i < parts.length; i++) dirs.add(parts.slice(0, i).join('/'));
+    }
+    const ordered = [...dirs].filter((d) => !rootOrAbove(d)).sort((a, b) => a.split('/').length - b.split('/').length || (a < b ? -1 : 1));
+    const taken = [];
+    mostly = new Map();
+    for (const dir of ordered) {
+      if (taken.some((t) => dir.startsWith(`${t}/`))) continue;
+      const inside = (f) => f.startsWith(`${dir}/`);
+      const own = free.filter(inside);
+      if (own.length < 2 || sources.some((f) => inside(f) && domainOf(f))) continue;
+      const incoming = runtime.filter((e) => inside(e.to) && !inside(e.from));
+      const by = new Map();
+      for (const e of incoming) {
+        const d = domainOf(e.from)?.name ?? '';
+        by.set(d, (by.get(d) ?? 0) + 1);
+      }
+      const [top, n] = [...by].filter(([d]) => d).sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
+      if (!top) continue;
+      const share = n / incoming.length;
+      if (share === 1) {
+        // a container with a single folder and no files of its own (`components/pages/` holding only
+        // `CompanyProfile/`) is a convention, not the module: take the folder inside, so later siblings stay free
+        let target = dir;
+        for (;;) {
+          const rest = own.map((f) => f.slice(target.length + 1).split('/'));
+          const kids = new Set(rest.filter((r) => r.length > 1).map((r) => r[0]));
+          if (kids.size !== 1 || rest.some((r) => r.length === 1)) break;
+          target = `${target}/${[...kids][0]}`;
+        }
+        const d = /** @type {Domain} */ (domains.find((x) => x.name === top));
+        d.paths.push(`${target}/**`);
+        d.owned.push({ folder: target, files: own.length, imports: n });
+        taken.push(dir);
+      } else if (share > DOUBTFUL_SHARE) {
+        mostly.set(dir, { domain: top, share, imports: n });
+      }
+    }
+    if (!taken.length) break;
+  }
+  // report the deepest doubtful folders only: a parent is doubtful because of them
+  const doubtful = [...mostly]
+    .filter(([dir]) => ![...mostly.keys()].some((o) => o.startsWith(`${dir}/`)) && !domains.some((d) => d.owned.some((x) => x.folder.startsWith(`${dir}/`))))
+    .map(([folder, x]) => ({ folder, ...x }));
+
+  // loose files: only one domain uses them (directly, or through other loose files of that domain)
+  /** @type {Map<string, string>} */
+  const looseOf = new Map();
+  const ownerOf = (f) => domainOf(f)?.name ?? looseOf.get(f) ?? '';
+  for (let round = 0, grew = true; grew && round < 5; round++) {
+    grew = false;
+    for (const f of sources) {
+      if (domainOf(f) || looseOf.has(f)) continue;
+      const users = new Set(runtime.filter((e) => e.to === f && e.from !== f).map((e) => ownerOf(e.from)));
+      if (users.size === 1 && !users.has('')) {
+        looseOf.set(f, [...users][0]);
+        grew = true;
+      }
+    }
+  }
+  for (const [f, name] of [...looseOf].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    const d = /** @type {Domain} */ (domains.find((x) => x.name === name));
+    (d.loose ??= []).push(f);
+  }
+  return { doubtful };
+}
+
+/** Imports into a domain's files from outside it. */
+export const importsFromOutside = (domain, edges) => edges.filter((e) => matchesAny(e.to, domain.paths) && !matchesAny(e.from, domain.paths)).length;
