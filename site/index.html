@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reins</title>
+<meta name="description" content="Hold the reins of your coding agents: your architecture enforced as a check on every commit, and module memory that survives compaction. MIT-licensed CLI for Vite + React and Next teams.">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="%23171a18"/><text x="16" y="22" font-family="monospace" font-size="16" font-weight="bold" fill="%23f5f4f0" text-anchor="middle">r/</text></svg>'>
+<script>document.documentElement.classList.add("js");</script>
+<style>
+/* Layout concept: an engineering field manual on paper — one 1080px column,
+   hairline-ruled panels, mono uppercase eyebrows, figures numbered like plates. */
+:root {
+  --paper: #f5f4f0;
+  --panel: #fffefa;
+  --ink: #171a18;
+  --muted: #555d57;
+  --faint: #747a74;
+  --line: #d9d9d2;
+  --line-strong: #bfc2bb;
+  --green: #215e49;
+  --green-deep: #174b39;
+  --green-soft: #edf2ec;
+  --green-line: #a9b8aa;
+  --red: #a54135;
+  --red-deep: #7a3b34;
+  --red-soft: #fbf0ed;
+  --amber: #8a6116;
+  --dark-line: #3d443f;
+  --dark-text: #c4c9c2;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --scale-1: 12px; --scale-2: 14px; --scale-3: 16px; --scale-4: 18px;
+  --scale-5: 22px; --scale-6: 30px; --scale-7: 44px;
+  color-scheme: light;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+[id] { scroll-margin-top: 76px; } /* sticky header offset for #anchor navigation */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--scale-3);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; }
+a { color: inherit; }
+h1, h2, h3 { text-wrap: balance; }
+.mono { font-family: var(--font-mono); }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--scale-1);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  html { scroll-behavior: auto; }
+  html.js [data-reveal] { opacity: 1; transform: none; }
+  .terminal.typing > div { opacity: 1; transform: none; }
+}
+
+/* ---------- header ---------- */
+header.site {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.site-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 1px solid var(--ink);
+  font-family: var(--font-mono); font-weight: 700; font-size: var(--scale-3);
+}
+.brand-name { font-size: var(--scale-4); font-weight: 650; letter-spacing: -0.01em; }
+.brand-tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+nav.top { display: flex; align-items: center; gap: 22px; }
+nav.top a { font-size: var(--scale-2); color: var(--muted); text-decoration: none; }
+nav.top a:hover { color: var(--green); }
+nav.top a.gh {
+  border: 1px solid var(--ink); color: var(--ink);
+  padding: 8px 14px; font-weight: 600;
+}
+nav.top a.gh:hover { background: var(--ink); color: #fff; }
+@media (max-width: 760px) { nav.top a:not(.gh) { display: none; } .brand-tag { display: none; } }
+
+/* ---------- hero ---------- */
+.hero { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr); gap: 44px; align-items: center; padding-block: 64px 72px; }
+.hero > div { min-width: 0; }
+.hero h1 { font-size: var(--scale-7); font-weight: 700; letter-spacing: -0.025em; line-height: 1.05; margin-block: 18px 20px; }
+.hero .lede { font-size: var(--scale-4); color: var(--muted); max-width: 34em; }
+.hero-props { margin-top: 26px; display: grid; gap: 10px; }
+.hero-props li { list-style: none; display: flex; gap: 10px; font-size: var(--scale-3); align-items: baseline; }
+.hero-props .tick { color: var(--green); font-weight: 700; }
+.install {
+  margin-top: 28px; display: flex; align-items: stretch;
+  border: 1px solid var(--line-strong); background: var(--panel);
+}
+.install code {
+  font-family: var(--font-mono); font-size: var(--scale-2);
+  padding: 13px 16px; overflow-x: auto; min-width: 0; flex: 1; white-space: nowrap;
+}
+.install code .pkg { color: var(--green); font-weight: 600; }
+.copy-btn {
+  border: 0; border-left: 1px solid var(--line-strong); background: var(--green);
+  color: #fff; font-family: var(--font-mono); font-size: var(--scale-1);
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 0 18px; cursor: pointer;
+}
+.copy-btn:hover { background: var(--green-deep); }
+.hero-meta { margin-top: 16px; font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+
+/* blocked-commit plate */
+.plate { border: 1px solid var(--line-strong); background: var(--panel); }
+.plate-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border-bottom: 1px solid var(--line); padding: 10px 18px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+}
+.plate-head .live { color: var(--green); }
+.terminal {
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7;
+  padding: 18px; overflow-x: auto; min-width: 0;
+}
+.terminal .cmd { color: var(--ink); }
+.terminal .cmd::before { content: "$ "; color: var(--faint); }
+.terminal .err { color: var(--red); font-weight: 600; }
+.terminal .why { color: var(--muted); }
+.terminal .fix { color: var(--green); }
+.terminal .dim { color: var(--faint); }
+.plate-foot { border-top: 1px solid var(--line); padding: 10px 18px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+@media (max-width: 900px) { .hero { grid-template-columns: minmax(0, 1fr); padding-block: 44px 56px; gap: 36px; } .hero h1 { font-size: 34px; } }
+
+/* ---------- sections ---------- */
+section { padding-block: 72px; }
+section + section { border-top: 1px solid var(--line); }
+.sec-head { max-width: 760px; margin-bottom: 36px; }
+.sec-head h2 { font-size: var(--scale-6); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-block: 12px 14px; }
+.sec-head p { color: var(--muted); font-size: var(--scale-4); }
+
+/* without / with */
+.ww { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line-strong); background: var(--panel); }
+.ww-col + .ww-col { border-left: 1px solid var(--line); }
+.ww-col > header { padding: 14px 22px; border-bottom: 1px solid var(--line); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.ww-col.with > header { color: var(--green); background: var(--green-soft); }
+.ww-col ul { list-style: none; }
+.ww-col li { display: flex; gap: 12px; padding: 14px 22px; font-size: var(--scale-2); line-height: 1.55; align-items: baseline; }
+.ww-col li + li { border-top: 1px solid var(--line); }
+.ww-col .mark { font-family: var(--font-mono); font-weight: 700; flex-shrink: 0; }
+.ww-col.without .mark { color: var(--red); }
+.ww-col.with .mark { color: var(--green); }
+.ww-col.without li { color: var(--muted); background: var(--paper); }
+@media (max-width: 820px) { .ww { grid-template-columns: minmax(0, 1fr); } .ww-col + .ww-col { border-left: 0; border-top: 1px solid var(--line); } }
+
+/* check flow */
+.flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; margin-bottom: 40px; }
+.flow .stage {
+  flex: 1 1 150px; min-width: 150px; border: 1px solid var(--line-strong); background: var(--panel);
+  padding: 12px 14px;
+}
+.flow .stage b { display: block; font-family: var(--font-mono); font-size: 12.5px; margin-bottom: 4px; }
+.flow .stage span { font-size: 12px; color: var(--muted); line-height: 1.5; display: block; }
+.flow .arrow { align-self: center; color: var(--faint); font-size: 18px; }
+.flow .stage.blocked { border-color: var(--red); background: var(--red-soft); }
+.flow .stage.blocked b { color: var(--red); }
+
+/* finding demo */
+.demo { border: 1px solid var(--line-strong); background: var(--panel); }
+.demo-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding: 10px 18px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.scenarios { display: flex; gap: 8px; flex-wrap: wrap; }
+.scenarios button {
+  font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.06em;
+  border: 1px solid var(--line-strong); background: var(--paper); color: var(--muted);
+  padding: 7px 12px; cursor: pointer;
+}
+.scenarios button:hover { border-color: var(--green); color: var(--green); }
+.scenarios button[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #fff; }
+.demo-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+.demo-map { padding: 20px; border-right: 1px solid var(--line); display: flex; align-items: center; }
+.demo-map svg { width: 100%; height: auto; display: block; }
+.demo-out { min-width: 0; }
+.demo-out .terminal { padding: 20px; }
+.demo-note { border-top: 1px solid var(--line); padding: 12px 20px; font-size: 12px; color: var(--faint); font-family: var(--font-mono); }
+@media (max-width: 820px) { .demo-body { grid-template-columns: minmax(0, 1fr); } .demo-map { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* rules table */
+.rules { margin-top: 40px; border: 1px solid var(--line-strong); }
+.rules table { width: 100%; border-collapse: collapse; background: var(--panel); }
+.rules th { text-align: left; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); font-weight: 600; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.rules td { padding: 13px 18px; font-size: var(--scale-2); vertical-align: top; border-bottom: 1px solid var(--line); }
+.rules tr:last-child td { border-bottom: 0; }
+.rules code { font-family: var(--font-mono); font-size: 12.5px; color: var(--green); font-weight: 600; white-space: nowrap; }
+.rules .opt { font-family: var(--font-mono); font-size: 10px; color: var(--amber); letter-spacing: 0.1em; text-transform: uppercase; margin-left: 8px; }
+.rules td:last-child { color: var(--muted); }
+.baseline-strip {
+  margin-top: 24px; display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start;
+  border-left: 3px solid var(--green); background: var(--green-soft); padding: 18px 22px;
+}
+.baseline-strip .mono { font-size: 12.5px; color: var(--green); font-weight: 600; white-space: nowrap; padding-top: 2px; }
+.baseline-strip p { font-size: var(--scale-2); color: var(--muted); line-height: 1.6; }
+.baseline-strip p b { color: var(--ink); }
+@media (max-width: 640px) { .baseline-strip { grid-template-columns: minmax(0, 1fr); } }
+
+/* memory */
+.memory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.doc-card { border: 1px solid var(--line-strong); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
+.doc-head { border-bottom: 1px solid var(--line); padding: 12px 18px; display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.doc-head .path { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.doc-head .scope { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.doc-body { padding: 6px 18px 14px; }
+.doc-body h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); margin-top: 14px; }
+.doc-body p { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-top: 3px; }
+.compaction { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+.compaction .step { flex: 1 1 190px; min-width: 190px; border: 1px solid var(--line-strong); background: var(--panel); padding: 14px 16px; }
+.compaction .step b { display: block; font-size: 14px; margin-bottom: 4px; }
+.compaction .step span { font-size: 12.5px; color: var(--muted); display: block; line-height: 1.5; }
+.compaction .step .n { font-family: var(--font-mono); font-size: 11px; color: var(--green); letter-spacing: 0.1em; display: block; margin-bottom: 6px; }
+.compaction .arrow { align-self: center; color: var(--faint); }
+@media (max-width: 820px) { .memory-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* enforced vs instructed */
+.ei { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.ei-col { border: 1px solid var(--line-strong); background: var(--panel); min-width: 0; }
+.ei-col > header { padding: 14px 20px; border-bottom: 1px solid var(--line); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.ei-col.enforced > header { color: var(--green); background: var(--green-soft); }
+.ei-col.instructed > header { color: var(--amber); }
+.ei-col ul { list-style: none; padding: 8px 0; }
+.ei-col li { padding: 9px 20px; font-size: var(--scale-2); color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
+.ei-col .mark { font-family: var(--font-mono); flex-shrink: 0; font-weight: 700; }
+.ei-col.enforced .mark { color: var(--green); }
+.ei-col.instructed .mark { color: var(--amber); }
+@media (max-width: 820px) { .ei { grid-template-columns: minmax(0, 1fr); } }
+
+/* skills */
+.skills { border: 1px solid var(--line-strong); overflow-x: auto; }
+.skills table { width: 100%; border-collapse: collapse; background: var(--panel); min-width: 560px; }
+.skills th { text-align: left; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.skills td { padding: 12px 18px; font-size: var(--scale-2); border-bottom: 1px solid var(--line); vertical-align: top; }
+.skills tr:last-child td { border-bottom: 0; }
+.skills code { font-family: var(--font-mono); font-size: 12.5px; color: var(--green); font-weight: 600; white-space: nowrap; }
+.skills td:last-child { color: var(--faint); font-size: 13.5px; }
+
+/* status */
+.status-band { background: var(--ink); color: #f2f3ed; margin-inline: calc(50% - 50vw); padding-block: 72px; }
+.status-band .eyebrow { color: #9cc5ac; }
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
+.status-col { border: 1px solid var(--dark-line); padding: 20px 22px; min-width: 0; }
+.status-col > h3 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 14px; font-weight: 600; }
+.status-col.stable > h3 { color: #b9d7c2; }
+.status-col.exp > h3 { color: #f0c47d; }
+.status-col ul { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.status-col li { font-family: var(--font-mono); font-size: 12.5px; border: 1px solid var(--dark-line); padding: 6px 11px; color: var(--dark-text); }
+.status-col.stable li { border-color: #2e5c48; color: #d9e8de; }
+.status-col p { margin-top: 14px; font-size: 13px; color: #9aa19b; line-height: 1.6; }
+.status-col a { color: #b9d7c2; }
+@media (max-width: 820px) { .status-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* quick start */
+.qs { counter-reset: step; display: grid; gap: 12px; }
+.qs-step { border: 1px solid var(--line-strong); background: var(--panel); display: grid; grid-template-columns: 44px 1fr; }
+.qs-step .num { border-right: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); color: var(--green); font-weight: 700; }
+.qs-step .content { padding: 14px 18px; min-width: 0; }
+.qs-step .content p { font-size: var(--scale-2); color: var(--muted); margin-top: 6px; }
+.qs-step .content p a { color: var(--green); }
+.qs-cmd { display: flex; align-items: stretch; border: 1px solid var(--line-strong); background: var(--paper); }
+.qs-cmd code { font-family: var(--font-mono); font-size: 13px; padding: 10px 14px; flex: 1; overflow-x: auto; white-space: nowrap; min-width: 0; }
+.qs-cmd button { border: 0; border-left: 1px solid var(--line-strong); background: var(--panel); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 0 14px; cursor: pointer; color: var(--green); }
+.qs-cmd button:hover { background: var(--green); color: #fff; }
+.qs-cmd button.copied { background: var(--green); color: #fff; }
+.qs-note { border-left: 3px solid var(--line-strong); padding: 6px 0 6px 18px; font-size: var(--scale-2); color: var(--muted); max-width: 820px; }
+.qs-note b { color: var(--ink); }
+
+/* footer + cta */
+.cta { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: end; padding-block: 72px; }
+.cta h2 { font-size: var(--scale-6); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-top: 12px; max-width: 22em; }
+.btn-primary { display: inline-block; background: var(--green); color: #fff; text-decoration: none; font-weight: 600; font-size: var(--scale-2); padding: 14px 22px; border: 1px solid var(--green); }
+.btn-primary:hover { background: var(--green-deep); border-color: var(--green-deep); }
+footer.site { border-top: 1px solid var(--line); padding-block: 32px; }
+.foot-inner { display: flex; flex-wrap: wrap; gap: 16px 32px; justify-content: space-between; font-size: 13.5px; color: var(--muted); }
+.foot-inner a { color: var(--muted); }
+.foot-inner a:hover { color: var(--green); }
+.foot-links { display: flex; gap: 20px; flex-wrap: wrap; }
+@media (max-width: 700px) { .cta { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- motion ---------- */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+@keyframes dashMarch { to { stroke-dashoffset: -18; } } /* dasharray is "5 4": -18 = two full periods, so the loop is seamless */
+@keyframes nudge {
+  0% { transform: translateX(0); } 20% { transform: translateX(3px); }
+  45% { transform: translateX(-2px); } 70% { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
+
+/* hero entrance (plays on load, staggered) */
+.hero > div:first-child > * { animation: fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+.hero > div:first-child > *:nth-child(2) { animation-delay: 0.06s; }
+.hero > div:first-child > *:nth-child(3) { animation-delay: 0.12s; }
+.hero > div:first-child > *:nth-child(4) { animation-delay: 0.18s; }
+.hero > div:first-child > *:nth-child(5) { animation-delay: 0.24s; }
+.hero > div:first-child > *:nth-child(6) { animation-delay: 0.3s; }
+.hero .plate { animation: fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) 0.22s both; }
+.brand-mark { transition: transform 0.25s ease; }
+.brand:hover .brand-mark { transform: rotate(-6deg); }
+
+/* terminal type-in (armed by JS, plays when the terminal first enters the viewport) */
+.terminal.typing > div { opacity: 0; transform: translateX(-6px); }
+.terminal.typing > div.shown { opacity: 1; transform: none; transition: opacity 0.22s ease, transform 0.22s ease; }
+.terminal.typing > div.fail-line.shown { animation: nudge 0.5s ease 0.15s 1; }
+.t-cursor { display: inline-block; width: 8px; height: 13px; background: var(--green); animation: blink 1.1s steps(1) infinite; }
+
+/* finding demo: scene crossfade + marching dashes on the violating import */
+#demo-map g.sc { animation: fadeIn 0.35s ease both; }
+#demo-map path.march { animation: dashMarch 1.1s linear infinite; }
+
+/* scroll reveal (armed only when JS runs; stagger within a group via --reveal-delay) */
+html.js [data-reveal] { opacity: 0; transform: translateY(16px); }
+html.js [data-reveal].revealed {
+  opacity: 1; transform: none;
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.7, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0s);
+}
+
+/* hover polish */
+.scenarios button, .qs-cmd button, .copy-btn, nav.top a, .btn-primary, .foot-inner a,
+.flow .stage, .qs-step { transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+.flow .stage:hover { border-color: var(--ink); }
+
+/* gate scene: agents, one gate */
+.gate-panel { border: 1px solid var(--line-strong); background: var(--panel); }
+.gate-panel svg { width: 100%; height: auto; display: block; }
+.gate-panel .track { stroke: var(--line-strong); stroke-dasharray: 4 5; }
+.gate-panel .track-head { fill: var(--line-strong); }
+.gate-panel .dock-tick { stroke: var(--line-strong); }
+.gate-panel .lbl { font-family: var(--font-mono); font-size: 10px; fill: var(--faint); letter-spacing: 0.08em; }
+.gate-panel .gline { stroke: var(--line-strong); stroke-dasharray: 2 4; }
+.gate-panel .stack { fill: var(--panel); stroke: var(--ink); stroke-width: 1; }
+.gate-panel .body { fill: var(--panel); stroke: var(--ink); stroke-width: 1.2; }
+.gate-panel .body-lbl { font-family: var(--font-mono); font-size: 10px; fill: var(--muted); }
+.gate-panel .stem { stroke: var(--line-strong); }
+.gate-panel .tag-red { fill: var(--red-soft); stroke: var(--red); }
+.gate-panel .tag-green { fill: var(--green-soft); stroke: var(--green); }
+.gate-panel .txt-red { font-family: var(--font-mono); font-size: 9.5px; fill: var(--red); font-weight: 600; }
+.gate-panel .txt-green { font-family: var(--font-mono); font-size: 9.5px; fill: var(--green); font-weight: 600; }
+#gate-state { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+.gate-panel .gate-bar { fill: var(--red); transition: transform 0.5s ease, fill 0.3s ease; }
+.gate-panel .gate-bar.open { transform: translateY(-42px); fill: var(--green); }
+.gate-panel .agent { transition: transform 1s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.5s ease; }
+.gate-panel .no-anim { transition: none !important; }
+.gate-panel .fade { transition: opacity 0.3s ease; }
+.gate-panel .hide { opacity: 0; }
+@keyframes gateNudge { 0% { transform: translateX(0); } 25% { transform: translateX(-4px); } 55% { transform: translateX(3px); } 100% { transform: translateX(0); } }
+.gate-panel .agent-inner.nudge { animation: gateNudge 0.45s ease 1; }
+@keyframes mainPulse { from { opacity: 0.9; } to { opacity: 0; } }
+#main-pulse { opacity: 0; fill: none; stroke: var(--green); stroke-width: 1.5; }
+#main-pulse.on { animation: mainPulse 0.9s ease-out 1; }
+
+/* notes scene: per-module context delivery */
+.notes-panel { border: 1px solid var(--line-strong); background: var(--panel); }
+.notes-panel svg { width: 100%; height: auto; display: block; }
+.notes-panel .lbl { font-family: var(--font-mono); font-size: 10px; fill: var(--faint); letter-spacing: 0.08em; }
+.notes-panel .ncard { fill: var(--panel); stroke: var(--ink); stroke-width: 1; transition: fill 0.3s ease, stroke 0.3s ease; }
+.notes-panel .nname { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); font-weight: 600; }
+.notes-panel .nline { fill: var(--line-strong); }
+.notes-panel .hot .ncard { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.4; }
+.notes-panel .hot .nname { fill: var(--green); }
+.notes-panel .dimmed { opacity: 0.3; transition: opacity 0.4s ease; }
+.notes-panel g.hot, .notes-panel g.warm { opacity: 1; transition: opacity 0.4s ease; }
+.notes-panel .fchip { fill: var(--paper); stroke: var(--line-strong); }
+.notes-panel .fpath { font-family: var(--font-mono); font-size: 8.5px; fill: var(--faint); }
+.notes-panel .fname { font-family: var(--font-mono); font-size: 10.5px; fill: var(--ink); }
+.notes-panel .beam { stroke: var(--green); stroke-width: 1.4; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.5s ease; }
+.notes-panel .beam.on { stroke-dashoffset: 0; }
+.notes-panel .beam-lbl { font-family: var(--font-mono); font-size: 9px; fill: var(--green); letter-spacing: 0.06em; }
+.notes-panel .nbody { fill: var(--panel); stroke: var(--ink); stroke-width: 1.2; }
+.notes-panel .nbody-lbl { font-family: var(--font-mono); font-size: 10px; fill: var(--muted); }
+.notes-panel .ghostcard { fill: var(--green-soft); stroke: var(--green); stroke-width: 1.2; }
+.notes-panel .gname { font-family: var(--font-mono); font-size: 9.5px; fill: var(--green); font-weight: 600; }
+.notes-panel .gline { fill: var(--green-line); }
+.notes-panel .gcheck { font-family: var(--font-mono); font-size: 9.5px; fill: var(--green); font-weight: 700; }
+.notes-panel .ntrain { transition: transform 1s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.4s ease; }
+.notes-panel .nghost { transition: transform 0.7s cubic-bezier(0.25, 0.8, 0.3, 1), opacity 0.3s ease; }
+.notes-panel .no-anim, .notes-panel .no-anim .nghost { transition: none !important; }
+.notes-panel .rail { stroke: var(--line-strong); stroke-dasharray: 4 5; }
+.notes-panel .hline { fill: var(--line-strong); }
+.notes-panel .hrect { fill: var(--panel); stroke: var(--line-strong); }
+.notes-panel .nhistory { transition: opacity 0.6s ease; }
+.notes-panel .nhistory.compacted { opacity: 0.12; }
+.notes-panel .nbcard { fill: #fbf3e4; stroke: var(--amber); stroke-width: 1.2; }
+.notes-panel .nbname { font-family: var(--font-mono); font-size: 9.5px; fill: var(--amber); font-weight: 700; }
+.notes-panel .nbcheck { font-family: var(--font-mono); font-size: 9.5px; fill: var(--amber); font-weight: 700; }
+.notes-panel .nnotebook { transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.25, 0.8, 0.3, 1); }
+
+/* ---------- small screens ---------- */
+.scroll-hint { display: none; }
+@media (max-width: 700px) {
+  section, .status-band, .cta { padding-block: 52px; }
+  .hero { padding-block: 40px 48px; gap: 30px; }
+  .hero h1 { font-size: 30px; }
+  .hero .lede { font-size: 16.5px; }
+  .sec-head h2 { font-size: 24px; }
+  .sec-head p { font-size: 16px; }
+  .flow .arrow, .compaction .arrow { display: none; }
+  .flow .stage, .compaction .step { flex-basis: 100%; }
+  .rules th, .rules td { padding: 11px 12px; }
+  .rules code { white-space: normal; }
+  .qs-step { grid-template-columns: 34px 1fr; }
+  .demo-note, .plate-foot { font-size: 10px; }
+  /* terminals wrap like text instead of forcing a fixed-width line (the <br>s exist for the desktop plate) */
+  .terminal br { display: none; }
+  .terminal { font-size: 11.5px; }
+  .demo-note { overflow-wrap: anywhere; }
+}
+@media (max-width: 640px) {
+  /* figures keep their internal size and scroll sideways instead of shrinking to unreadable text */
+  .gate-panel, .notes-panel, .demo-map { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .gate-panel svg, .notes-panel svg { min-width: 640px; }
+  .demo-map { flex-direction: column; align-items: flex-start; }
+  .demo-map svg { min-width: 460px; width: 100%; }
+  .scroll-hint { display: block; }
+}
+.scroll-hint {
+  padding: 8px 18px 10px;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  color: var(--faint); text-align: center;
+}
+
+/* toast */
+#toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 60;
+  background: var(--ink); color: #f2f3ed; font-family: var(--font-mono); font-size: 12.5px;
+  padding: 10px 16px; opacity: 0; transform: translateY(6px);
+  transition: opacity 0.15s, transform 0.15s; pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap site-inner">
+    <a class="brand" href="#top" aria-label="reins home">
+      <span class="brand-mark">r/</span>
+      <span>
+        <span class="brand-name">reins</span><br>
+        <span class="brand-tag">architecture &amp; memory for coding agents</span>
+      </span>
+    </a>
+    <nav class="top" aria-label="Main">
+      <a href="#check">The check</a>
+      <a href="#memory">Memory</a>
+      <a href="#skills">Skills</a>
+      <a href="#quickstart">Quick start</a>
+      <a class="gh" href="https://github.com/fredarcito/reins" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top" class="wrap">
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">For Vite + React and Next teams · Node 22+</p>
+      <h1 id="hero-title">Hold the reins of your coding agents.</h1>
+      <p class="lede">Agents write code fast, then forget. They violate your architecture one import at a time, and re-read your codebase from scratch every session. reins makes both problems a check.</p>
+      <ul class="hero-props">
+        <li><span class="tick">✓</span><span><b>Architecture becomes a check</b> — runs on every commit and PR, whatever agent wrote the code. When something breaks a rule, the commit is blocked with the reason and the fix, so the agent corrects it before you even review.</span></li>
+        <li><span class="tick">✓</span><span><b>Each module gets a short note</b> — what it does, how it works, its decisions and traps. It reaches the agent when it opens a file of that module, and the task's notebook comes back on its own after a compaction.</span></li>
+      </ul>
+      <div class="install">
+        <code id="install-cmd">npm install -D <span class="pkg">@agentreins/cli</span> <span class="pkg">@agentreins/adapter-js</span></code>
+        <button class="copy-btn" data-copy="npm install -D @agentreins/cli @agentreins/adapter-js" aria-label="Copy install command">Copy</button>
+      </div>
+      <p class="hero-meta">Works with Claude Code, Codex, Cursor, or any agent · plain markdown · no telemetry</p>
+    </div>
+
+    <div class="plate" aria-label="Example of a blocked commit">
+      <div class="plate-head"><span>git hook · commit blocked</span><span class="live">reins check</span></div>
+      <div class="terminal" data-typein="cursor" role="img" aria-label="Terminal output showing reins check blocking a commit with the rule, reason and fix">
+        <div class="cmd">git commit -m "add billing widget"</div>
+        <div class="err">✖ error layer-direction</div>
+        <div class="dim">src/components/PriceTag.js → src/features/billing/index.js</div>
+        <div class="why">Why: src/components/PriceTag.js (components) imports <br>src/features/billing/index.js (features), but features is <br>above components.</div>
+        <div class="fix">Fix: Move what src/components/PriceTag.js needs from <br>features down to components or a lower layer, or invert <br>the dependency (pass it in as props or callbacks).</div>
+        <div class="dim">&nbsp;</div>
+        <div class="dim">reins check: 1 new (1 error, 0 warnings) · 0 in baseline · 0 fixed</div>
+        <div class="err fail-line">Result: FAIL (new errors)</div>
+        <div class="dim">pre-commit hook failed — commit blocked</div>
+      </div>
+      <div class="plate-foot">FIG. 00 · WHAT A BROKEN RULE LOOKS LIKE — SAME CHECK LOCALLY AND IN CI</div>
+    </div>
+  </section>
+
+  <!-- WITHOUT / WITH -->
+  <section aria-labelledby="ww-title">
+    <div class="sec-head">
+      <p class="eyebrow">01 · The difference</p>
+      <h2 id="ww-title">Without reins, the review is the safety net. With reins, the check is.</h2>
+      <p>Every row is a failure mode of agent-driven development — and what changes when the rules leave the prompt and live in a tool.</p>
+    </div>
+    <div class="ww">
+      <div class="ww-col without">
+        <header>Without reins</header>
+        <ul>
+          <li><span class="mark">✕</span><span>A shared component imports from a feature. Someone spots it in review — or nobody does.</span></li>
+          <li><span class="mark">✕</span><span>A week later, the agent reads a whole module again to find out what it does and why.</span></li>
+          <li><span class="mark">✕</span><span>A long conversation gets compacted and the task's decisions are lost.</span></li>
+          <li><span class="mark">✕</span><span>Architecture rules live in a long prompt the agent skims.</span></li>
+          <li><span class="mark">✕</span><span>"Review the whole project" every few weeks, from scratch.</span></li>
+          <li><span class="mark">✕</span><span>Adopting rules means fixing all the old debt first.</span></li>
+        </ul>
+      </div>
+      <div class="ww-col with">
+        <header>With reins</header>
+        <ul>
+          <li><span class="mark">✓</span><span>The commit is blocked; the agent reads the fix and corrects it.</span></li>
+          <li><span class="mark">✓</span><span>Its note — purpose, map, decisions with their why, traps — reaches the agent as soon as it opens the module.</span></li>
+          <li><span class="mark">✓</span><span>The notebook and the notes of the files in play come back right after the compaction.</span></li>
+          <li><span class="mark">✓</span><span>They live in <span class="mono">architecture.yml</span>, checked by a tool. The prompt stays at 30 lines.</span></li>
+          <li><span class="mark">✓</span><span>Findings stay in a backlog; the next audit rechecks them.</span></li>
+          <li><span class="mark">✓</span><span>Old debt is frozen in a baseline and can only shrink.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE CHECK -->
+  <section id="check" aria-labelledby="check-title">
+    <div class="sec-head">
+      <p class="eyebrow">02 · The check</p>
+      <h2 id="check-title">The core never opens your files. It checks the edges.</h2>
+      <p>A language adapter turns the repo into a list of import edges; the core applies the rules declared in <span class="mono">architecture.yml</span> to that list. Deterministic, identical locally and in CI, whatever agent or model wrote the code.</p>
+    </div>
+
+    <div class="flow" aria-label="How a check runs">
+      <div class="stage"><b>your repo</b><span>every commit and pull request</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="stage"><b>adapter-js</b><span>turns the code into a list of import edges</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="stage"><b>architecture.yml</b><span>layers, domains, rules, exceptions</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="stage"><b>finding</b><span>rule, reason and fix — as text or JSON</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="stage blocked"><b>blocked</b><span>the hook fails fast; CI + branch protection is the real guarantee</span></div>
+    </div>
+
+    <div class="demo">
+      <div class="demo-head">
+        <span>Findings — pick a rule</span>
+        <div class="scenarios" role="group" aria-label="Choose a finding example">
+          <button type="button" data-scenario="0" aria-pressed="true">layer-direction</button>
+          <button type="button" data-scenario="1" aria-pressed="false">domain-boundary</button>
+          <button type="button" data-scenario="2" aria-pressed="false">no-cycles</button>
+        </div>
+      </div>
+      <div class="demo-body">
+        <div class="demo-map" id="demo-map" aria-live="polite">
+          <svg viewBox="0 0 440 190" role="img" aria-labelledby="mapTitle mapDesc">
+            <title id="mapTitle">Dependency diagram of the selected finding</title>
+            <desc id="mapDesc">Diagram showing the import that breaks the selected rule, in red, next to the allowed direction, in green.</desc>
+          </svg>
+          <div class="scroll-hint" aria-hidden="true">← swipe to see the whole figure →</div>
+        </div>
+        <div class="demo-out">
+          <div class="terminal" id="demo-terminal"></div>
+        </div>
+      </div>
+      <div class="demo-note" id="demo-note"></div>
+    </div>
+
+    <div class="rules">
+      <table>
+        <caption class="visually-hidden" style="display:none">Rules reins enforces</caption>
+        <thead>
+          <tr><th scope="col">Rule</th><th scope="col">What it prevents</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>layer-direction</code></td><td>Layers importing from layers above — a component reaching into a feature.</td></tr>
+          <tr><td><code>domain-boundary</code></td><td>Importing a domain's internals instead of its public API.</td></tr>
+          <tr><td><code>no-cycles</code></td><td>Modules importing each other in a loop.</td></tr>
+          <tr><td><code>next-server-client</code><span class="opt">optional</span></td><td>'use client' components importing server-only modules.</td></tr>
+          <tr><td><code>integrity</code><span class="opt">warn by default</span></td><td>A PR that changes <code>architecture.yml</code> or grows <code>baseline.json</code> instead of fixing the violation. Set it to <code>error</code> to make it block.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="baseline-strip">
+      <span class="mono">baseline.json</span>
+      <p><b>Adopt on an existing repo without a big-bang fix.</b> <span class="mono">reins init</span> freezes today's violations in a baseline: start green, and from then on <span class="mono">reins check</span> fails only on <b>new</b> violations. The baseline can only shrink.</p>
+    </div>
+
+    <div class="gate-panel" aria-label="Animated scene: agents meeting the reins check gate on the way to main">
+      <svg id="gate-scene" viewBox="0 0 900 320" role="img" aria-labelledby="gateTitle gateDesc">
+        <title id="gateTitle">Agents pass through the reins check gate on the way to main</title>
+        <desc id="gateDesc">An agent carrying a violation is blocked at the reins check gate, reads the reason and the fix, comes back with the code corrected and reaches main; a second agent with a clean commit passes straight through. Whatever agent wrote the code, it passes the same check.</desc>
+        <line class="track" x1="60" y1="190" x2="718" y2="190"/>
+        <polygon class="track-head" points="718,184 718,196 730,190"/>
+        <line class="dock-tick" x1="60" y1="178" x2="60" y2="202"/>
+        <text class="lbl" x="60" y="232">feature branch</text>
+        <text class="lbl" x="598" y="242" text-anchor="middle">push · PR</text>
+        <line class="gline" x1="470" y1="95" x2="470" y2="275"/>
+        <text id="gate-state" class="txt-red" x="470" y="132" text-anchor="middle">✕ blocked</text>
+        <rect id="gate-bar" class="gate-bar" x="430" y="185" width="80" height="10" rx="2"/>
+        <text class="lbl" x="470" y="300" text-anchor="middle">reins check · hook + CI</text>
+        <g id="finding" class="fade hide">
+          <text class="txt-red" x="88" y="92">Why: features is above components.</text>
+          <text class="txt-green" x="88" y="110">Fix: move it down, or invert the dependency.</text>
+        </g>
+        <g id="main-stack">
+          <rect class="stack" x="740" y="157" width="110" height="9"/>
+          <rect class="stack" x="740" y="173" width="110" height="9"/>
+          <rect class="stack" x="740" y="189" width="110" height="9"/>
+          <rect id="main-pulse" x="732" y="147" width="126" height="60" rx="4"/>
+          <text class="lbl" x="795" y="232" text-anchor="middle">main</text>
+        </g>
+        <g id="agent1" class="agent" style="transform: translateX(140px)">
+          <g id="agent1-inner" class="agent-inner">
+            <rect id="agent1-tag" class="tag-red" x="-34" y="146" width="108" height="20" rx="2"/>
+            <text id="agent1-tag-text" class="txt-red" x="20" y="160" text-anchor="middle">✕ layer-direction</text>
+            <line class="stem" x1="20" y1="166" x2="20" y2="177"/>
+            <rect class="body" x="-30" y="177" width="60" height="26" rx="3"/>
+            <text class="body-lbl" x="0" y="194" text-anchor="middle">agent</text>
+          </g>
+        </g>
+        <g id="agent2" class="agent" style="opacity: 0">
+          <g class="agent-inner">
+            <rect class="tag-green" x="-34" y="146" width="108" height="20" rx="2"/>
+            <text class="txt-green" x="20" y="160" text-anchor="middle">✓ clean commit</text>
+            <line class="stem" x1="20" y1="166" x2="20" y2="177"/>
+            <rect class="body" x="-30" y="177" width="60" height="26" rx="3"/>
+            <text class="body-lbl" x="0" y="194" text-anchor="middle">agent</text>
+          </g>
+        </g>
+      </svg>
+      <div class="scroll-hint" aria-hidden="true">← swipe to see the whole figure →</div>
+      <div class="demo-note">FIG. 04 · THE GATE — WHATEVER AGENT WROTE THE CODE, IT PASSES THE SAME CHECK. THE HOOK FAILS FAST; CI AND BRANCH PROTECTION ARE THE REAL GUARANTEE.</div>
+    </div>
+  </section>
+
+  <!-- MEMORY -->
+  <section id="memory" aria-labelledby="memory-title">
+    <div class="sec-head">
+      <p class="eyebrow">03 · Context between sessions</p>
+      <h2 id="memory-title">Memory as plain markdown, not a service.</h2>
+      <p>Two kinds of memory live in <span class="mono">.reins/</span>, both readable, versionable and optional. Notes are committed; the notebook stays local to the branch.</p>
+    </div>
+
+    <div class="notes-panel" aria-label="Animated scene: the agent opens a file and receives the note of its module, and only that one">
+      <svg id="notes-scene" viewBox="0 0 900 400" role="img" aria-labelledby="notesTitle notesDesc">
+        <title id="notesTitle">The note of the opened module is delivered to the agent</title>
+        <desc id="notesDesc">Three modules have one note each. When the agent opens a file of the cart module, the PreToolUse hook delivers cart.md and only that one; when it opens a billing file, the cart note is detached and billing.md arrives. After a compaction, the notebook and the module notes come back, so the task continues where it stopped.</desc>
+        <text class="lbl" x="85" y="20">.reins/notes/ · one note per module</text>
+        <g class="mnote" data-i="0" transform="translate(85,30)">
+          <rect class="ncard" width="150" height="56" rx="3"/>
+          <text class="nname" x="12" y="19">cart.md</text>
+          <rect class="nline" x="12" y="28" width="96" height="4" rx="2"/>
+          <rect class="nline" x="12" y="37" width="122" height="4" rx="2"/>
+          <rect class="nline" x="12" y="46" width="78" height="4" rx="2"/>
+        </g>
+        <g class="mnote" data-i="1" transform="translate(325,30)">
+          <rect class="ncard" width="150" height="56" rx="3"/>
+          <text class="nname" x="12" y="19">billing.md</text>
+          <rect class="nline" x="12" y="28" width="96" height="4" rx="2"/>
+          <rect class="nline" x="12" y="37" width="122" height="4" rx="2"/>
+          <rect class="nline" x="12" y="46" width="78" height="4" rx="2"/>
+        </g>
+        <g class="mnote" data-i="2" transform="translate(565,30)">
+          <rect class="ncard" width="150" height="56" rx="3"/>
+          <text class="nname" x="12" y="19">search.md</text>
+          <rect class="nline" x="12" y="28" width="96" height="4" rx="2"/>
+          <rect class="nline" x="12" y="37" width="122" height="4" rx="2"/>
+          <rect class="nline" x="12" y="46" width="78" height="4" rx="2"/>
+        </g>
+        <text class="lbl" x="85" y="148">your repo</text>
+        <line class="beam" id="beam-0" x1="160" y1="154" x2="160" y2="90" pathLength="1"/>
+        <line class="beam" id="beam-1" x1="400" y1="154" x2="400" y2="90" pathLength="1"/>
+        <line class="beam" id="beam-2" x1="640" y1="154" x2="640" y2="90" pathLength="1"/>
+        <text class="beam-lbl" x="172" y="126">PreToolUse hook</text>
+        <g transform="translate(85,158)">
+          <rect class="fchip" width="150" height="34" rx="3"/>
+          <text class="fpath" x="10" y="13">features/cart/</text>
+          <text class="fname" x="10" y="26">cartStore.js</text>
+        </g>
+        <g transform="translate(325,158)">
+          <rect class="fchip" width="150" height="34" rx="3"/>
+          <text class="fpath" x="10" y="13">features/billing/</text>
+          <text class="fname" x="10" y="26">total.js</text>
+        </g>
+        <g transform="translate(565,158)">
+          <rect class="fchip" width="150" height="34" rx="3"/>
+          <text class="fpath" x="10" y="13">features/search/</text>
+          <text class="fname" x="10" y="26">results.js</text>
+        </g>
+        <line class="rail" x1="60" y1="330" x2="770" y2="330"/>
+        <g id="ntrain" class="ntrain" style="transform: translateX(40px)">
+          <g id="nnotebook" class="nnotebook" style="opacity: 0">
+            <rect class="nbcard" x="-150" y="240" width="100" height="50" rx="3"/>
+            <text class="nbname" x="-142" y="256">notebook.md</text>
+            <rect class="nline" x="-142" y="264" width="60" height="3" rx="1.5"/>
+            <rect class="nline" x="-142" y="272" width="42" height="3" rx="1.5"/>
+            <text class="nbcheck" x="-58" y="286" text-anchor="end">✓ returns</text>
+          </g>
+          <g id="nhistory" class="nhistory">
+            <text class="lbl" x="-40" y="232">the conversation</text>
+            <rect class="hrect" x="-40" y="238" width="76" height="46" rx="4"/>
+            <rect class="hline" x="-32" y="248" width="56" height="4" rx="2"/>
+            <rect class="hline" x="-32" y="257" width="40" height="4" rx="2"/>
+            <rect class="hline" x="-32" y="266" width="48" height="4" rx="2"/>
+          </g>
+          <g id="nghost" class="nghost" style="opacity: 0">
+            <rect class="ghostcard" x="48" y="240" width="110" height="50" rx="3"/>
+            <text id="ghost-name" class="gname" x="56" y="256">cart.md</text>
+            <rect class="gline" x="56" y="264" width="62" height="3" rx="1.5"/>
+            <rect class="gline" x="56" y="272" width="44" height="3" rx="1.5"/>
+            <text class="gcheck" x="150" y="286" text-anchor="end">✓ in context</text>
+          </g>
+          <rect class="nbody" x="-34" y="302" width="68" height="28" rx="3"/>
+          <text class="nbody-lbl" x="0" y="320" text-anchor="middle">agent</text>
+        </g>
+        <text id="nstatus" class="nbody-lbl" x="85" y="372">the agent is about to open a file</text>
+        <text class="lbl" x="860" y="372" text-anchor="end">claude code: PreToolUse hook · others: AGENTS.md index</text>
+      </svg>
+      <div class="scroll-hint" aria-hidden="true">← swipe to see the whole figure →</div>
+      <div class="demo-note">FIG. 05 · ONE FILE IN, ONE NOTE OUT — AND AFTER A COMPACTION, THE NOTEBOOK AND THE NOTES COME BACK.</div>
+    </div>
+
+    <div class="memory-grid">
+      <div class="doc-card">
+        <div class="doc-head"><span class="path">.reins/notes/billing.md</span><span class="scope">in git · lasts as long as the module</span></div>
+        <div class="doc-body">
+          <h4>Purpose</h4><p>What the module does for whom, in one or two lines.</p>
+          <h4>Map</h4><p>Public API and key files.</p>
+          <h4>How it works</h4><p>The main data flow, in a few lines.</p>
+          <h4>Decisions</h4><p>Why choices were made, with dates — stops the agent "fixing" intentionally designed code.</p>
+          <h4>Traps</h4><p>What looks wrong but is intentional.</p>
+        </div>
+      </div>
+      <div class="doc-card">
+        <div class="doc-head"><span class="path">.reins/progress/&lt;branch&gt;.md</span><span class="scope">local · lasts as long as the task</span></div>
+        <div class="doc-body">
+          <h4>Goal</h4><p>What this branch is trying to land.</p>
+          <h4>Done criteria</h4><p>How you know it is finished; the agent checks them off one by one.</p>
+          <h4>Subtasks</h4><p>What is finished and what is next.</p>
+          <h4>Next step</h4><p>Where the work stopped, so the next session starts there.</p>
+          <h4>Returns after compaction</h4><p>The notebook and the notes of the files in play come back after a compaction.</p>
+        </div>
+      </div>
+    </div>
+    <div class="compaction" aria-label="What happens at compaction">
+      <div class="step"><span class="n">STEP 1</span><b>Agent opens a file</b><span>AGENTS.md points the path to its module note; the note arrives with the file.</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span class="n">STEP 2</span><b>Session grows long</b><span>Old turns get compacted; raw history is lost.</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span class="n">STEP 3</span><b>Notebook returns</b><span>Goal, criteria and next step re-enter the context, plus the notes of the files in play.</span></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step"><span class="n">STEP 4</span><b>Work continues</b><span>The agent starts from existing knowledge instead of rediscovering it.</span></div>
+    </div>
+  </section>
+
+  <!-- ENFORCED VS INSTRUCTED -->
+  <section aria-labelledby="ei-title">
+    <div class="sec-head">
+      <p class="eyebrow">04 · The core idea</p>
+      <h2 id="ei-title">Everything falls on one side of a line: enforced or instructed.</h2>
+      <p>What a machine refuses to let through, and what it hands the agent as guidance. Both matter; only one of them can't be ignored.</p>
+    </div>
+    <div class="ei">
+      <div class="ei-col enforced">
+        <header>Enforced by a machine</header>
+        <ul>
+          <li><span class="mark">▸</span><span><span class="mono">reins check</span> in the git hook and CI</span></li>
+          <li><span class="mark">▸</span><span><span class="mono">baseline.json</span> — existing violations frozen</span></li>
+          <li><span class="mark">▸</span><span>Integrity of <span class="mono">architecture.yml</span>, <span class="mono">baseline.json</span> and generated files</span></li>
+          <li><span class="mark">▸</span><span>Branch protection: PR with human approval + CI green</span></li>
+          <li><span class="mark">▸</span><span>Claude Code permissions denying <span class="mono">git commit</span> / <span class="mono">push</span> (a first line of defense)</span></li>
+        </ul>
+      </div>
+      <div class="ei-col instructed">
+        <header>Guidance for the agent</header>
+        <ul>
+          <li><span class="mark">▸</span><span>Announcing the task level (triage)</span></li>
+          <li><span class="mark">▸</span><span>Progress notebook</span></li>
+          <li><span class="mark">▸</span><span>Module notes, policies, skills, agents</span></li>
+          <li><span class="mark">▸</span><span>Audit backlog</span></li>
+          <li><span class="mark">▸</span><span>Multi-agent rules</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section id="skills" aria-labelledby="skills-title">
+    <div class="sec-head">
+      <p class="eyebrow">05 · Skills for your agent</p>
+      <h2 id="skills-title">Commands installed by <span class="mono">reins install</span>.</h2>
+      <p>In Claude Code, type them directly or ask in your own words. Other agents read the same instructions in <span class="mono">.reins/skills/</span>.</p>
+    </div>
+    <div class="skills">
+      <table>
+        <thead><tr><th scope="col">Skill</th><th scope="col">What it does</th><th scope="col">When to use</th></tr></thead>
+        <tbody>
+          <tr><td><code>/reins-done</code></td><td>Closes a task: runs the checks, updates the notebook and the notes of the modules it touched, says what was and wasn't verified</td><td>When a task is done</td></tr>
+          <tr><td><code>/reins-backlog</code></td><td>Shows what is pending in the backlog, proposes what to do next</td><td>"What's pending?"</td></tr>
+          <tr><td><code>/reins-notes</code></td><td>Reads each module and fills in its note, writing only what it can back up; the rest become <span class="mono">- ? question</span> lines for you</td><td>After <span class="mono">init</span> or <span class="mono">notes new</span></td></tr>
+          <tr><td><code>/reins-notes review</code></td><td>Checks notes against the code and fixes what is no longer true</td><td>Every few weeks, or when doctor flags notes</td></tr>
+          <tr><td><code>/reins-arch</code></td><td>Reviews <span class="mono">architecture.yml</span> against the code and proposes changes with evidence. Applies nothing until you approve each one</td><td>After <span class="mono">init</span>, and every few months</td></tr>
+          <tr><td><code>/reins-audit</code></td><td>Looks for new improvements and adds only new findings to the backlog</td><td>"Review the whole project"</td></tr>
+          <tr><td><code>/reins-agent</code></td><td>Creates a new subagent in <span class="mono">.reins/agents/</span> (read-only by default)</td><td>New needs: a tester, an a11y checker...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- STATUS -->
+  <div class="status-band" id="status">
+    <div class="wrap">
+      <div class="sec-head" style="margin-bottom:0">
+        <p class="eyebrow">06 · Status</p>
+        <h2 style="color:#f2f3ed">Stable core, honest edges.</h2>
+        <p style="color:var(--dark-text)">The enforcement core is stable. Agent-assisted workflows are documented as experimental — verify current behavior in the repository before relying on it in production CI.</p>
+      </div>
+      <div class="status-grid">
+        <div class="status-col stable">
+          <h3>Stable</h3>
+          <ul>
+            <li>reins check</li>
+            <li>reins init</li>
+            <li>adapter-js</li>
+            <li>next-server-client (optional)</li>
+            <li>git hook + CI</li>
+          </ul>
+          <p>The deterministic core: rules, findings, baseline.</p>
+        </div>
+        <div class="status-col exp">
+          <h3>Experimental</h3>
+          <ul>
+            <li>reins install</li>
+            <li>reins sync</li>
+            <li>notes management</li>
+            <li>reins doctor</li>
+            <li>audit / progress / review</li>
+            <li>skill templates</li>
+          </ul>
+          <p><span class="mono">reins doctor</span> sits in the middle: it warns locally about agent-written artifacts but never blocks and never runs in CI. Current status: <a href="https://github.com/fredarcito/reins/blob/main/docs/STATUS.md" target="_blank" rel="noreferrer">docs/STATUS.md ↗</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK START -->
+  <section id="quickstart" aria-labelledby="qs-title">
+    <div class="sec-head">
+      <p class="eyebrow">07 · Quick start</p>
+      <h2 id="qs-title">Green on the first commit, from the root of your project.</h2>
+      <p>Node 22 or newer. Four commands, and only new violations can fail.</p>
+    </div>
+    <div class="qs">
+      <div class="qs-step">
+        <span class="num">01</span>
+        <div class="content">
+          <div class="qs-cmd"><code>npm install -D @agentreins/cli @agentreins/adapter-js</code><button type="button" data-copy="npm install -D @agentreins/cli @agentreins/adapter-js" aria-label="Copy command">Copy</button></div>
+          <p>Add the CLI and the JS/TS language adapter as dev dependencies (pnpm: <span class="mono">pnpm add -D</span>).</p>
+        </div>
+      </div>
+      <div class="qs-step">
+        <span class="num">02</span>
+        <div class="content">
+          <div class="qs-cmd"><code>npx reins install</code><button type="button" data-copy="npx reins install" aria-label="Copy command">Copy</button></div>
+          <p>Sets up the git hook, the CI job, <span class="mono">AGENTS.md</span> and <span class="mono">.claude/</span>. Additive and idempotent: it never overwrites your files, and never installs packages.</p>
+        </div>
+      </div>
+      <div class="qs-step">
+        <span class="num">03</span>
+        <div class="content">
+          <div class="qs-cmd"><code>npx reins init</code><button type="button" data-copy="npx reins init" aria-label="Copy command">Copy</button></div>
+          <p>Drafts the architecture plan, the baseline and the module notes. Review them: in Claude Code type <span class="mono">/reins-arch</span> (the agent proposes changes with evidence, you approve each one); otherwise read <span class="mono">.reins/init-report.md</span> and edit <span class="mono">.reins/architecture.yml</span> yourself. Then <span class="mono">/reins-notes</span> — or ask your agent to fill in the notes' TODO lines.</p>
+        </div>
+      </div>
+      <div class="qs-step">
+        <span class="num">04</span>
+        <div class="content">
+          <div class="qs-cmd"><code>npx reins check --update-baseline</code><button type="button" data-copy="npx reins check --update-baseline" aria-label="Copy command">Copy</button></div>
+          <p>Freezes today's violations. From now on, <span class="mono">npx reins check</span> fails only on new ones. Commit everything and make the "reins" job required in branch protection.</p>
+        </div>
+      </div>
+    </div>
+    <p class="qs-note" style="margin-top:24px"><b>Updating later:</b> bump both packages, then run <span class="mono">npx reins sync</span>, <span class="mono">npx reins doctor</span>, <span class="mono">npx reins check</span> and <span class="mono">npx reins notes stale</span> to review out-of-date notes. Nothing is overwritten: <span class="mono">install</span> and <span class="mono">init</span> only add files or ask first.</p>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div>
+      <p class="eyebrow">Ready to try it?</p>
+      <h2>Start with the README. Pilot it on a branch. Keep the final call yours.</h2>
+    </div>
+    <a class="btn-primary" href="https://github.com/fredarcito/reins" target="_blank" rel="noreferrer">Explore reins on GitHub ↗</a>
+  </div>
+
+</main>
+
+<footer class="site">
+  <div class="wrap foot-inner">
+    <p><b style="color:var(--ink)">reins</b> · MIT License © 2026 fredarcito · no lock-in, no service, no API keys, no telemetry</p>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="https://github.com/fredarcito/reins" target="_blank" rel="noreferrer">GitHub ↗</a>
+      <a href="https://github.com/fredarcito/reins/issues" target="_blank" rel="noreferrer">Issues ↗</a>
+      <a href="https://github.com/fredarcito/reins/blob/main/docs/walkthrough.md" target="_blank" rel="noreferrer">Walkthrough</a>
+      <a href="https://github.com/fredarcito/reins/blob/main/docs/architecture-yml.md" target="_blank" rel="noreferrer">architecture.yml reference</a>
+      <a href="https://github.com/fredarcito/reins/blob/main/docs/team-adoption.md" target="_blank" rel="noreferrer">Team adoption</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- copy buttons ---------- */
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2000);
+  }
+  function copyText(text, btn) {
+    function done() {
+      if (btn) {
+        var prev = btn.textContent;
+        btn.textContent = "Copied";
+        btn.classList.add("copied");
+        setTimeout(function () { btn.textContent = prev; btn.classList.remove("copied"); }, 1600);
+      }
+      toast("Copied to clipboard");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed — select the command manually"); }
+      document.body.removeChild(ta);
+    }
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () { copyText(btn.getAttribute("data-copy"), btn); });
+  });
+
+  /* ---------- motion helpers ---------- */
+  var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Reveals a terminal's lines one by one; leaves everything visible when the user
+  // prefers reduced motion. withCursor appends a blinking block cursor at the end.
+  function playTerminal(term, startDelay, withCursor) {
+    var lines = Array.prototype.slice.call(term.children);
+    if (REDUCED || lines.length === 0) return;
+    term.classList.add("typing");
+    lines.forEach(function (line, i) {
+      setTimeout(function () {
+        line.classList.add("shown");
+        if (i !== lines.length - 1) return;
+        term.classList.remove("typing");
+        if (withCursor) {
+          var c = document.createElement("div");
+          c.innerHTML = '<span class="t-cursor"></span>';
+          term.appendChild(c);
+        }
+      }, startDelay + i * 70);
+    });
+  }
+
+  /* ---------- finding demo ---------- */
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    var n = document.createElementNS(SVGNS, name);
+    for (var k in attrs) { n.setAttribute(k, attrs[k]); }
+    if (text) { n.textContent = text; }
+    return n;
+  }
+  function label(x, y, text, fill, size, anchor, weight) {
+    return el("text", { x: x, y: y, "text-anchor": anchor || "start", fill: fill || "#555d57",
+      "font-size": size || 11, "font-family": "ui-monospace, Menlo, monospace",
+      "font-weight": weight || "normal" }, text);
+  }
+  function box(x, y, w, h, stroke, fill) {
+    return el("rect", { x: x, y: y, width: w, height: h, fill: fill || "#f8f8f3",
+      stroke: stroke || "#aeb5ac", "stroke-width": 1 });
+  }
+  function arrowPath(d, color, dashed) {
+    return el("path", { d: d, fill: "none", stroke: color, "stroke-width": 1.6,
+      "stroke-dasharray": dashed ? "5 4" : "none", "class": dashed ? "march" : "",
+      "marker-end": "url(#demo-arrow-" + (dashed ? "red" : "grey") + ")" });
+  }
+
+  var scenarios = [
+    {
+      note: "FIG. 01 · layer-direction — components must not reach up into features. Example from the README.",
+      draw: function (svg) {
+        svg.appendChild(label(20, 24, "FEATURES  (above)", "#747a74", 10));
+        svg.appendChild(box(120, 32, 200, 44, "#aeb5ac"));
+        svg.appendChild(label(132, 50, "features/", "#303732", 12, "start", "600"));
+        svg.appendChild(label(132, 66, "billing/index.js", "#555d57", 11));
+        svg.appendChild(label(20, 132, "COMPONENTS  (below)", "#747a74", 10));
+        svg.appendChild(box(120, 140, 200, 44, "#aeb5ac"));
+        svg.appendChild(label(132, 158, "components/", "#303732", 12, "start", "600"));
+        svg.appendChild(label(132, 174, "PriceTag.js", "#555d57", 11));
+        svg.appendChild(arrowPath("M170 76 L170 134", "#215e49"));
+        svg.appendChild(label(160, 108, "allowed", "#215e49", 10.5, "end"));
+        svg.appendChild(arrowPath("M270 140 L270 82", "#a54135", true));
+        svg.appendChild(label(280, 112, "violation", "#a54135", 10.5, "start"));
+      },
+      term: [
+        ["err", "✖ error layer-direction"],
+        ["dim", "src/components/PriceTag.js → src/features/billing/index.js"],
+        ["why", "Why: src/components/PriceTag.js (components) imports"],
+        ["why", "src/features/billing/index.js (features), but features is"],
+        ["why", "above components."],
+        ["fix", "Fix: Move what src/components/PriceTag.js needs from"],
+        ["fix", "features down to components or a lower layer, or invert"],
+        ["fix", "the dependency (pass it in as props or callbacks)."]
+      ]
+    },
+    {
+      note: "FIG. 02 · domain-boundary — import the domain's public API, not its internals. Paths from the README example.",
+      draw: function (svg) {
+        svg.appendChild(label(20, 24, "FEATURES / SEARCH", "#747a74", 10));
+        svg.appendChild(box(20, 34, 160, 50, "#aeb5ac"));
+        svg.appendChild(label(30, 57, "features/search/", "#303732", 12, "start", "600"));
+        svg.appendChild(label(30, 74, "results.js", "#555d57", 11));
+        svg.appendChild(label(230, 24, "FEATURES / BILLING", "#747a74", 10));
+        svg.appendChild(box(230, 34, 190, 104, "#215e49", "#fffefa"));
+        svg.appendChild(label(240, 55, "features/billing/", "#303732", 12, "start", "600"));
+        svg.appendChild(box(240, 66, 170, 28, "#215e49", "#edf2ec"));
+        svg.appendChild(label(250, 84, "index.js  ← public API", "#215e49", 11, "start", "600"));
+        svg.appendChild(box(240, 102, 170, 28, "#c18b84", "#fbf0ed"));
+        svg.appendChild(label(250, 120, "total.js  ← internals", "#7a3b34", 11));
+        svg.appendChild(arrowPath("M170 58 L236 78", "#215e49"));
+        svg.appendChild(label(196, 52, "ok", "#215e49", 10.5));
+        svg.appendChild(arrowPath("M170 72 L236 114", "#a54135", true));
+        svg.appendChild(label(178, 100, "forbidden", "#a54135", 10.5, "end"));
+      },
+      term: [
+        ["err", "✖ error domain-boundary"],
+        ["dim", "src/features/search/results.js → src/features/billing/total.js"],
+        ["why", "Why: results.js imports src/features/billing/total.js, an"],
+        ["why", "internal file of the billing domain."],
+        ["fix", "Fix: Import from the public API of billing instead:"],
+        ["fix", "src/features/billing/index.js. If something is missing"],
+        ["fix", "there, export it from that file."]
+      ]
+    },
+    {
+      note: "FIG. 03 · no-cycles — modules importing each other in a loop. Example from the README.",
+      draw: function (svg) {
+        svg.appendChild(label(20, 24, "SRC / LIB", "#747a74", 10));
+        svg.appendChild(box(20, 44, 110, 44, "#aeb5ac"));
+        svg.appendChild(label(30, 63, "lib/a.js", "#303732", 12, "start", "600"));
+        svg.appendChild(label(30, 79, "exports a()", "#555d57", 10.5));
+        svg.appendChild(box(165, 44, 110, 44, "#aeb5ac"));
+        svg.appendChild(label(175, 63, "lib/b.js", "#303732", 12, "start", "600"));
+        svg.appendChild(label(175, 79, "exports b()", "#555d57", 10.5));
+        svg.appendChild(box(310, 44, 110, 44, "#aeb5ac"));
+        svg.appendChild(label(320, 63, "lib/c.js", "#303732", 12, "start", "600"));
+        svg.appendChild(label(320, 79, "exports c()", "#555d57", 10.5));
+        svg.appendChild(arrowPath("M130 62 L161 62", "#a54135", true));
+        svg.appendChild(arrowPath("M275 62 L306 62", "#a54135", true));
+        svg.appendChild(arrowPath("M365 88 C 340 160, 100 160, 76 92", "#a54135", true));
+        svg.appendChild(label(220, 140, "the loop is the violation", "#a54135", 10.5, "middle"));
+      },
+      term: [
+        ["err", "✖ error no-cycles"],
+        ["dim", "src/lib/a.js → src/lib/b.js"],
+        ["why", "Why: Import cycle: src/lib/a.js → src/lib/b.js →"],
+        ["why", "src/lib/c.js → src/lib/a.js."],
+        ["fix", "Fix: Break the cycle: move the code both sides need"],
+        ["fix", "into a lower module, or invert one of the imports."]
+      ]
+    }
+  ];
+
+  var mapHost = document.getElementById("demo-map");
+  var svgHost = mapHost.querySelector("svg");
+  var termHost = document.getElementById("demo-terminal");
+  var noteHost = document.getElementById("demo-note");
+  var buttons = document.querySelectorAll(".scenarios button");
+
+  function defs(svg) {
+    var d = el("defs", {});
+    function marker(id, color) {
+      var m = el("marker", { id: id, markerWidth: 8, markerHeight: 8, refX: 7, refY: 4, orient: "auto" });
+      m.appendChild(el("path", { d: "M0 0L8 4L0 8", fill: "none", stroke: color, "stroke-width": 1.4 }));
+      d.appendChild(m);
+    }
+    marker("demo-arrow-grey", "#737b74");
+    marker("demo-arrow-red", "#a54135");
+    svg.appendChild(d);
+  }
+
+  function render(i) {
+    var sc = scenarios[i];
+    while (svgHost.firstChild) { svgHost.removeChild(svgHost.firstChild); }
+    defs(svgHost);
+    var scene = el("g", { "class": "sc" });
+    sc.draw(scene);
+    svgHost.appendChild(scene);
+    termHost.textContent = "";
+    sc.term.forEach(function (line) {
+      var div = document.createElement("div");
+      div.className = line[0];
+      div.textContent = line[1];
+      termHost.appendChild(div);
+    });
+    playTerminal(termHost, 60, false);
+    noteHost.textContent = sc.note;
+    buttons.forEach(function (b, bi) { b.setAttribute("aria-pressed", bi === i ? "true" : "false"); });
+  }
+
+  buttons.forEach(function (b, i) {
+    b.addEventListener("click", function () { render(i); });
+  });
+
+  /* ---------- terminal type-in on first view ---------- */
+  if ("IntersectionObserver" in window && !REDUCED) {
+    var tio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        tio.unobserve(en.target);
+        playTerminal(en.target, 350, en.target.getAttribute("data-typein") === "cursor");
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll("[data-typein]").forEach(function (t) { tio.observe(t); });
+  }
+
+  /* ---------- scroll reveal ---------- */
+  try {
+    var revealSelectors = [".sec-head", ".ww", ".demo", ".rules", ".baseline-strip", ".gate-panel", ".notes-panel", ".memory-grid .doc-card",
+      ".compaction", ".ei-col", ".skills", ".status-grid .status-col", ".qs .qs-step", ".cta > div", ".cta > a"];
+    var targets = document.querySelectorAll(revealSelectors.join(","));
+    var batch = new Map();
+    targets.forEach(function (elm) {
+      elm.setAttribute("data-reveal", "");
+      var n = batch.get(elm.parentNode) || 0;
+      batch.set(elm.parentNode, n + 1);
+      if (n > 0) elm.style.setProperty("--reveal-delay", Math.min(n * 70, 350) + "ms");
+    });
+    if ("IntersectionObserver" in window && !REDUCED) {
+      var rio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          en.target.classList.add("revealed");
+          rio.unobserve(en.target);
+        });
+      }, { rootMargin: "0px 0px -60px 0px" });
+      targets.forEach(function (elm) { rio.observe(elm); });
+    } else {
+      targets.forEach(function (elm) { elm.classList.add("revealed"); });
+    }
+  } catch (e) {
+    document.documentElement.classList.remove("js"); // never leave content hidden
+  }
+
+  /* ---------- gate scene: agents, one gate ---------- */
+  var gate = (function () {
+    var root = document.getElementById("gate-scene");
+    if (!root) return null;
+    var a1 = root.querySelector("#agent1"), a2 = root.querySelector("#agent2");
+    var inner1 = root.querySelector("#agent1-inner");
+    var tag1 = root.querySelector("#agent1-tag"), tag1t = root.querySelector("#agent1-tag-text");
+    var bar = root.querySelector("#gate-bar"), state = root.querySelector("#gate-state");
+    var finding = root.querySelector("#finding"), pulse = root.querySelector("#main-pulse");
+    var token = 0, started = false;
+
+    function setX(agent, x) { agent.style.transform = "translateX(" + x + "px)"; }
+    function place(agent, x, op) { // reposition without the slide transition
+      agent.classList.add("no-anim");
+      setX(agent, x);
+      agent.style.opacity = op;
+      requestAnimationFrame(function () { requestAnimationFrame(function () { agent.classList.remove("no-anim"); }); });
+    }
+    function setTag(red) {
+      tag1.setAttribute("class", red ? "tag-red" : "tag-green");
+      tag1t.setAttribute("class", red ? "txt-red" : "txt-green");
+      tag1t.textContent = red ? "✕ layer-direction" : "✓ fixed";
+    }
+    function setGate(open) {
+      bar.classList.toggle("open", open);
+      state.textContent = open ? "✓ pass" : "✕ blocked";
+      state.classList.toggle("txt-green", open);
+      state.classList.toggle("txt-red", !open);
+    }
+    function landPulse() {
+      pulse.classList.remove("on");
+      requestAnimationFrame(function () { pulse.classList.add("on"); });
+    }
+    // Resolves true to continue, false when the scene was cancelled (gone off screen).
+    function beat(ms, fn) {
+      var my = token;
+      return new Promise(function (res) {
+        setTimeout(function () {
+          if (my !== token) { res(false); return; }
+          fn();
+          res(true);
+        }, ms);
+      });
+    }
+    async function story() {
+      setTag(true); setGate(false);
+      finding.classList.add("hide");
+      place(a1, 140, "1");
+      place(a2, 140, "0");
+      var ok = await beat(700, function () { setX(a1, 350); }); if (!ok) return false;   // approach
+      ok = await beat(1100, function () {                                                // blocked
+        inner1.classList.remove("nudge"); void inner1.getBBox(); inner1.classList.add("nudge");
+        finding.classList.remove("hide");
+      }); if (!ok) return false;
+      ok = await beat(1900, function () { finding.classList.add("hide"); setTag(false); }); if (!ok) return false; // fix applied
+      ok = await beat(500, function () { setGate(true); }); if (!ok) return false;       // gate opens
+      ok = await beat(600, function () { setX(a1, 660); }); if (!ok) return false;       // through
+      ok = await beat(1100, function () { landPulse(); }); if (!ok) return false;        // lands on main
+      ok = await beat(900, function () {                                                 // next agent, clean
+        a1.style.opacity = "0";
+        a2.style.opacity = "1";
+      }); if (!ok) return false;
+      ok = await beat(500, function () { setX(a2, 660); }); if (!ok) return false;
+      ok = await beat(1100, function () { landPulse(); }); if (!ok) return false;
+      ok = await beat(1300, function () { a2.style.opacity = "0"; }); if (!ok) return false;
+      await beat(900, function () {});                                                   // breather, then loop
+      return true;
+    }
+    async function loop() { while (await story()) {} }
+    function staticEnd() {
+      setTag(false); setGate(true);
+      finding.classList.add("hide");
+      place(a1, 660, "1");
+      place(a2, 140, "1");
+    }
+    function start() {
+      if (REDUCED) { staticEnd(); return; }
+      token++;
+      loop();
+    }
+    function stop() { token++; }
+    return { start: start, stop: stop, staticEnd: staticEnd };
+  })();
+
+  var gatePanel = document.querySelector(".gate-panel");
+  if (gatePanel && gate) {
+    if (REDUCED) {
+      gate.staticEnd();
+    } else if ("IntersectionObserver" in window) {
+      var gio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { gate.start(); } else { gate.stop(); }
+        });
+      }, { threshold: 0.2 });
+      gio.observe(gatePanel);
+    } else {
+      gate.start();
+    }
+  }
+
+  /* ---------- notes scene: per-module delivery + compaction recovery ---------- */
+  var notesScene = (function () {
+    var root = document.getElementById("notes-scene");
+    if (!root) return null;
+    var train = root.querySelector("#ntrain"), ghost = root.querySelector("#nghost");
+    var notebook = root.querySelector("#nnotebook"), historyEl = root.querySelector("#nhistory");
+    var beams = [root.querySelector("#beam-0"), root.querySelector("#beam-1"), root.querySelector("#beam-2")];
+    var notes = Array.prototype.slice.call(root.querySelectorAll(".mnote"));
+    var status = root.querySelector("#nstatus");
+    var token = 0, GHOST_JUMP = "translate(-123px,-210px)", NB_HIDDEN = "translate(-20px,8px)";
+    var HOOK_MSG = "reins notes --hook → additionalContext · 1 note, the module's";
+
+    function beat(ms, fn) {
+      var my = token;
+      return new Promise(function (res) {
+        setTimeout(function () {
+          if (my !== token) { res(false); return; }
+          if (fn) fn();
+          res(true);
+        }, ms);
+      });
+    }
+    function withoutAnim(fn) { // reposition hidden elements without a slide
+      train.classList.add("no-anim");
+      fn();
+      requestAnimationFrame(function () { requestAnimationFrame(function () { train.classList.remove("no-anim"); }); });
+    }
+    function reset() {
+      withoutAnim(function () {
+        train.style.transform = "translateX(40px)";
+        train.style.opacity = "1";
+        ghost.style.opacity = "0";
+        ghost.style.transform = GHOST_JUMP;
+        notebook.style.opacity = "0";
+        notebook.style.transform = NB_HIDDEN;
+      });
+      historyEl.classList.remove("compacted");
+      notes.forEach(function (n) { n.classList.remove("hot", "dimmed"); });
+      beams.forEach(function (b) { b.classList.remove("on"); });
+      status.textContent = "the agent is about to open a file";
+    }
+    function deliverNote(i) { // light up note i, dim the rest, fly its card to the agent
+      notes.forEach(function (n, ni) {
+        n.classList.toggle("hot", ni === i);
+        n.classList.toggle("dimmed", ni !== i);
+      });
+      root.querySelector("#ghost-name").textContent = notes[i].querySelector(".nname").textContent;
+      ghost.style.opacity = "1";
+      ghost.style.transform = "translate(0,0)";
+      status.textContent = HOOK_MSG;
+    }
+    async function story() {
+      reset();
+      var ok = await beat(700, function () { // cart: open a file, its note arrives
+        train.style.transform = "translateX(160px)";
+        status.textContent = "opens src/features/cart/cartStore.js";
+      }); if (!ok) return false;
+      ok = await beat(1000, function () { beams[0].classList.add("on"); }); if (!ok) return false;
+      ok = await beat(500, function () { deliverNote(0); }); if (!ok) return false;
+      ok = await beat(1800, function () {}); if (!ok) return false;
+      ok = await beat(1100, function () { // switch to billing: cart's note detaches
+        withoutAnim(function () { ghost.style.opacity = "0"; ghost.style.transform = GHOST_JUMP; });
+        beams[0].classList.remove("on");
+        notes[0].classList.remove("hot");
+        train.style.transform = "translateX(400px)";
+        status.textContent = "opens src/features/billing/total.js";
+      }); if (!ok) return false;
+      ok = await beat(700, function () { beams[1].classList.add("on"); }); if (!ok) return false;
+      ok = await beat(500, function () { deliverNote(1); }); if (!ok) return false;
+      ok = await beat(1700, function () { // compaction: the raw history fades
+        historyEl.classList.add("compacted");
+        status.textContent = "compaction: the raw history is gone";
+      }); if (!ok) return false;
+      ok = await beat(800, function () { // notebook + notes come back
+        notebook.style.opacity = "1";
+        notebook.style.transform = "translate(0,0)";
+        status.textContent = "notebook + module notes come back — the task continues";
+      }); if (!ok) return false;
+      ok = await beat(2100, function () {}); if (!ok) return false;
+      ok = await beat(700, function () { train.style.opacity = "0"; }); if (!ok) return false;
+      await beat(900, function () {});
+      return true;
+    }
+    async function loop() { while (await story()) {} }
+    function staticEnd() {
+      withoutAnim(function () {
+        train.style.transform = "translateX(160px)";
+        train.style.opacity = "1";
+        ghost.style.opacity = "1";
+        ghost.style.transform = "translate(0,0)";
+        notebook.style.opacity = "1";
+        notebook.style.transform = "translate(0,0)";
+      });
+      historyEl.classList.add("compacted");
+      beams[0].classList.add("on");
+      deliverNote(0);
+      status.textContent = "the note arrives with the file; the notebook returns after compaction";
+    }
+    return {
+      start: function () { token++; loop(); },
+      stop: function () { token++; },
+      staticEnd: staticEnd
+    };
+  })();
+
+  var notesPanel = document.querySelector(".notes-panel");
+  if (notesPanel && notesScene) {
+    if (REDUCED) {
+      notesScene.staticEnd();
+    } else if ("IntersectionObserver" in window) {
+      var nio = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { notesScene.start(); } else { notesScene.stop(); }
+        });
+      }, { threshold: 0.2 });
+      nio.observe(notesPanel);
+    } else {
+      notesScene.start();
+    }
+  }
+
+  render(0);
+})();
+</script>
+</body>
+</html>

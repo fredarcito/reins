@@ -786,10 +786,13 @@ reins/
 ├── examples/            vite-react (JS/JSX), next-app (TS): one test repo per preset
 ├── scripts/             lint.mjs, rename-scope.mjs, pack.mjs, self-check.mjs, verify/ (end-to-end scripts)
 ├── .reins/            this repo's own architecture.yml: cli > adapters > core
+├── site/                landing page for GitHub Pages (plain HTML, no build step)
 └── docs/                design, decisions, verification log, status, guides
 ```
 
 How to contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md). Rules for agents working here: [`AGENTS.md`](AGENTS.md). The repo checks its own architecture with its own `reins check`.
+
+The landing page lives in `site/`: one static HTML file, no framework and no build step. `.github/workflows/pages.yml` deploys it to GitHub Pages on every push to main that touches `site/`. Enable it once in the repo: Settings → Pages → Source: "GitHub Actions"; the site is then served at `https://fredarcito.github.io/reins/`.
 
 Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `--dry-run`, then `pnpm install`.
 
@@ -797,6 +800,7 @@ Renaming the npm scope: `pnpm rename-scope @new-scope --dry-run`, then without `
 
 | Document | What's in it |
 | --- | --- |
+| [Project site](https://fredarcito.github.io/reins/) | The landing page, served by GitHub Pages; source in [`site/`](site/) |
 | [`docs/walkthrough.md`](docs/walkthrough.md) | Full tour on an example app, with real output: install, init, a blocked commit, notes, doctor |
 | [`docs/publishing.md`](docs/publishing.md) | How to publish the three packages to npm |
 | [`docs/team-install.md`](docs/team-install.md) | Install in the team's repos without publishing; what goes in git; branch protection |

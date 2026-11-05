@@ -277,6 +277,14 @@ Running 0.5.1 on a real Next.js app (1204 files) showed the first version split 
 | Preset shared layer | Adds `constants`, `store`, `api`, `context` (and `src/config`); not `providers` | Common low-level folders were left out of every layer (93 of 1204 files unchecked). Providers often import components, so a fixed layer would be wrong; the report proposes one from its imports instead |
 | Unclassified folders | The report proposes the lowest layer each one fits without violations, from who imports it and what it imports | Turns a list of unchecked folders into a decision a person can take in seconds |
 
+## GitHub Pages site (2026-11-05)
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Landing page | `site/index.html`, one static file: vanilla HTML/CSS/JS, no framework, no build step | The page markets a no-lock-in, no-build-step tool; building it with a framework would contradict the message. Nothing new to maintain or update |
+| Deployment | `.github/workflows/pages.yml`: official Pages actions (`configure-pages` / `upload-pages-artifact` / `deploy-pages`), on pushes to main touching `site/`, plus a manual trigger. Requires enabling Pages once (Settings → Pages → Source: "GitHub Actions") | The official flow needs no branch and no deploy key; a `gh-pages` branch and a `docs/` root were rejected — the first duplicates the source, the second would mix the landing page with the team's `docs/` and expose the markdown raw |
+| Accuracy | Terminal output and rule texts on the page are quoted from the README and the core rule templates (`packages/core/src/check/rules/`), not invented | The page claims "same check locally and in CI"; showing fake output would undermine it |
+
 ## Open
 
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.
