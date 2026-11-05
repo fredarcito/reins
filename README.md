@@ -67,6 +67,10 @@ npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest   # pnpm: pn
 npx reins sync
 npx reins doctor
 npx reins check
+
+# 3. Notes that fell behind their code (git history, no tokens);
+#    review the top ones with /reins-notes review
+npx reins notes stale
 ```
 
 Then read the [changelog](CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
@@ -107,6 +111,7 @@ Commands for your agent, installed by `reins install`. In Claude Code, type them
 | `/reins-done` | Closes a task: runs the checks once, updates the notebook and the notes of the modules it touched, says what was and wasn't verified | When a task is done |
 | `/reins-backlog` | Shows what is pending in the backlog, proposes what to do next (checked against the code), adds, closes or drops items | "What's pending?", "what should we do next?" |
 | `/reins-notes` | Reads each module and fills in its note. Writes only decisions it can back up; the rest become `- ? question` lines for you | After `init` or `notes new` |
+| `/reins-notes review` | Checks notes against the code and fixes what is no longer true: the ones you name, or the top of `npx reins notes stale` (notes ranked by commits since they last changed) plus those doctor flags as `note-dead-paths`/`note-dead-refs` | Every few weeks, or when doctor flags notes |
 | `/reins-arch` | Reviews `.reins/architecture.yml` against the code and proposes changes with evidence. **Applies nothing until you approve each one**, and never bends the plan just to make the check pass | After `init`, and every few months |
 | `/reins-audit` | Looks for new improvements in the code and adds only new findings to the backlog | "Review the whole project" |
 | `/reins-agent` | Creates a new subagent in `.reins/agents/` (read-only by default, the fewest tools) and generates it for Claude Code | When you want a new agent: a tester, an a11y checker… |
