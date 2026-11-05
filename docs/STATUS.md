@@ -33,8 +33,8 @@ Version 0.3.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 
 Known limits of `init` on repos organized by routes:
 
-- A component used by a single route today is assigned to it; when a second route imports it, `check` fails until someone moves it or edits `architecture.yml`. The report lists every assigned folder.
-- A folder needs every import from one domain; a single import from another domain sends it to the report instead.
+- Inside a folder organized by feature, a subfolder joins the domain with 2/3 of its imports; the other imports are frozen in the baseline as violations (the report counts them).
+- Directly under a layer root (`src/components/`), a component used by a single route today is still assigned to it; when a second route imports it, `check` fails until someone moves it or edits `architecture.yml`.
 - Route folders are measured in files, not size: a route with one large `page.js` is left out.
 - Only when there is no `features/*` or `modules/*` folder: mixed repos get nothing from this.
 - Barrels are read as text: named imports and `export … from` re-exports are resolved; default and namespace imports, `require` and dynamic `import()` of a barrel count as using everything behind it. Only `index.*` files are considered barrels.

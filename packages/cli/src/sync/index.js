@@ -129,6 +129,9 @@ export function planSync(root) {
  * module note is missing gets a line of its own.
  * @param {{ file: string, paths: string[] }[]} notes
  */
+/** Paths shown per note in the AGENTS.md index. */
+export const MAX_INDEX_PATHS = 2;
+
 export function renderNotesIndex(notes) {
   const files = new Set(notes.map((n) => n.file));
   const grouped = (n) => {
@@ -139,7 +142,10 @@ export function renderNotesIndex(notes) {
     const own = notes.filter((x) => grouped(x) && parentNoteFile(x.file) === n.file);
     const folder = n.file.replace(/\.md$/, '/');
     const tail = own.length ? `; parts in \`${folder}\`: ${own.map((x) => x.file.slice(folder.length, -3)).join(', ')}` : '';
-    return `- ${n.paths.map((p) => `\`${p}\``).join(', ')} → \`${n.file}\`${tail}\n`;
+    // AGENTS.md is read on every session: a few paths say where the module is, the note itself has them all
+    const shown = n.paths.slice(0, MAX_INDEX_PATHS).map((p) => `\`${p}\``).join(', ');
+    const more = n.paths.length > MAX_INDEX_PATHS ? ` (+${n.paths.length - MAX_INDEX_PATHS} more)` : '';
+    return `- ${shown}${more} → \`${n.file}\`${tail}\n`;
   }).join('');
 }
 

@@ -7,7 +7,7 @@ layers:
   - { name: app,        paths: ["src/main.{js,jsx,ts,tsx}", "src/App.{js,jsx,ts,tsx}", "src/pages/**", "src/routes/**", "src/app/**"] }
   - { name: features,   paths: ["src/features/**", "src/modules/**"] }
   - { name: components, paths: ["src/components/**", "src/ui/**"] }
-  - { name: shared,     paths: ["src/hooks/**", "src/lib/**", "src/utils/**", "src/services/**", "src/api/**", "src/store/**", "src/types/**", "src/constants/**"] }
+  - { name: shared,     paths: ["src/hooks/**", "src/lib/**", "src/utils/**", "src/services/**", "src/api/**", "src/store/**", "src/types/**", "src/constants/**", "src/context/**", "src/config/**"] }
 
 domains_from: ["src/features/*", "src/modules/*"]
 # With no domain folder above, each route folder becomes a domain: one-file routes are left out, and folders only

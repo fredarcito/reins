@@ -183,3 +183,8 @@ test('notes index: parts of a module go on its line, so AGENTS.md does not grow 
     '- `src/x/**` → `.reins/notes/orphan/part.md`\n',
   ].join(''));
 });
+
+test('notes index: at most two paths per note, so a big module does not flood AGENTS.md', () => {
+  const block = renderNotesIndex([{ file: '.reins/notes/companies.md', paths: ['src/app/(companies)/companies/**', 'src/components/pages/companies/**', 'src/components/a.js', 'src/components/b.js'] }]);
+  assert.equal(block, '- `src/app/(companies)/companies/**`, `src/components/pages/companies/**` (+2 more) → `.reins/notes/companies.md`\n');
+});

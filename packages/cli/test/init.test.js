@@ -239,6 +239,25 @@ test('a broader note (a whole route group) does not stop the domain note; parts 
   }
 });
 
+test('next-app preset: store, constants, api and context are shared; the report says where other folders fit', async () => {
+  const dir = routesRepo('next-app', {
+    'src/store/cart.ts': 'import { fmt } from "@/lib/date";\nexport const cart = fmt;\n',
+    'src/constants/dates.ts': 'export const D = 1;\n',
+    'src/api/client.ts': 'import { D } from "@/constants/dates";\nexport const get = D;\n',
+    'src/context/Theme.tsx': 'export const Theme = 1;\n',
+    'src/providers/Providers.tsx': 'import { Button } from "@/components/Button";\nimport { Theme } from "@/context/Theme";\nexport const Providers = [Button, Theme];\n',
+    'src/app/(main)/jobs/page.tsx': 'import { Providers } from "@/providers/Providers";\nimport { cart } from "@/store/cart";\nimport { get } from "@/api/client";\nexport default function P() { return [Providers, cart, get]; }\n',
+    'src/app/(main)/jobs/x.ts': 'export const x = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  const yml = read(dir, '.reins/architecture.yml');
+  assert.match(yml, /name: shared, paths: \[[^\]]*src\/\{[^}]*constants,store,api,context/);
+  const report = read(dir, '.reins/init-report.md');
+  assert.match(report, /Source files outside every layer \(not checked\): \*\*1\*\*/);
+  assert.match(report, /`src\/providers\/` \(1 files; imported by app; imports components, shared\) — \*\*fits `components`\*\*/);
+});
+
 test('vite-react by routes: a components folder only one route uses joins it; a one-file route is left out', async () => {
   const dir = routesRepo('vite-react', {
     'src/App.jsx': "import { Jobs } from './routes/jobs/Jobs';\nimport { Profile } from './routes/profile/Profile';\nexport function App() { return [Jobs, Profile]; }\n",

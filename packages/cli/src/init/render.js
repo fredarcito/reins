@@ -83,6 +83,7 @@ Review this, edit \`.reins/architecture.yml\`, then run \`reins check --update-b
 - Adapter: \`${d.adapterPackage}\`, preset \`${d.preset}\` (${d.presetReason})${d.detected ? '' : '. **Warning:** the adapter did not recognize this repo'}
 - Scanned: ${d.files} files, ${d.edges} internal imports${d.typescript ? '; TypeScript detected, so type-only imports are ignored by the rules (`ignore_kinds: [type]`)' : ''}
 - Existing violations frozen in \`baseline.json\`: **${v.length}** (${counts.join(', ')})
+- Source files outside every layer (not checked): **${d.layerInfo.unclassified.reduce((n, u) => n + u.files, 0)}**${d.layerInfo.unclassified.length ? ' — see "Folders with source files outside every layer"' : ''}
 
 ## Layers (top to bottom)
 
@@ -98,12 +99,12 @@ ${bullet(d.layerInfo.pairs.map((p) => `${p.above} → ${p.below}: ${p.down} down
 ${d.layerInfo.conflicts.length ? `\n${bullet(d.layerInfo.conflicts, '')}\n` : ''}
 Folders with source files outside every layer (add them to a layer, or leave them unchecked):
 
-${bullet(capped(d.layerInfo.unclassified.map((u) => `\`${u.folder}/\` (${u.files} files)`)), 'none')}
+${bullet(capped(d.layerInfo.unclassified.map(unclassifiedLine)), 'none')}
 
 ## Domains
 ${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Route groups `(x)` and parameters `[x]` are looked through, and a route folder with a single source file is left out. Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
 ${bullet(d.domains.map((x) => domainLine(x, d.domainFacts?.find((f) => f.name === x.name))), 'none proposed (no folders matching the preset, e.g. `src/features/*`)')}
-${d.smallRoutes?.length ? `\nRoute folders left out (a single source file, e.g. a lone page):\n\n${bullet(capped(d.smallRoutes.map((f) => `\`${f}/\``)), '')}\n` : ''}${d.doubtfulOwned?.length ? `\nFolders mostly used by one domain, but not only: not added to it, since the other imports would become violations. Add them by hand if they belong to it:\n\n${bullet(capped(d.doubtfulOwned.map((x) => `\`${x.folder}/\` → \`${x.domain}\` (${x.imports} of ${Math.round(x.imports / x.share)} imports into it come from that domain)`)), '')}\n` : ''}
+${d.smallRoutes?.length ? `\nRoute folders left out (a single source file, e.g. a lone page, \`sitemap.xml\` or \`llms.txt\`): too small for a domain or a note; the layer rules still check them:\n\n${bullet(capped(d.smallRoutes.map((f) => `\`${f}/\``)), '')}\n` : ''}${d.doubtfulOwned?.length ? `\nFolders mostly used by one domain, but not only: not added to it, since the other imports would become violations. Add them by hand if they belong to it:\n\n${bullet(capped(d.doubtfulOwned.map((x) => `\`${x.folder}/\` → \`${x.domain}\` (${x.imports} of ${Math.round(x.imports / x.share)} imports into it come from that domain)`)), '')}\n` : ''}
 ## Cycles
 
 ${bullet(capped(cycles), 'none')}
@@ -136,7 +137,7 @@ ${bullet(d.warnings, 'none')}
 /** One domain in the report: folder, extra folders it owns, public API, and what domain-boundary guards. */
 function domainLine(x, facts) {
   const owned = x.owned?.length
-    ? `; also ${x.owned.map((o) => `\`${o.folder}/\` (${o.files} files, imported only from this domain)`).join(', ')}`
+    ? `; also ${x.owned.map((o) => `\`${o.folder}/\` (${o.files} files, ${o.total && o.total > o.imports ? `${o.imports} of ${o.total} imports into it come from this domain; the other ${o.total - o.imports} become violations, frozen in the baseline` : 'imported only from this domain'})`).join(', ')}`
     : '';
   const loose = x.loose?.length
     ? `; its note also covers ${x.loose.length} loose file(s) only this domain uses: ${x.loose.slice(0, 5).map((f) => `\`${f}\``).join(', ')}${x.loose.length > 5 ? ', …' : ''} (not its rules; move them into a folder to make them part of the domain)`
@@ -148,4 +149,16 @@ function domainLine(x, facts) {
   else if (facts) guard = ` — imported from outside: ${facts.importedFrom} time(s)`;
   const where = (x.folders ?? [x.folder]).map((f) => `\`${f}/\``).join(' + ');
   return `\`${x.name}\`: ${where} (${x.files} files)${owned}, ${api}${guard}${loose}`;
+}
+
+/** A folder outside every layer, with where it would fit from its imports. */
+function unclassifiedLine(u) {
+  const facts = [
+    u.importedBy?.length ? `imported by ${u.importedBy.join(', ')}` : '',
+    u.imports?.length ? `imports ${u.imports.join(', ')}` : '',
+  ].filter(Boolean).join('; ');
+  const fit = u.fits
+    ? ` — **fits \`${u.fits}\`** (add \`${u.folder}/**\` to its paths)`
+    : u.importedBy?.length || u.imports?.length ? ' — no layer fits without violations: its imports go both ways' : ' — no imports to or from the layers';
+  return `\`${u.folder}/\` (${u.files} files${facts ? `; ${facts}` : ''})${fit}`;
 }

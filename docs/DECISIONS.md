@@ -256,12 +256,26 @@ They come from [`VERIFIED.md`](VERIFIED.md). Pending your OK.
 | Route groups | `(x)` folders are looked through like `[param]` | In Next a group only shares a layout; `(main)` as a domain mixed unrelated routes. A group holding one feature (`(companies)/companies`) still gives that feature |
 | Same route in several groups | Folders whose path without groups is the same are one domain (and one part) with several folders | Groups are not part of the URL: `(companies)/companies` and `(main)/companies` are both `/companies`. Found on a real repo, where they came out as `companies`, `companies-2`, `companies-3` |
 | Lone pages | A route folder needs 2+ source files to be a domain; the rest are listed in the report | Looking through groups would otherwise turn every legal page into a domain with an empty note |
-| Logic outside the route | A folder outside every domain joins a route domain when it has 2+ source files and every runtime import into it (tests and stories excluded) comes from that domain. The highest such folder, skipping layer roots and single-folder containers (`components/pages/` holding only `CompanyProfile/`). Repeats until stable | Decided by the import graph so it works for any convention (`components/pages/x`, `components/x`, `views/x`). Matching folder names was rejected: it breaks on `CompanyProfile/` vs `companies` and covers one convention only |
-| Partial majorities | Above 50% but below 100% only goes to the report; ties are ignored | Adding such a folder would turn the other domains' imports into violations frozen in the baseline |
+| Logic outside the route | Revised 2026-11-05 after a real repo (see below). Was: a folder joins a domain only when 100% of its imports come from it, descending otherwise | Decided by the import graph so it works for any convention (`components/pages/x`, `components/x`, `views/x`). Matching folder names was rejected: it breaks on `CompanyProfile/` vs `companies` and covers one convention only |
+| Partial majorities | Revised 2026-11-05: see "Owned folders, second version" | |
 | Closed domains | Reported, not warned | A route domain whose public API is only `page.js` is not "unchecked": `domain-boundary` flags any outside import of its files |
 | Feature domains | Unchanged | `features/x` already holds its own components |
 | Barrels | The JS adapter reads `index.*` files that only re-export, and the named imports of their importers, and returns `uses` (importer → file behind the barrel). `init` uses them instead of the edges into and out of barrels; rules keep the real edges. Anything it can't resolve (default or namespace import, dynamic import) counts as using everything behind the barrel | With a `components/index.js` barrel every page imports the same file, so no folder could ever look owned. Text, not a parser, because it is JS-specific (adapter) and the conservative fallback keeps mistakes on the safe side |
 | Loose files | A file outside every owned folder that only one domain uses (directly or through other such files) joins the domain's note paths, never its `architecture.yml` paths | Notes are context and cannot block anyone; a rule built on "used once today" would break the day a second route uses the file |
+
+## Owned folders, second version (2026-11-05)
+
+Running 0.5.1 on a real Next.js app (1204 files) showed the first version split features into pieces and assigned shared code.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Never split a feature | Inside a folder organized by feature, a subfolder joins the domain that makes at least 2/3 of the imports into it, whole. The other imports become violations, frozen in the baseline and counted in the report | Requiring 100% made one import from another domain push the algorithm down a level, ending with `OverviewPage/content/**`, `OverviewPage/faq/**` and 100+ single files; a new file in `OverviewPage/` had no domain. Freezing a few imports is better than a plan nobody can read |
+| "Organized by feature" | A folder's children are split among domains only when most of its used children are mostly used by one domain (`components/pages/`). Otherwise it is shared code and nothing in it is assigned (`components/shared/`) | A graph signal, not a name list: `components/shared/CircularProgress` used by one page today is still shared by intent, and its siblings say so |
+| Layer roots | Directly under a layer root, a folder still needs every import from one domain | A layer root mixes everything (`components/` holding `Button`, `pages/`, `JobBoard/`), so it says nothing about intent |
+| Lowest layer | Never assigned, folders or loose files | It is shared by design (`utils/vote.js`, `constants/dates.js` were assigned before) |
+| AGENTS.md index | At most two paths per note, then `(+N more)` | The index is read on every session; one note listed ~150 paths |
+| Preset shared layer | Adds `constants`, `store`, `api`, `context` (and `src/config`); not `providers` | Common low-level folders were left out of every layer (93 of 1204 files unchecked). Providers often import components, so a fixed layer would be wrong; the report proposes one from its imports instead |
+| Unclassified folders | The report proposes the lowest layer each one fits without violations, from who imports it and what it imports | Turns a list of unchecked folders into a decision a person can take in seconds |
 
 ## Open
 

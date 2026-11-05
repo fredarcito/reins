@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 · 2026-11-05
+
+From running 0.5.1 on a real Next.js app (1204 files). Re-run `reins init --dry-run` after updating.
+
+- `reins init`: a feature folder (`components/pages/companies/`) joins its route domain whole, instead of a list of its subfolders and 100+ single files. Inside a folder organized by feature, a subfolder goes to the domain with at least 2/3 of the imports into it; the other imports are frozen in the baseline and counted in the report.
+- `reins init`: shared code is no longer assigned to one domain. A folder that is not organized by feature (`components/shared/`) and the lowest layer (`utils/`, `constants/`…) stay out of every domain and every note.
+- `AGENTS.md` notes index: at most two paths per note, then `(+N more)`; the note keeps them all.
+- Presets: the shared layer includes `constants`, `store`, `api`, `context` (and `src/config`).
+- Init report: how many source files are outside every layer, and for each such folder who imports it, what it imports and the lowest layer it fits without violations. Route folders left out (lone pages, `sitemap.xml`) are explained: the layer rules still check them.
+
 ## 0.5.1 · 2026-11-05
 
 Fixes found running 0.5.0 on a real Next.js app. Re-run `reins init --dry-run` after updating.

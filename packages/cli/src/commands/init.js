@@ -76,7 +76,7 @@ export async function init(ctx) {
   if (fromRoutes) {
     domains = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true, small: smallRoutes });
     // a route's logic often lives outside its folder (components/pages/x, components/x…): the graph says where
-    doubtfulOwned = inferOwnedFolders(domains, graph.files, graph.edges, layerInfo.layers.flatMap((l) => l.paths), graph).doubtful;
+    doubtfulOwned = inferOwnedFolders(domains, graph.files, graph.edges, layerInfo.layers, graph).doubtful;
   }
   const entrySet = new Set(graph.entries);
   const domainFacts = domains.map((d) => ({

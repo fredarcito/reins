@@ -53,7 +53,7 @@ test('layers: absent layers and globs are dropped; order follows the dominant im
   assert.deepEqual(r.layers.map((l) => `${l.name}:${l.files}`), ['pages:1', 'features:2', 'components:1', 'shared:1']);
   assert.deepEqual(r.layers[3].paths, ['src/lib/**']);
   assert.deepEqual(r.pairs.find((p) => p.above === 'features' && p.below === 'components'), { above: 'features', below: 'components', down: 2, up: 1 });
-  assert.deepEqual(r.unclassified, [{ folder: 'src/store', files: 2 }]);
+  assert.deepEqual(r.unclassified, [{ folder: 'src/store', files: 2, importedBy: [], imports: [], fits: null }]);
   assert.deepEqual(r.conflicts, []);
 });
 
@@ -62,6 +62,28 @@ test('layers: a loop in the dominant directions keeps the preset order and is re
   const r = inferLayers(presetLayers, files, edges);
   assert.equal(r.conflicts.length, 1);
   assert.match(r.conflicts[0], /form a loop/);
+});
+
+test('layers: an unclassified folder gets the lowest layer its imports allow, or none when they go both ways', () => {
+  const preset = [
+    { name: 'app', paths: ['src/app/**'] },
+    { name: 'components', paths: ['src/components/**'] },
+    { name: 'shared', paths: ['src/utils/**'] },
+  ];
+  const files = ['src/app/layout.js', 'src/app/page.js', 'src/components/Card.js', 'src/utils/fmt.js',
+    'src/store/cart.js', 'src/providers/Theme.js', 'src/legacy/x.js'];
+  const e = (from, to) => ({ from, to, kind: 'static' });
+  const edges = [
+    e('src/app/page.js', 'src/components/Card.js'), e('src/components/Card.js', 'src/utils/fmt.js'),
+    e('src/components/Card.js', 'src/store/cart.js'), e('src/store/cart.js', 'src/utils/fmt.js'), // store: like utils
+    e('src/app/layout.js', 'src/providers/Theme.js'), e('src/providers/Theme.js', 'src/components/Card.js'), // providers: above components
+    e('src/legacy/x.js', 'src/app/page.js'), e('src/utils/fmt.js', 'src/legacy/x.js'), // both ways
+  ];
+  const r = inferLayers(preset, files, edges);
+  const fit = Object.fromEntries(r.unclassified.map((u) => [u.folder, [u.fits, u.importedBy.join(','), u.imports.join(',')]]));
+  assert.deepEqual(fit['src/store'], ['shared', 'components', 'shared']);
+  assert.deepEqual(fit['src/providers'], ['components', 'app', 'components']);
+  assert.deepEqual(fit['src/legacy'], [null, 'shared', 'app']);
 });
 
 test('domains: one per folder, public API from its index, missing index flagged, names deduplicated', () => {
@@ -135,46 +157,55 @@ test('a parameter folder that is a page itself is a part, covering only its own 
   ]);
 });
 
-test('owned folders: a folder only one route domain imports joins it, decided by imports, never by names', () => {
+test('owned folders: whole feature folders by imports, never split; shared code and the lowest layer stay out', () => {
   const route = (name) => ({ name, folder: `src/app/(main)/${name}`, paths: [`src/app/(main)/${name}/**`], publicApi: [`src/app/(main)/${name}/page.js`], missingIndex: false, files: 2, owned: [] });
   const domains = [route('companies'), route('jobs')];
+  const C = 'src/app/(main)/companies/index.js';
+  const J = 'src/app/(main)/jobs/index.js';
+  const P = 'src/components/pages/companies';
   const files = [
-    'src/app/(main)/companies/page.js', 'src/app/(main)/companies/index.js', 'src/app/(main)/jobs/page.js', 'src/app/(main)/jobs/index.js',
-    // logic of companies, under a name that has nothing to do with it
-    'src/components/pages/CompanyProfile/Header.js', 'src/components/pages/CompanyProfile/Tabs.js',
-    'src/components/pages/CompanyProfile/charts/Bar.js', 'src/components/pages/CompanyProfile/charts/Line.js',
+    C, 'src/app/(main)/companies/page.js', J, 'src/app/(main)/jobs/page.js',
+    // the companies feature, with subfolders and loose files; jobs imports one file of it once
+    `${P}/OverviewPage/index.js`, `${P}/OverviewPage/Header.js`, `${P}/OverviewPage/content/Body.js`, `${P}/OverviewPage/faq/Faq.js`, `${P}/Tabs.js`,
+    'src/components/pages/jobs/JobBoard.js', 'src/components/pages/jobs/JobRow.js',
+    // shared on purpose: one of them used by companies only, today
+    'src/components/shared/CircularProgress/index.js', 'src/components/shared/CircularProgress/Ring.js',
+    'src/components/shared/Modal/index.js', 'src/components/shared/Modal/Body.js',
+    'src/components/shared/Tooltip/index.js', 'src/components/shared/Tooltip/Arrow.js',
     // used only by an owned folder: follows it
     'src/components/widgets/Rating.js', 'src/components/widgets/Stars.js',
-    // shared for real
-    'src/components/ui/Button.js', 'src/components/ui/Modal.js',
-    // mostly jobs, once from companies
+    // flat, any name, used by companies only: its note, not its rules
+    'src/components/paginaContacto.js',
+    // mostly jobs
     'src/components/jobs-list/List.js', 'src/components/jobs-list/Row.js',
-    'src/components/pages/CompanyProfile/Header.test.js',
+    // lowest layer: shared by design
+    'src/utils/vote.js', 'src/constants/dates.js',
   ];
+  const e = (from, to) => ({ from, to });
   const edges = [
-    { from: 'src/app/(main)/companies/index.js', to: 'src/components/pages/CompanyProfile/Header.js' },
-    { from: 'src/app/(main)/companies/index.js', to: 'src/components/pages/CompanyProfile/Tabs.js' },
-    { from: 'src/components/pages/CompanyProfile/Tabs.js', to: 'src/components/pages/CompanyProfile/charts/Bar.js' },
-    { from: 'src/components/pages/CompanyProfile/Header.js', to: 'src/components/widgets/Rating.js' },
-    { from: 'src/components/widgets/Rating.js', to: 'src/components/widgets/Stars.js' },
-    { from: 'src/app/(main)/companies/index.js', to: 'src/components/ui/Button.js' },
-    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/ui/Modal.js' },
-    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/jobs-list/List.js' },
-    { from: 'src/app/(main)/jobs/page.js', to: 'src/components/jobs-list/Row.js' },
-    { from: 'src/app/(main)/jobs/index.js', to: 'src/components/jobs-list/Row.js' },
-    { from: 'src/app/(main)/companies/index.js', to: 'src/components/jobs-list/Row.js' },
-    { from: 'src/components/pages/CompanyProfile/Header.test.js', to: 'src/components/jobs-list/List.js' },
+    e(C, `${P}/OverviewPage/index.js`), e(C, `${P}/Tabs.js`), e(`${P}/OverviewPage/index.js`, `${P}/OverviewPage/Header.js`),
+    e(`${P}/OverviewPage/Header.js`, `${P}/OverviewPage/content/Body.js`), e(`${P}/OverviewPage/Header.js`, `${P}/OverviewPage/faq/Faq.js`),
+    e(J, `${P}/Tabs.js`),
+    e(J, 'src/components/pages/jobs/JobBoard.js'), e('src/components/pages/jobs/JobBoard.js', 'src/components/pages/jobs/JobRow.js'),
+    e(`${P}/Tabs.js`, 'src/components/shared/CircularProgress/index.js'), e('src/components/shared/CircularProgress/index.js', 'src/components/shared/CircularProgress/Ring.js'),
+    e(C, 'src/components/shared/Modal/index.js'), e(J, 'src/components/shared/Modal/index.js'),
+    e(C, 'src/components/shared/Tooltip/index.js'), e(J, 'src/components/shared/Tooltip/index.js'),
+    e(`${P}/OverviewPage/Header.js`, 'src/components/widgets/Rating.js'), e('src/components/widgets/Rating.js', 'src/components/widgets/Stars.js'),
+    e(C, 'src/components/paginaContacto.js'),
+    e(J, 'src/components/jobs-list/List.js'), e(J, 'src/components/jobs-list/Row.js'), e('src/app/(main)/jobs/page.js', 'src/components/jobs-list/Row.js'), e(C, 'src/components/jobs-list/Row.js'),
+    e(`${P}/Tabs.js`, 'src/utils/vote.js'), e(C, 'src/constants/dates.js'),
   ];
-  const { doubtful } = inferOwnedFolders(domains, files, edges, ['src/app/**', 'src/components/**']);
-  assert.deepEqual(domains[0].owned.map((o) => [o.folder, o.files]), [
-    ['src/components/pages/CompanyProfile', 4],
-    ['src/components/widgets', 2],
-  ]);
-  assert.deepEqual(domains[0].paths, ['src/app/(main)/companies/**', 'src/components/pages/CompanyProfile/**', 'src/components/widgets/**']);
-  assert.deepEqual(domains[1].owned, [], 'ui/ is shared, jobs-list/ is also used by companies');
+  const layers = [{ paths: ['src/app/**'] }, { paths: ['src/components/**'] }, { paths: ['src/{utils,constants}/**'] }];
+  const { doubtful } = inferOwnedFolders(domains, files, edges, layers);
+  assert.deepEqual(domains[0].owned.map((o) => [o.folder, o.files, o.imports, o.total]), [
+    [P, 5, 2, 3],
+    ['src/components/widgets', 2, 1, 1],
+  ], 'companies/ whole (OverviewPage and its subfolders included, not one by one), even with an import from jobs');
+  assert.deepEqual(domains[1].owned.map((o) => o.folder), ['src/components/pages/jobs']);
+  assert.deepEqual(domains[0].loose, ['src/components/paginaContacto.js']);
+  assert.ok(!domains.some((d) => d.paths.some((p) => /shared|utils|constants/.test(p))), 'shared code stays out');
   assert.deepEqual(doubtful, [{ folder: 'src/components/jobs-list', domain: 'jobs', share: 0.75, imports: 3 }]);
-  assert.equal(importsFromOutside(domains[0], edges), 0);
-  assert.equal(importsFromOutside(domains[0], [...edges, { from: 'src/app/(main)/jobs/index.js', to: 'src/components/widgets/Stars.js' }]), 1, 'owned folders count as the domain');
+  assert.equal(importsFromOutside(domains[0], edges), 1, 'the jobs import into companies/ is now outside companies');
 });
 
 test('orphans: not imported, not entries, not tests, not config, not .d.ts', () => {
