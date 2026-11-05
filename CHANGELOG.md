@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2 · 2026-11-05
+
+Run `reins sync` after updating.
+
+- `AGENTS.md` notes block: its first line now says to run `npx reins notes <path…>` before changing a file. The notes hook only fires on Read/Edit/Write, so an agent reading code through the shell (`cat`, `grep`, `sed`) or another tool (a code-graph MCP server) never got the notes. When the path → note index does not fit in the `AGENTS.md` limit, the block keeps that line and the number of notes, instead of the module names of 0.6.1, which did not match paths to notes nor list the parts of a module.
+- New installs: the `- Before touching these paths, read their note:` line above the block is gone, since the block now says it. In an existing `AGENTS.md` that line belongs to you: you can delete it.
+
 ## 0.6.1 · 2026-11-05
 
 Fixes found running 0.6.0 on a real Next.js app. Run `reins sync` after updating.

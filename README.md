@@ -583,7 +583,8 @@ flowchart LR
 | A generated file edited by hand | Overwritten, with a message (edit the source instead); `--check` fails |
 | A source deleted | Its generated files are removed (kept if edited by hand) |
 | `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only the notes block is managed) |
-| More notes than fit in `AGENTS.md` | The index becomes one line of module names, so `AGENTS.md` stays within doctor's `agents_md.max_lines`; the notes hook still delivers every note |
+| Notes index | Its first line says to run `npx reins notes <path…>` before changing a file (the hook only fires on Read/Edit/Write, not on shell commands or other tools), then one line per note |
+| More notes than fit in `AGENTS.md` | Only that first line and the number of notes, so `AGENTS.md` stays within doctor's `agents_md.max_lines` |
 
 `sync --check` writes nothing and fails if anything differs. Once `.generated.json` exists, `reins check` reports the same differences under `integrity`.
 
@@ -685,6 +686,45 @@ flowchart LR
 `reins install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`; an existing `AGENTS.md` only gets the notes index block appended at the end), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
 
 Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
+
+### Updating
+
+```bash
+# 1. Update the packages (@agentreins/core comes along with the CLI)
+npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest
+
+# 2. Regenerate what reins owns, then check
+npx reins sync
+npx reins doctor
+npx reins check
+```
+
+Then read the [changelog](CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
+
+```mermaid
+flowchart LR
+    pkg["npm install -D<br/>@agentreins/*@latest"] --> sync["reins sync"]
+    sync --> gen["regenerated<br/>.claude/ · AGENTS.md notes index"]
+    pkg -.-> tpl["new templates<br/>in node_modules"]
+    tpl -. "you merge by hand" .-> src[".reins/ sources<br/>skills · policies · agents"]
+    src --> sync
+```
+
+What updates by itself and what doesn't:
+
+| What | On update |
+| --- | --- |
+| `.claude/skills/reins-*`, `.claude/agents/reins-*`, the hooks in `.claude/settings.json`, the notes index in `AGENTS.md` | `reins sync` regenerates them from `.reins/` |
+| `.reins/skills/`, `.reins/policies/`, `.reins/agents/` and the rest of what `install` copied | Kept: they are your sources and you may have edited them |
+| `AGENTS.md` outside the notes index, `architecture.yml`, `baseline.json`, your notes | Never touched |
+
+When a version changes the templates, the changelog says so. To bring them in, compare your copy with the new one and merge what you want:
+
+```bash
+diff -ru node_modules/@agentreins/cli/templates/.reins .reins
+```
+
+A file you never edited can simply be deleted and copied again by `npx reins install`. Then run `npx reins sync`.
 
 ## Roadmap
 
