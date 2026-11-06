@@ -4,7 +4,7 @@ paths: ["packages/cli/**"]
 # cli
 
 ## Purpose
-The `reins` command line: wires the core and the language adapter to a consumer repo's files, git and Claude Code (`check`, `init`, `doctor`, `sync`, `notes`, `scope`, `resume`, `audit`, `progress`, `review`, `install`).
+The `reins` command line: wires the core and the language adapter to a consumer repo's files, git and Claude Code (`check`, `init`, `doctor`, `sync`, `notes`, `scope`, `impact`, `resume`, `audit`, `progress`, `review`, `install`).
 
 ## Map
 - Files: 33. Used by: nothing outside the module. Depends on: domain core (13), only through `@agentreins/core`; adapters are loaded at runtime, never imported
@@ -28,6 +28,7 @@ The `reins` command line: wires the core and the language adapter to a consumer 
 - 2026-11-04: Claude Code hooks (`notes --hook`, `resume --hook`) must never fail: any error means no output and exit 0.
 - 2026-11-04: on `compact`/`clear`, `resume --hook` forgets the session's seen-notes record so notes are delivered again.
 - 2026-11-05: `sync` never writes an AGENTS.md that doctor rejects: the notes index fits in `agents_md.max_lines` minus the hand-written lines, or shrinks to its first line (`fitNotesIndex`). That line always says to run `reins notes <path…>`: the hook misses shell reads and MCP tools.
+- 2026-11-06: `impact` passes the adapter's `uses` to `impactOf` so importers behind a barrel count as consumers; without it a re-exported util shows only the barrel and the level comes out too low.
 
 ## Traps
 - `cwd` and root are real paths on purpose: macOS `/var` -> `/private/var` would break `--files` repo-relative paths.

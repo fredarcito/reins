@@ -493,6 +493,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
 | `reins install` | experimental | ✅ npm and pnpm |
 | `reins sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |
+| `reins impact` | experimental | ✅ the domains that consume a file, before the refactor |
 | `reins notes new`, `resume` + `SessionStart` hook | experimental | ✅ notebook and notes come back after a compaction |
 | Skills `arch`, `notes`, `agent` | experimental | ✅ tested with Claude Code |
 | Templates: `AGENTS.md`, policies, skills, agents | experimental | ✅ |
@@ -615,7 +616,7 @@ Notebook format (`.reins/progress/<branch>.md`, local, outside git):
 **Next step:** wire the UI.
 ```
 
-### `reins sync`, `reins notes`, `reins scope`, `reins resume`
+### `reins sync`, `reins notes`, `reins scope`, `reins impact`, `reins resume`
 
 `sync` generates the tool layer from the sources in `.reins/`. It only touches what it generated, recorded in `.reins/.generated.json`.
 
@@ -667,6 +668,29 @@ sequenceDiagram
 
 The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the Claude Code fast path. Tested with Claude Code: the note arrives when the file is read, so the very first edit already follows it ([details](docs/VERIFIED.md#phase-6-findings)).
 
+`scope` goes **path → domain**: the files a task will touch. `impact` goes the other way, **file → consuming domains**, and answers the question an agent has before touching a shared file: *who else imports this?*
+
+```mermaid
+flowchart LR
+    ann["announce the level<br/>(triage policy)"] --> imp["reins impact the file"]
+    imp --> plan["plan with the real<br/>blast radius"]
+    plan --> edit["edit"]
+    edit --> chk["reins check confirms<br/>instead of surprising"]
+```
+
+```console
+$ npx reins impact src/lib/date.ts
+File: src/lib/date.ts (no domain)
+Imported by: 2 files — billing (1), no domain (1)
+Public API: no
+Boundary crossings: none
+Existing violations: 1 (no-cycles new; run `reins check --files src/lib/date.ts` to see them)
+Notes to read: .reins/notes/lib.md
+Minimum level (if the change breaks importers): small (3 file(s) in 1 domain)
+```
+
+Boundary crossings are imports that reach a domain's internals instead of its public API — the same leak `domain-boundary` reports, counted with every import kind (a type-only import also breaks when the type changes). Importers that go through a barrel (`import { x } from '@/lib'`) count as consumers of the file behind it, not just of the barrel. Symbol-level questions stay with grep, inside the domains listed.
+
 | Command | What it does |
 | --- | --- |
 | `reins notes <path…>` | Prints the notes that apply to each path |
@@ -676,6 +700,7 @@ The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the
 | `reins resume` | Branch notebook, files changed on the branch and their notes: what an agent needs to pick a task up. `--json` for agents |
 | `reins resume --hook` | The same, as the Claude Code `SessionStart` hook (startup, `/clear`, compaction). After a compaction the notes are delivered again |
 | `reins scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
+| `reins impact <file-or-folder>` | The reverse of `scope`: the domains that consume a file, imports that bypass a public API, violations that already involve it, and the minimum level if the change breaks its importers. `--json` |
 
 ### `reins audit`, `reins progress`, `reins review`
 

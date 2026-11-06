@@ -285,6 +285,23 @@ Running 0.5.1 on a real Next.js app (1204 files) showed the first version split 
 | Deployment | `.github/workflows/pages.yml`: official Pages actions (`configure-pages` / `upload-pages-artifact` / `deploy-pages`), on pushes to main touching `site/`, plus a manual trigger. Requires enabling Pages once (Settings → Pages → Source: "GitHub Actions") | The official flow needs no branch and no deploy key; a `gh-pages` branch and a `docs/` root were rejected — the first duplicates the source, the second would mix the landing page with the team's `docs/` and expose the markdown raw |
 | Accuracy | Terminal output and rule texts on the page are quoted from the README and the core rule templates (`packages/core/src/check/rules/`), not invented | The page claims "same check locally and in CI"; showing fake output would undermine it |
 
+## `reins impact`: the reverse of scope (2026-11-06)
+
+Proposed from a real working session: `scope` goes path → domain, but nothing went the other way (file → consuming domains), so every agent paid recursive greps and a mental join with `architecture.yml` before touching a shared file.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Contract | None added: the `Edge { from, to, kind }` contract and the adapter graphs are enough; `impact` is a pure core function (`impactOf`) over edges + domains | The proposal asked for an "edge provider contract" that already existed. A new adapter gets `impact` for free with the `graph()` it already needs for `check` |
+| Extraction | The adapter's own graph (dependency-cruiser in `adapter-js`); knip rejected as a second extractor | No new dependency to justify; aliases and barrels are already solved there |
+| Consumers | Files **outside** the target that import it; internal imports are not consumers; folder targets include everything inside | The blast radius of a change is who breaks outside, not who is already inside |
+| Import kinds | All kinds count, including `type` (unlike rules with `ignore_kinds`) | A type-only import still breaks when the type changes: impact is about breakage, rules about architecture legality |
+| Crossings | An import that reaches a domain's internals instead of its public API, before `allow`/`ignore_kinds` exceptions | Shows the leak even when `check` doesn't report it; the same shape `domain-boundary` would flag |
+| Existing violations | Reuses `runCheck` with the `--files` filter (target + importers, adapter rules included), baseline status shown | One code path for what a violation is; impact never invents its own rule semantics |
+| Level | `scopeSignals` + `suggestLevel` over the target plus its importers | Same thresholds as `scope` and `triage-mismatch`; the level of a breaking change, announced before the work |
+| Barrels | Importers that reach the target through a barrel count as consumers (kind `barrel`), from the adapter's existing `uses`; crossings stay on real edges | Without it, a util re-exported by `utils/index.ts` shows the barrel as its only consumer and the level comes out too low — confidently wrong. Going through a domain's public API barrel is the legal path, so it is never a crossing |
+| Symbols | File or folder, not `<file-or-export>`; `names[]` on edges rejected | Symbol questions stay a one-liner grep inside the domains impact lists; altitude stays at domains |
+| Cache | None: the graph is recomputed per run, exactly like `check` | Freshness is the property that makes the answer trustworthy; cache only if extraction cost becomes a measured problem |
+
 ## Open
 
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

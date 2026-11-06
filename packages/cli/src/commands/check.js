@@ -85,8 +85,11 @@ export async function analyze(root, adapterOpts, over = {}) {
   return { config, adapter, packageName: loaded.packageName, graph, extra };
 }
 
-/** @param {string} root */
-function readBaseline(root) {
+/**
+ * @param {string} root
+ * @returns {{ baseline: import('@agentreins/core').Baseline, missing: boolean }} throws CliError when the file can't be parsed
+ */
+export function readBaseline(root) {
   const file = path.join(root, BASELINE_FILE);
   if (!existsSync(file)) return { baseline: emptyBaseline(), missing: true };
   try {

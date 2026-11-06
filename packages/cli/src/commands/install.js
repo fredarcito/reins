@@ -9,7 +9,7 @@
 //   6. the notes index block at the end of an existing AGENTS.md that has none
 //   7. reins sync (AGENTS.md, CLAUDE.md, .claude/)
 import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
 import { ARCHITECTURE_FILE, CliError } from '../context.js';

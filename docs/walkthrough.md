@@ -179,6 +179,19 @@ Notes to read: .reins/notes/cart.md
 Minimum level: large (touches a public API (src/features/cart/index.js))
 ```
 
+**A change that starts from a shared file**, not from the page: `scope` says where you are, `impact` says who else is on the other end. One command replaces the recursive grep plus the mental join with `architecture.yml`:
+
+```console
+$ npx reins impact src/lib/money.js
+File: src/lib/money.js (no domain)
+Imported by: 3 files — cart (2), no domain (1)
+Public API: no
+Boundary crossings: none
+Existing violations: none
+Notes to read: .reins/notes/cart.md
+Minimum level (if the change breaks importers): medium (4 files (small allows 3))
+```
+
 **Triage vs. reality** (`reins doctor`, local only): the agent declared `small` in `.reins/progress/triage.log` but touched four code files.
 
 ```console

@@ -19,4 +19,5 @@ A task is anything that needs reading the repo, running a command or changing a 
   `reins doctor` compares it with the diff.
 - **When in doubt:** pick the lower level and say so ("medium, but could be large if another domain shows up").
 - **Objective signals:** `npx reins scope <paths>` prints the domains, notes and minimum level: 1 domain and ≤ 3 files = small; 1 domain and more files = medium; 2+ domains, a public API or `architecture.yml` = large.
+- **Shared files:** before changing a file other domains may import (a util, a type, a barrel, a public API), run `npx reins impact <file-or-folder>`: the consuming domains, the imports that bypass a public API, and the minimum level if the change breaks importers. "Could be large if another domain shows up" stops being a guess; grep inside the listed domains for symbol-level questions.
 - **Escalate mid-task:** stop and propose a higher level if a second domain appears, the thresholds are exceeded, you need to change a public API, a rule or the baseline, or `reins check` fails for something unexpected. Append a new line to `triage.log`. Don't escalate "just in case".

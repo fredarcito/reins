@@ -19,6 +19,7 @@ Version 0.3.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 | Git pre-commit hook and CI job running `check` | templates + `install` | stable | Yes (phase 8); hook and CI steps verified end to end locally; not yet run on GitHub |
 | `doctor` | core + cli | experimental | Yes (phase 5), tested with simulated logs, notebooks and diffs |
 | `sync`, `notes`, `scope` | cli | experimental | Yes (phase 6), tested; notes hook verified with Claude Code (2/2) |
+| `impact` | core + cli | experimental | Yes (2026-11-06), tested; pure core function over the `check` graph, no new dependency |
 | Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `reins` |
 | Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |

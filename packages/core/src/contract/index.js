@@ -33,7 +33,8 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * - warnings: problems the user should see, e.g. imports that could not be resolved
  * - barrels:  files that only re-export other modules (e.g. components/index.js)
  * - uses:     what an importer really uses through barrels ({ from: importer, to: file behind the barrel }).
- *             Only `reins init` reads `barrels` and `uses` (to see which domain uses a folder); rules check `edges`.
+ *             `reins init` reads `barrels` and `uses` (which domain uses a folder), `reins impact` reads `uses`
+ *             (importers behind a barrel); rules check `edges`.
  * @typedef {Edge[] | { edges: Edge[], files?: string[], entries?: string[], warnings?: string[], barrels?: string[], uses?: { from: string, to: string }[] }} GraphResult
  */
 

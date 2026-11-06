@@ -126,7 +126,7 @@ export async function graph(repoPath, config = {}) {
   const presetName = config.preset ?? detectFramework(root)?.suggestedPreset;
   const entryGlobs = presetName ? loadPreset(presetName).entries : [];
   const entries = files.filter((f) => matchesAny(f, entryGlobs));
-  // what each importer really uses through re-export files, for reins init (the rules keep the real edges)
+  // what each importer really uses through re-export files, for reins init and impact (the rules keep the real edges)
   const { barrels, uses } = resolveBarrels(root, edges, specs);
   return { edges, files, entries, warnings, barrels, uses };
 }

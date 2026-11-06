@@ -46,7 +46,7 @@ Either an array of edges, or an object:
 | `entries` | no | Files that are entry points by convention (Next `page`/`layout`/`route`, `src/main.jsx`…). Never orphans |
 | `warnings` | no | Problems the user must see, e.g. imports that could not be resolved |
 | `barrels` | no | Files that only re-export other modules (e.g. `components/index.js`) |
-| `uses` | no | `[{ from, to }]`: what an importer really uses through barrels (`to` is the file behind the barrel). Only `reins init` reads it, to see which domain uses a folder; the rules keep checking `edges` |
+| `uses` | no | `[{ from, to }]`: what an importer really uses through barrels (`to` is the file behind the barrel). `reins init` reads it to see which domain uses a folder, and `reins impact` to count importers behind a barrel as consumers of the real file; the rules keep checking `edges` |
 
 `normalizeGraph()` turns either form into the object form.
 
