@@ -2,6 +2,8 @@
 
 Every task gets a level before acting. You decide with your judgment and this policy; the person can change it.
 
+A task is anything that needs reading the repo, running a command or changing a file. Information-only messages (a question you can answer from the conversation, a confirmation of the workflow) are not tasks: no level, no announcement, no `triage.log` line. A question whose answer needs repository work is a task: triage it.
+
 | Level | Signal | What you do |
 | --- | --- | --- |
 | small | A named file or function; a bounded change | Read only that file and its note. Don't explore. No notebook |

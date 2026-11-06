@@ -565,7 +565,7 @@ Local, informational checks of **how the work is going**, not of the code. It re
 
 ```mermaid
 flowchart LR
-    log["triage.log<br/>2026-11-04 · feat/x · small · fix button"] --> cmp{"declared level<br/>vs. diff"}
+    log["triage.log<br/>2026-11-04 · feat/x · small · fix button"] --> cmp{"highest declared level<br/>vs. branch diff"}
     diff["git diff of the branch<br/>files · domains · public API"] --> cmp
     cmp -- "diff needs more" --> mismatch["triage-mismatch"]
     cmp -- "no line for the branch" --> missing["triage-missing"]
@@ -576,7 +576,7 @@ flowchart LR
 | Rule | Warns when |
 | --- | --- |
 | `triage-missing` | The branch has changes but no line in `triage.log` (or a line can't be read) |
-| `triage-mismatch` | The diff exceeds the declared level: `small` = ≤ 3 files in 1 domain; `medium` = 1 domain; more domains, a public API or `architecture.yml` = `large` |
+| `triage-mismatch` | The branch diff exceeds the highest level declared on the branch: `small` = ≤ 3 files in 1 domain; `medium` = 1 domain; more domains, a public API or `architecture.yml` = `large` |
 | `agents-size` | `AGENTS.md` is longer than 30 lines (`sync` keeps its notes index inside this limit) |
 | `progress-hot-size` | The hot notebook is longer than 40 lines |
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |

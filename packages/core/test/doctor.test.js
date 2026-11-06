@@ -66,11 +66,22 @@ test('triage-missing: a diff without a line for the branch; nothing without a di
   assert.deepEqual(rules(doctor({ changedFiles: ['src/a.js'] })), ['triage-missing'], 'no triage.log at all');
 });
 
-test('triage-mismatch: the latest line of the branch is compared with the diff', () => {
+test('triage-mismatch: the highest level declared on the branch is compared with the diff', () => {
   const files = ['src/features/billing/a.js', 'src/features/billing/b.js', 'src/features/billing/c.js', 'src/features/billing/d.js'];
-  const r = doctor({ changedFiles: files, triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | tweak billing\n' } });
+  const log = (...lines) => ({ file: LOG, text: lines.map((l) => `2026-11-04 | ${l}\n`).join('') });
+  const r = doctor({ changedFiles: files, triageLog: log('feat/x | small | tweak billing') });
   assert.deepEqual(rules(r), ['triage-mismatch', 'note-missing']);
-  assert.match(r.violations[0].message, /Declared small \(line 1: "tweak billing"\), but the diff looks medium: 4 files \(small allows 3\)/);
+  assert.match(r.violations[0].message, /Highest level declared on feat\/x is small \(line 1: "tweak billing"\), but the diff looks medium: 4 files \(small allows 3\)/);
+
+  const later = doctor({ changedFiles: files, triageLog: log('feat/x | medium | billing rework', 'feat/x | small | how does X work?') });
+  assert.deepEqual(rules(later), ['note-missing'], 'a smaller task after a bigger one does not hide the bigger level');
+
+  const repeated = doctor({ changedFiles: [...files, 'src/features/search/a.js'], triageLog: log('feat/x | small | first', 'other | large | not this branch', 'feat/x | small | second', 'feat/x | small | third') });
+  assert.deepEqual(rules(repeated).slice(0, 1), ['triage-mismatch']);
+  assert.match(repeated.violations[0].message, /is small \(line 4: "third"\), but the diff looks large/, 'ties cite the latest line; other branches are ignored');
+
+  const order = doctor({ changedFiles: [...files, 'src/features/search/a.js'], triageLog: log('feat/x | small | a', 'feat/x | medium | b', 'feat/x | small | c', 'feat/x | medium | d', 'feat/x | small | e') });
+  assert.match(order.violations[0].message, /is medium \(line 4: "d"\), but the diff looks large/, 'cites the line that set the level, not the last one');
 
   const escalated = doctor({ changedFiles: files, triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | a\n2026-11-04 | feat/x | medium | it grew\n' } });
   assert.deepEqual(rules(escalated), ['note-missing']);

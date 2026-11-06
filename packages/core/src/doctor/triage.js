@@ -1,5 +1,6 @@
 // Triage: the agent declares a task level (small | medium | large) in .reins/progress/triage.log,
-// one line per task: `YYYY-MM-DD | branch | level | reason`. The doctor compares it with the diff.
+// one line per task: `YYYY-MM-DD | branch | level | reason`. The doctor compares the highest level declared on
+// the branch with the branch diff.
 import { matchesAny } from '../glob.js';
 
 export const LEVELS = Object.freeze(['small', 'medium', 'large']);
@@ -95,11 +96,14 @@ export function checkTriage({ branch, changedFiles, log, logFile, signals, thres
       `When announcing the task level, append: \`${new Date().toISOString().slice(0, 10)} | ${branch} | <small|medium|large> | <reason>\`.`);
     return out;
   }
-  const declared = mine[mine.length - 1];
+  // The diff covers the whole branch, so it is compared with the highest level declared on it, not the latest
+  // line: a small task (or a read-only one) after a large one must not make the large diff look undeclared.
+  // On ties the latest line wins, since its reason is the most current.
+  const declared = mine.reduce((best, e) => (rank(e.level) >= rank(best.level) ? e : best));
   const suggested = suggestLevel(signals, thresholds);
   if (rank(suggested.level) > rank(declared.level)) {
     add('triage-mismatch', branch,
-      `Declared ${declared.level} (line ${declared.line}: "${declared.reason}"), but the diff looks ${suggested.level}: ${suggested.reasons.join('; ')}.`,
+      `Highest level declared on ${branch} is ${declared.level} (line ${declared.line}: "${declared.reason}"), but the diff looks ${suggested.level}: ${suggested.reasons.join('; ')}.`,
       `If the task grew, say so and append a new line with level ${suggested.level}. If the thresholds are wrong for this repo, tune .reins/doctor.yml.`);
   }
   return out;

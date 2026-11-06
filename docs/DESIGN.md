@@ -301,6 +301,8 @@ Las notas con fecha envejecen, así que se prevé avisar de las que no se tocan 
 
 Tres niveles. Decide el agente con su juicio y la política, y la persona puede cambiarlo.
 
+Una tarea es lo que requiere leer el repo, ejecutar un comando o cambiar un archivo. Los mensajes solo informativos (una pregunta que se responde con lo que ya está en la conversación, una confirmación del flujo) no son tareas: sin nivel, sin anuncio y sin línea en `triage.log`, para no meter ruido en la conversación. Una pregunta que requiere trabajo en el repo (una revisión o investigación, aunque no cambie archivos) sí es tarea.
+
 | Nivel | Señal | Qué hace |
 | --- | --- | --- |
 | Pequeña | Archivo o función nombrados; cambio acotado | Lee solo ese archivo y su nota. No explora. Sin libreta. |
@@ -312,7 +314,7 @@ Tres niveles. Decide el agente con su juicio y la política, y la persona puede 
 - **Cuando duda:** elige el nivel menor y lo dice ("media, pero podría ser grande si aparece otro dominio").
 - **Señales objetivas** (con `harness scope <rutas>`, comando previsto y aún no construido): 1 dominio y 3 archivos o menos = pequeña; 1 dominio y más de 3 = media; 2 dominios o más, o toca `architecture.yml` o una API pública = grande.
 - **Escalada a mitad de tarea:** una pequeña o media debe parar y proponer subir de nivel si aparece un segundo dominio, se superan los umbrales, hay que modificar una API pública, una regla o el baseline, o el `check` falla por algo imprevisto. No se sube de nivel "por precaución".
-- **Registro:** al anunciar, el agente añade una línea a `progress/triage.log` con `fecha | rama | nivel | motivo`. El `doctor` la compara con el diff y sirve para medir el piloto sin anotar a mano.
+- **Registro:** al anunciar, el agente añade una línea a `progress/triage.log` con `fecha | rama | nivel | motivo`. El `doctor` compara el diff de la rama con el nivel más alto declarado en ella (no con la última línea, para que una tarea pequeña o de solo lectura después de una grande no dé un `triage-mismatch` falso; con empate cita la línea más reciente) y sirve para medir el piloto sin anotar a mano.
 - **Punto más frágil:** que el agente clasifique bien. Mitigaciones: anuncio corregible, override, escalada y `triage-mismatch`.
 - **Descartado:** un agente delegador separado. Gasta tokens para decidir si gastar tokens, falla en ambos sentidos y es un orquestador encubierto.
 

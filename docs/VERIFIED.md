@@ -245,3 +245,4 @@ Everything below is assumed, not tested. Each is a candidate for the pilot or fo
 - That agents fill the TODO lines of a drafted note and keep notes current when closing (instructions plus doctor warnings, not enforced).
 - Any behavior in Codex or Cursor.
 - That agents write `triage.log` lines, keep the notebook format and use `harness progress` / `harness audit` instead of rewriting files (instructions, not enforced).
+- That agents skip triage (no level, announcement or `triage.log` line) for information-only messages, and still triage questions that need repository work (policy text, not enforced).

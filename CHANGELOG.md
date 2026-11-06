@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.1 · 2026-11-06
+
+Fewer false triage warnings, and no triage for plain questions.
+
+After updating the packages, bring the triage policy up to date. `install` copies policies only when they are missing, so yours stays as it is: `diff -u .reins/policies/triage.md node_modules/@agentreins/cli/templates/.reins/policies/triage.md` and add the new paragraph by hand (or copy the file if you never edited it). Commit `.reins/policies/triage.md`.
+
+- `reins doctor` (`triage-mismatch`): the branch diff is compared with the highest level declared on the branch, not with its latest `triage.log` line. A small or read-only task after a large one no longer makes the large diff look undeclared. The warning cites the line that set that level; on ties, the most recent one.
+- Triage policy: information-only messages (a question answered from the conversation, a confirmation of the workflow) are not tasks: no level, no announcement, no `triage.log` line. A question that needs repository work, such as a review or an investigation, is still triaged even if no file changes.
+
 ## 0.7.0 · 2026-11-05
 
 Catching module notes that no longer match the code.
