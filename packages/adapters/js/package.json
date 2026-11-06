@@ -62,7 +62,7 @@
     "url": "git+https://github.com/fredarcito/reins.git",
     "directory": "packages/adapters/js"
   },
-  "homepage": "https://github.com/fredarcito/reins#readme",
+  "homepage": "https://fredarcito.github.io/reins/",
   "bugs": {
     "url": "https://github.com/fredarcito/reins/issues"
   },
