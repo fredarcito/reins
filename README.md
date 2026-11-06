@@ -2,6 +2,8 @@
 
 **Hold the reins of your coding agents: they respect your architecture and remember your project.**
 
+Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js)
+
 Coding agents write code fast, but they forget, in two ways:
 
 - **They forget your architecture.** A shared component imports from a feature, one feature reaches into another's internals, an import cycle appears, and nobody notices until the codebase is a tangle. Rules written in a prompt or in `CLAUDE.md` help, until the agent skips them.

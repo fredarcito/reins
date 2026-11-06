@@ -2,11 +2,13 @@
 
 **Hold the reins of your coding agents: they respect your architecture and remember your project.**
 
+Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)**
+
 Coding agents write code fast, but they forget your architecture (a shared component imports from a feature, an import cycle appears) and they forget your project (every session re-reads a module to work out what it does and why).
 
 reins fixes both:
 
-- **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. A broken rule blocks the commit with the reason and the fix, so the agent corrects it before you review.
+- **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. A broken rule blocks the commit with the reason and the fix, so the agent corrects it before you review. And before the edit, `reins impact` tells the agent which domains consume a shared file, so a "small fix" that is really a large refactor says so before the work starts.
 - **Each module gets a short note**: what it does, how it works, the decisions taken and why, its traps. The note reaches the agent as soon as it opens a file of that module, and after a compaction the task's notebook comes back on its own.
 
 Made for frontend teams on **Vite + React** or **Next** (app and pages router, plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent. A Node CLI and plain markdown: no service, no API keys, no telemetry.
@@ -77,21 +79,46 @@ Result: FAIL (new errors)
 
 **A baseline**: today's violations are frozen in `.reins/baseline.json`, so you start green and only *new* problems fail. The baseline can only shrink.
 
-**Module notes** in `.reins/notes/`: one per module, drafted from the import graph and filled in by your agent. A big module keeps the notes of its parts in a folder (`companies.md` + `companies/salaries.md`); an agent working in `salaries/` reads both, general first.
+**The blast radius before a refactor.** `reins impact <file-or-folder>` joins the real import graph with your plan and answers the question an agent has before touching a shared file: *who else imports this?*
+
+```
+$ npx reins impact src/lib/date.ts
+File: src/lib/date.ts (no domain)
+Imported by: 2 files — billing (1), no domain (1)
+Public API: no
+Boundary crossings: none
+Existing violations: 1 (no-cycles new; run `reins check --files src/lib/date.ts` to see them)
+Notes to read: .reins/notes/lib.md
+Minimum level (if the change breaks importers): small (3 file(s) in 1 domain)
+```
+
+A boundary crossing is an import that reaches a domain's internals instead of its public API — the same leak `domain-boundary` reports, seen before you edit. Every import kind counts, including type-only imports: a type change breaks them too. Symbol-level questions ("who calls `formatDate` inside billing?") stay with grep, run inside the domains `impact` lists.
+
+**Module notes** in `.reins/notes/`: one per module, drafted from the import graph and filled in by your agent. A big module keeps the notes of its parts in a folder (`companies.md` + `companies/salaries.md`); an agent working in `salaries/` reads both, general first. `reins notes stale` ranks notes that fell behind the code.
+
+## The agent's workflow
+
+What `install` sets up, in the order the agent hits it:
+
+1. **Announce.** Every task gets a level — `small`, `medium`, `large` — from the triage policy in `.reins/policies/`. `reins scope <paths>` gives the objective signals: domains touched, notes to read, minimum level.
+2. **Plan.** Before changing a file other domains may import (a util, a type, a barrel, a public API), the agent runs `reins impact` on it. "Medium, but could be large if another domain shows up" stops being a guess.
+3. **Edit.** The module note arrives the moment the agent opens a file — a Claude Code hook, or the notes index in `AGENTS.md` for any other agent.
+4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `reins install` | Wires reins into the repo: `.reins/` sources, pre-commit hook (Husky or lefthook), CI workflow, `.gitignore`, `AGENTS.md`, `.claude/` |
-| `reins init` | Drafts `architecture.yml`, the baseline, a review report and the module notes from the code |
+| `reins install` | Wires reins into the repo: `.reins/` sources, pre-commit hook (Husky or lefthook), CI workflow, `.gitignore`, `AGENTS.md`, `.claude/`. `--dry-run` |
+| `reins init` | Drafts `architecture.yml`, the baseline, a review report and the module notes from the code. `--dry-run`, `--preset <name>` |
 | `reins check` | Checks the rules (git hook and CI). `--update-baseline`, `--coverage`, `--json`, `--files` |
-| `reins notes <path>` | Prints the module notes for a path. `reins notes new <domain\|folder>` drafts one |
-| `reins sync` | Regenerates `.claude/` and the notes index in `AGENTS.md` from `.reins/` |
-| `reins doctor` | Local workflow checks: task level, notebook, module notes, `AGENTS.md` size |
-| `reins scope <paths>` | Domains, notes and minimum task level for some paths |
-| `reins resume` | Notebook, changed files and notes to resume a task (also a Claude Code hook) |
-| `reins audit`, `reins progress`, `reins review` | Local backlog, branch notebook, review prompt |
+| `reins scope <paths>` | Domains, public APIs, notes to read and the minimum task level for some paths. `--json` |
+| `reins impact <file-or-folder>` | The reverse of `scope`: the domains that consume a file, imports that bypass a public API, violations that already involve it, and the minimum level if the change breaks its importers. `--json` |
+| `reins notes <path...>` | Prints the module notes for a path (`--hook`: the Claude Code fast path). `notes new <domain\|folder>` drafts one from the import graph; `notes stale` ranks notes behind the code. `--json` |
+| `reins resume` | Notebook, changed files and notes to resume a task. `--json`, `--hook` (Claude Code `SessionStart`) |
+| `reins sync` | Regenerates `.claude/` and the notes index in `AGENTS.md` from `.reins/`. `--check` |
+| `reins doctor` | Local workflow checks: declared task level vs the branch diff, the notebook, the notes, `AGENTS.md` size. Warns, never blocks, never in CI |
+| `reins audit`, `reins progress`, `reins review` | Local backlog of findings, branch notebook, review prompt |
 
 `reins <command> --help` explains each one. Every command except `check` and `init` is still experimental.
 
@@ -108,11 +135,17 @@ Result: FAIL (new errors)
 | `/reins-backlog` | Shows what is pending and proposes what to do next |
 | `/reins-agent` | Creates a new subagent in `.reins/agents/` |
 
+## Updating
+
+After every update, read the [changelog](https://github.com/fredarcito/reins/blob/main/CHANGELOG.md): each release says what to run afterwards (`reins sync`, `reins install`) and when. `install` only copies files that are missing; the ones you already have are yours to merge.
+
 ## Learn more
 
+- [Project site](https://fredarcito.github.io/reins/)
 - [Full documentation](https://github.com/fredarcito/reins#readme): how it works, diagrams, every option
 - [Walkthrough with real output](https://github.com/fredarcito/reins/blob/main/docs/walkthrough.md)
 - [Try it on a branch first](https://github.com/fredarcito/reins/blob/main/docs/try-it.md)
+- [Adopting it as a team](https://github.com/fredarcito/reins/blob/main/docs/team-adoption.md)
 - [`architecture.yml` reference](https://github.com/fredarcito/reins/blob/main/docs/architecture-yml.md)
 - [Changelog](https://github.com/fredarcito/reins/blob/main/CHANGELOG.md) · [Issues](https://github.com/fredarcito/reins/issues)
 

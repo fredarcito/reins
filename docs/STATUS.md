@@ -51,4 +51,4 @@ Known limits of `init` on repos organized by routes:
 | `scripts/self-check.mjs` (`pnpm self-check`) | stable; in CI; checks this repo with dependency-cruiser alone and with `reins check` |
 | `.reins/architecture.yml` of this repo | `cli` > `adapters` > `core`, no cycles, adapters use only the core contract |
 | `.github/workflows/ci.yml` | written, never run on GitHub |
-| `site/` landing page + `.github/workflows/pages.yml` (GitHub Pages, plain HTML, no build step) | written; not deployed yet (Pages must be enabled once in Settings → Pages → Source: "GitHub Actions") |
+| `site/` landing page + `.github/workflows/pages.yml` (GitHub Pages, plain HTML, no build step) | deployed at [fredarcito.github.io/reins](https://fredarcito.github.io/reins/) |

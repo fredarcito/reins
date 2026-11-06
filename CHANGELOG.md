@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.2 · 2026-11-06
+
+Impact questions answered before the refactor, not after.
+
+After updating the packages, the triage policy has a new paragraph (before changing a file other domains may import, run `reins impact`). `install` copies policies only when they are missing, so yours stays as it is: `diff -u .reins/policies/triage.md node_modules/@agentreins/cli/templates/.reins/policies/triage.md` and add it by hand (or copy the file if you never edited it). Commit `.reins/policies/triage.md`.
+
+- `reins impact <file-or-folder>`: the reverse of `scope`. From the real import graph joined with your plan: the domains that consume a file, the imports that bypass a domain's public API, the violations that already involve it, the notes to read, and the minimum task level if the change breaks its importers (same thresholds as `scope`). Importers behind a re-export barrel count as consumers of the real file. Every import kind counts, including type-only. `--json`.
+- Triage policy: the mid-task escalation "a second domain appeared while editing" gets resolved at announcement time; the policy says when to run `impact`.
+- The npm READMEs of the three packages are rewritten and up to date (`impact`, the complete command list, the contract with `presets`/`uses`, adapter barrels and monorepo support).
+
 ## 0.7.1 · 2026-11-06
 
 Fewer false triage warnings, and no triage for plain questions.
