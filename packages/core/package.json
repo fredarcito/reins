@@ -1,6 +1,6 @@
 {
   "name": "@agentreins/core",
-  "version": "0.7.2",
+  "version": "0.7.4",
   "license": "MIT",
   "files": [
     "src",

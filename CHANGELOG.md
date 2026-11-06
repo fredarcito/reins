@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.4 · 2026-11-07
+
+Make architecture impact guidance easier for agents to find and follow.
+
+After updating, compare the installed `.reins` templates and merge the changes you want. `install` does not overwrite existing files:
+
+```bash
+diff -ru node_modules/@agentreins/cli/templates/.reins .reins
+diff -u node_modules/@agentreins/cli/templates/AGENTS.md AGENTS.md
+```
+
+- Generated `AGENTS.md` now explains when to run `reins impact`, how to use `scope` and `review`, and where to find command help.
+- Triage policy clarifies that `scope` and `impact` are allowed for small tasks, and requires impact analysis before domain-level work or changes to shared files.
+- Explorer and audit guidance now uses impact results to identify affected domains and make findings more actionable.
+
 ## 0.7.2 · 2026-11-06
 
 Impact questions answered before the refactor, not after.
