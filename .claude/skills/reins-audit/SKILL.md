@@ -11,6 +11,7 @@ The backlog is `.reins/backlog/optimizations.md` (local, outside git). Never sta
 2. **Re-verify every `open` item against the current code.** If it was fixed, `npx reins audit set <id> done "<how>"`. If it no longer applies, `npx reins audit set <id> wontfix "<reason>"`.
 3. Audit the scope you were given. Prefer one domain at a time (`npx reins scope <folder>` shows domains and notes); it costs fewer tokens.
 4. Add only **new** findings: `npx reins audit add "<path>" "<finding and suggested fix>"`. Don't repeat recorded ones, including `wontfix`.
+   A finding that changes a file other code imports: run `npx reins impact <file>` first and put the consuming domains in the finding ("affects billing, orders"); it sets the real cost. Don't run it on every file; boundary leaks across the repo come from `npx reins check`.
 5. Don't fix anything during the audit unless asked.
 6. A `wontfix` with a durable reason belongs in the module note (`.reins/notes/`), so nobody proposes it again.
 7. Reply with: new findings, re-verified items and their new status, and what you did not audit.

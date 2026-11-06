@@ -6,9 +6,9 @@ A task is anything that needs reading the repo, running a command or changing a 
 
 | Level | Signal | What you do |
 | --- | --- | --- |
-| small | A named file or function; a bounded change | Read only that file and its note. Don't explore. No notebook |
+| small | A named file or function; a bounded change | Read only that file and its note. Don't explore (`reins scope` and `reins impact` are not exploring). No notebook |
 | medium | One domain, several files, no new architecture decisions | Read the module note first (purpose, map, how it works); search the code only for what it does not answer. Summarize in two lines before editing. Mini notebook |
-| large | Several domains, a new feature, a refactor, a contract change, a migration, or "review everything" | Write done criteria, use the explorer (read-only), present a plan and **wait for confirmation**. Full notebook |
+| large | Several domains, a new feature, a refactor, a contract change, a migration, or "review everything" | Write done criteria, run `npx reins impact` on each folder or file the plan changes, use the explorer (read-only; hand it the impact output), present a plan and **wait for confirmation**. Full notebook |
 
 ## Rules
 
@@ -18,6 +18,10 @@ A task is anything that needs reading the repo, running a command or changing a 
   `YYYY-MM-DD | <branch> | small|medium|large | <reason>`
   `reins doctor` compares it with the diff.
 - **When in doubt:** pick the lower level and say so ("medium, but could be large if another domain shows up").
-- **Objective signals:** `npx reins scope <paths>` prints the domains, notes and minimum level: 1 domain and ≤ 3 files = small; 1 domain and more files = medium; 2+ domains, a public API or `architecture.yml` = large.
-- **Shared files:** before changing a file other domains may import (a util, a type, a barrel, a public API), run `npx reins impact <file-or-folder>`: the consuming domains, the imports that bypass a public API, and the minimum level if the change breaks importers. "Could be large if another domain shows up" stops being a guess; grep inside the listed domains for symbol-level questions.
+- **Objective signals:** `npx reins scope <paths>` prints the domains, notes and minimum level: 1 domain and ≤ 3 files = small; 1 domain and more files = medium; 2+ domains, a public API or `architecture.yml` = large. For a task about a whole domain or folder, pass the folder, not two of its files.
+- **Impact — don't skip it:** run `npx reins impact <file-or-folder>`
+  1. when the task restructures, refactors or optimizes a domain or folder: on that folder, while mapping, before the plan;
+  2. before editing a file other code may import (a component, util, type, hook, barrel or public API). Unsure whether it's shared → run it: one call is cheaper than a wrong level.
+
+  Never conclude "nothing shared changes" without it. It prints the consuming domains, the imports that bypass a public API, the notes to read and the minimum level if the change breaks importers; it is not exploring, so it applies at every level. It sees imports, not HTTP calls: find callers of an API route with grep. For symbol-level questions, grep inside the domains it lists.
 - **Escalate mid-task:** stop and propose a higher level if a second domain appears, the thresholds are exceeded, you need to change a public API, a rule or the baseline, or `reins check` fails for something unexpected. Append a new line to `triage.log`. Don't escalate "just in case".

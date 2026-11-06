@@ -691,7 +691,7 @@ Notes to read: .reins/notes/lib.md
 Minimum level (if the change breaks importers): small (3 file(s) in 1 domain)
 ```
 
-Boundary crossings are imports that reach a domain's internals instead of its public API — the same leak `domain-boundary` reports, counted with every import kind (a type-only import also breaks when the type changes). Importers that go through a barrel (`import { x } from '@/lib'`) count as consumers of the file behind it, not just of the barrel. Symbol-level questions stay with grep, inside the domains listed.
+Boundary crossings are imports that reach a domain's internals instead of its public API — the same leak `domain-boundary` reports, counted with every import kind (a type-only import also breaks when the type changes). Importers that go through a barrel (`import { x } from '@/lib'`) count as consumers of the file behind it, not just of the barrel. Symbol-level questions stay with grep, inside the domains listed. The generated `AGENTS.md` tells agents when to run it (restructuring a domain or folder, or editing a file other code may import), at every task level.
 
 | Command | What it does |
 | --- | --- |
