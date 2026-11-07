@@ -9,6 +9,7 @@ import { readTemplate } from '../templates.js';
 import { pickBaseRef } from './check.js';
 
 export const CHECKLIST_FILE = '.reins/review/checklist.md';
+export const CORE_CHECKLIST_FILE = '.reins/core/review/checklist.md';
 const DEFAULT_MAX_BYTES = 200_000;
 
 /**
@@ -96,7 +97,7 @@ export async function review(ctx) {
     out(`No changes compared to ${baseRef ?? 'HEAD'}: nothing to review.`);
     return 0;
   }
-  const checklist = readText(root, CHECKLIST_FILE) ?? readTemplate(CHECKLIST_FILE);
+  const checklist = readText(root, CHECKLIST_FILE) ?? readText(root, CORE_CHECKLIST_FILE) ?? readTemplate(CORE_CHECKLIST_FILE);
   const all = loadNotes(root).notes;
   const notes = all.filter((n) => files.some((f) => notesFor(f, [n]).length));
   return executor.run(buildReviewPrompt({ diff, files, checklist, notes, base: baseRef ?? 'HEAD', maxBytes }), { out });

@@ -1,10 +1,10 @@
 ---
 name: agent
-description: Create a new subagent for this repo in .reins/agents/, in the reins format, and generate it for Claude Code. Use it when the person asks to create, add or design an agent (a reviewer, an explorer, a tester, a migration helper…).
+description: Create a provider-neutral agent definition for this repo in .reins/agents/, and optionally generate a Claude Code wrapper. Use it when the person asks to create, add or design an agent (a reviewer, an explorer, a tester, a migration helper…).
 ---
 # Create an agent
 
-Agents live in `.reins/agents/<name>.md` (plain markdown, in git, tool-agnostic). `npx reins sync` turns each one into `.claude/agents/reins-<name>.md` for Claude Code. Never write into `.claude/agents/` by hand.
+Agent definitions live in `.reins/agents/<name>.md` as plain Markdown. They are the provider-neutral source; `npx reins sync` can also generate a Claude Code wrapper in `.claude/agents/reins-<name>.md`. Never write into generated adapter files by hand.
 
 1. Agree on the agent with the person before writing it. Ask only what you can't infer:
    - **Job:** one sentence. If it needs "and", it is probably two agents.
@@ -17,7 +17,7 @@ Agents live in `.reins/agents/<name>.md` (plain markdown, in git, tool-agnostic)
    ```markdown
    ---
    name: <name>
-   description: <what it does and when to use it, in one or two sentences: Claude Code picks agents by this line>
+   description: <what it does and when to use it, in one or two sentences>
    permissions: read-only            # or: edits files
    tools: [Read, Grep, Glob]         # the fewest that do the job; add Bash only if it must run commands, Edit/Write only if it edits
    ---
@@ -34,4 +34,4 @@ Agents live in `.reins/agents/<name>.md` (plain markdown, in git, tool-agnostic)
    ```
 5. Keep it short (under 40 lines): it is read every time the agent runs. Rules that already live in `AGENTS.md` or the policies don't need repeating; point to them.
 6. Run `npx reins sync`, then `npx reins sync --check` (0 differences).
-7. Tell the person: the file you created, the generated `.claude/agents/reins-<name>.md`, that a new Claude Code session picks it up, and how to call it (by asking for it by name, or when its description matches the task). If it should be part of a workflow, propose the line to add to `.reins/policies/multiagent.md` or `triage.md`, and wait for approval.
+7. Tell the person: the provider-neutral source you created, whether a Claude Code wrapper was generated, and how to use the definition in their agent client. If it should be part of a workflow, propose the line to add to `.reins/core/policies/multiagent.md` or `triage.md`, and wait for approval.

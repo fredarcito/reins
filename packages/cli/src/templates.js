@@ -15,8 +15,17 @@ export function templatesDir() {
   throw new Error('reins: templates folder not found (broken install?).');
 }
 
-/** Text of one template, e.g. "AGENTS.md" or ".reins/policies/triage.md". */
-export const readTemplate = (rel) => readFileSync(path.join(templatesDir(), rel), 'utf8');
+/** Text of one template, e.g. "AGENTS.md" or ".reins/core/policies/triage.md". */
+export const readTemplate = (rel) => {
+  const base = templatesDir();
+  const direct = path.join(base, rel);
+  if (existsSync(direct)) return readFileSync(direct, 'utf8');
+  if (rel.startsWith('.reins/')) {
+    const inCore = path.join(base, '.reins', 'core', rel.slice('.reins/'.length));
+    if (existsSync(inCore)) return readFileSync(inCore, 'utf8');
+  }
+  throw new Error(`reins: template not found: ${rel}`);
+};
 
 /**
  * AGENTS.md for a repo: project name and commands from its package.json.

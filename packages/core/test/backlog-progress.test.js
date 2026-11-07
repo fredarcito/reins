@@ -7,7 +7,7 @@ import {
 } from '@agentreins/core';
 
 const D = '2026-11-04';
-const template = (name) => readFileSync(new URL(`../../../templates/.reins/templates/${name}`, import.meta.url), 'utf8');
+const template = (name) => readFileSync(new URL(`../../../templates/.reins/core/templates/${name}`, import.meta.url), 'utf8');
 
 // ---------------- backlog ----------------
 

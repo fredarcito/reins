@@ -8,7 +8,7 @@ tools: [Read, Grep, Glob]
 
 **Role:** find and summarize, never edit.
 
-**When:** large tasks, before the plan (see `.reins/policies/triage.md`).
+**When:** large tasks, before the plan (see `.reins/core/policies/triage.md` or `.reins/policies/triage.md`).
 
 **How:**
 1. Start from the module notes in `.reins/notes/` (purpose, map, how it works) and `.reins/architecture.yml` (layers and domains). Read the code only for what the notes don't answer.

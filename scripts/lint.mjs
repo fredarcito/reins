@@ -2,7 +2,7 @@
 // Simple repo linter, no dependencies. Checks:
 //   syntax          every .js/.mjs file under packages/ and scripts/ parses (node --check)
 //   import-boundary core never imports cli/adapters; adapter code (not its tests) only imports core through "<scope>/core/contract"
-//   agents-md       AGENTS.md has at most 30 lines; AGENTS.md/CLAUDE.md only at the root, templates/ or examples/<name>/
+//   agents-md       AGENTS.md has at most 45 lines; AGENTS.md/CLAUDE.md only at the root, templates/ or examples/<name>/
 //   diagrams        mermaid blocks in markdown without HTML entities, quotes/<>/| in labels or reserved node ids
 //   packages        every workspace package is ESM and uses the same npm scope; adapters declare core as peer + reins.contract
 // The real architecture check of this repo (phase 9) will replace import-boundary.
@@ -12,7 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'coverage']);
-export const AGENTS_MAX_LINES = 30;
+export const AGENTS_MAX_LINES = 45;
 
 /** @param {string} dir @returns {string[]} absolute file paths */
 function walk(dir) {

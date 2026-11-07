@@ -58,7 +58,7 @@ test('lint flags adapter metadata, scope mismatch and syntax errors', () => {
 
 test('lint flags long and nested AGENTS.md/CLAUDE.md', () => {
   const files = base();
-  files['AGENTS.md'] = Array.from({ length: 31 }, (_, i) => `line ${i}`).join('\n');
+  files['AGENTS.md'] = Array.from({ length: 46 }, (_, i) => `line ${i}`).join('\n');
   files['packages/core/CLAUDE.md'] = '@AGENTS.md\n';
   files['templates/AGENTS.md'] = '# template\n';
   files['examples/vite-react/AGENTS.md'] = '# example\n';

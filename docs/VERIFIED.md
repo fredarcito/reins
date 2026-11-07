@@ -21,6 +21,7 @@ Scripts to rerun them: [`scripts/verify/`](../scripts/verify/). The Claude Code 
 | P7 | `peerDependencies` on `@harness/core` with pnpm | **Pass** | Yes, two details: see P7 |
 | P8 | npm scope `@harness` is free | **Could not be fully tested** | Pending decision |
 | P9 | A `SessionStart` hook restores context after a compaction | **Pass** | Yes: notes must be re-delivered, see P9 |
+| P10 | Other coding-agent clients consume the shared `AGENTS.md` rules and can use the reins CLI | **Unverified** | The shared workflow avoids provider APIs; client-level instruction loading still needs testing |
 
 ## P1. `PreToolUse` hook with per-path context — pass, with a caveat
 

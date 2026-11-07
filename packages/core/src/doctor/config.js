@@ -5,7 +5,7 @@ import { ConfigError } from '../config/index.js';
 
 export const DOCTOR_DEFAULTS = Object.freeze({
   triage: { small: { max_files: 3, max_domains: 1 }, medium: { max_domains: 1 } },
-  agents_md: { max_lines: 30 },
+  agents_md: { max_lines: 45 },
   progress: { hot_max_lines: 40 },
   notes: { max_lines: 60 },
 });

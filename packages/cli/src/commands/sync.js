@@ -1,20 +1,28 @@
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
+import { CliError } from '../context.js';
 
-export const options = { check: { type: 'boolean' } };
+export const options = {
+  check: { type: 'boolean' },
+  claude: { type: 'boolean' },
+  'skip-claude': { type: 'boolean' },
+};
 
-export const help = `Usage: reins sync [--check]
+export const help = `Usage: reins sync [--check] [--claude | --skip-claude]
 
-Generates the agent tool files from .reins/: .claude/skills/reins-*, .claude/agents/reins-*, the notes index
-inside AGENTS.md, and the notes hook + git permissions in .claude/settings.json. Creates AGENTS.md and CLAUDE.md
-when missing. Only touches what it generated (listed in ${MANIFEST_FILE}); never other skills, agents or settings.
+Syncs provider-neutral .reins/core/ sources and managed rules/notes blocks in AGENTS.md.
+Generates the optional Claude Code adapter (.claude/ and CLAUDE.md) by default; its preference is saved.
+Only touches what it generated (listed in ${MANIFEST_FILE}); never other skills, agents or settings.
 
 Options:
-  --check   Write nothing; exit 1 if the generated files differ from their sources (CI, reins check)`;
+  --check         Write nothing; exit 1 if the generated files differ from their sources (CI, reins check)
+  --skip-claude   Disable Claude Code files and save that preference
+  --claude        Enable Claude Code files and save that preference`;
 
 /** @param {{ root: string, values: Record<string, any>, out: (s: string) => void }} ctx */
 export async function sync(ctx) {
   const { root, values, out } = ctx;
-  const r = runSync(root, { check: values.check });
+  if (values.claude && values['skip-claude']) throw new CliError('Use either --claude or --skip-claude, not both.');
+  const r = runSync(root, { check: values.check, claude: values.claude, skipClaude: values['skip-claude'] });
   for (const w of r.warnings) out(`! warning  ${w}`);
   if (values.check) {
     if (!r.divergences.length) {

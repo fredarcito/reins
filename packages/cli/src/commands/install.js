@@ -1,13 +1,13 @@
 // reins install: wires reins into a consumer repo. Additive and idempotent: it never overwrites
 // files that already exist (except with --force for the CI workflow), and it never installs packages.
 //
-//   1. .reins/ sources from the templates (policies, notebook templates, skills, agents, hook, doctor.yml)
+//   1. .reins/ starter sources (hook, doctor.yml); reins sync manages the shared core
 //   2. .gitignore entries for local state
 //   3. a package.json script
 //   4. the pre-commit hook through the hook manager the repo already uses (Husky or lefthook)
 //   5. .github/workflows/reins.yml running only `reins check`
 //   6. the notes index block at the end of an existing AGENTS.md that has none
-//   7. reins sync (AGENTS.md, CLAUDE.md, .claude/)
+//   7. reins sync (shared core and AGENTS.md; optional Claude Code adapter)
 import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -16,25 +16,27 @@ import { ARCHITECTURE_FILE, CliError } from '../context.js';
 import { readText } from '../project.js';
 import { templatesDir, readTemplate } from '../templates.js';
 import { pkg as cliPkg } from '../scope.js';
-import { NOTES_BLOCK_RE, NOTES_BLOCK_SECTION, sync as runSync } from '../sync/index.js';
+import { migrateLegacyRules, NOTES_BLOCK_RE, NOTES_BLOCK_SECTION, RULES_BLOCK_RE, RULES_BLOCK_SECTION, sync as runSync } from '../sync/index.js';
 
 export const options = {
   'dry-run': { type: 'boolean' },
   force: { type: 'boolean' },
   'skip-hook': { type: 'boolean' },
   'skip-ci': { type: 'boolean' },
+  claude: { type: 'boolean' },
+  'skip-claude': { type: 'boolean' },
 };
 
-export const help = `Usage: reins install [--dry-run] [--force] [--skip-hook] [--skip-ci]
+export const help = `Usage: reins install [--dry-run] [--force] [--skip-hook] [--skip-ci] [--claude | --skip-claude]
 
-Wires reins into this repo, additively (existing files are never overwritten):
-  - .reins/ sources (policies, templates, skills, agents, pre-commit script, doctor.yml)
+Wires reins into this repo without overwriting user-owned files:
+  - .reins/ starter sources (pre-commit script, doctor.yml)
   - .gitignore entries for .reins/backlog/, .reins/progress/ and .reins/init-report.md
   - a "reins:check" script in package.json
   - the pre-commit hook in Husky (.husky/pre-commit) or lefthook (lefthook.yml), whichever the repo uses
   - .github/workflows/reins.yml running only \`reins check\` (--force overwrites it)
-  - the module notes index block at the end of an existing AGENTS.md that has none
-  - reins sync (AGENTS.md, CLAUDE.md, .claude/)
+  - the reins rules and module notes blocks at the end of an existing AGENTS.md that has none
+  - reins sync (.reins/core/, AGENTS.md; Claude Code files by default, disabled with --skip-claude and re-enabled with --claude)
 It never installs packages. Run \`reins init\` afterwards if there is no architecture.yml yet.`;
 
 export const HOOK_LINE = 'sh .reins/hooks/pre-commit.sh';
@@ -44,12 +46,13 @@ export const SCRIPT = { name: 'reins:check', command: 'reins check' };
 const deps = (pkg) => ({ ...pkg.dependencies, ...pkg.devDependencies });
 const LEFTHOOK_FILES = ['lefthook.yml', 'lefthook.yaml', '.lefthook.yml', '.lefthook.yaml'];
 
-/** Every template file under templates/.reins, as repo-relative paths. */
+/** Starter template files under templates/.reins (core/ is managed by reins sync). */
 function reinsSources() {
   const base = templatesDir();
   const out = [];
   const walk = (rel) => {
     for (const name of readdirSync(path.join(base, rel)).sort()) {
+      if (name === 'core') continue; // core is managed by reins sync
       const r = `${rel}/${name}`;
       if (statSync(path.join(base, r)).isDirectory()) walk(r);
       else out.push(r);
@@ -104,7 +107,7 @@ function defaultBranch(root) {
 /**
  * Plans and (unless dryRun) applies the installation.
  * @param {string} root
- * @param {{ dryRun?: boolean, force?: boolean, skipHook?: boolean, skipCi?: boolean }} opts
+ * @param {{ dryRun?: boolean, force?: boolean, skipHook?: boolean, skipCi?: boolean, claude?: boolean, skipClaude?: boolean }} opts
  * @returns {{ actions: string[], notes: string[] }}
  */
 export function installInto(root, opts = {}) {
@@ -199,17 +202,35 @@ export function installInto(root, opts = {}) {
     actions.push(`CI workflow: wrote ${WORKFLOW_FILE} (${packageManager(root)})`);
   }
 
-  // 6. an AGENTS.md the repo already had: append the notes index block if it has none (sync fills it in)
-  const agents = readText(root, 'AGENTS.md');
-  if (agents !== null && !NOTES_BLOCK_RE.test(agents)) {
-    write('AGENTS.md', `${agents}${agents.endsWith('\n') ? '' : '\n'}\n${NOTES_BLOCK_SECTION}`);
-    actions.push('AGENTS.md: appended the module notes index block (kept everything else)');
+  // 6. an AGENTS.md the repo already had: append the rules and notes index blocks if missing (sync fills them in)
+  let agents = readText(root, 'AGENTS.md');
+  if (agents !== null) {
+    let changed = false;
+    if (migrateLegacyRules(agents) !== null) {
+      actions.push('AGENTS.md: rules from an older reins found; reins sync moves them into the reins:rules block');
+    } else if (!RULES_BLOCK_RE.test(agents)) {
+      // before the notes block, and before its "## Module notes" heading when it has one
+      const at = agents.search(/^(?:## Module notes\r?\n)?<!-- reins:notes:start/m);
+      if (at >= 0) {
+        agents = `${agents.slice(0, at)}${RULES_BLOCK_SECTION}\n${agents.slice(at)}`;
+      } else {
+        agents = `${agents}${agents.endsWith('\n') ? '' : '\n'}\n${RULES_BLOCK_SECTION}`;
+      }
+      changed = true;
+      actions.push('AGENTS.md: appended the reins rules block (kept everything else)');
+    }
+    if (!NOTES_BLOCK_RE.test(agents)) {
+      agents = `${agents}${agents.endsWith('\n') ? '' : '\n'}\n${NOTES_BLOCK_SECTION}`;
+      changed = true;
+      actions.push('AGENTS.md: appended the module notes index block (kept everything else)');
+    }
+    if (changed) write('AGENTS.md', agents);
   }
 
   // 7. sync
-  if (dry) actions.push('reins sync: would generate AGENTS.md (if missing), CLAUDE.md (if missing) and .claude/');
+  if (dry) actions.push(`reins sync: would generate .reins/core/ and AGENTS.md${opts.skipClaude ? '' : ', plus Claude Code files'}`);
   else {
-    const r = runSync(root);
+    const r = runSync(root, { claude: opts.claude, skipClaude: opts.skipClaude });
     actions.push(`reins sync: ${r.changes.length ? r.changes.length + ' change(s)' : 'nothing to do'}`);
     notes.push(...r.warnings);
   }
@@ -224,7 +245,8 @@ export function installInto(root, opts = {}) {
 /** @param {{ root: string, values: Record<string, any>, out: (s: string) => void }} ctx */
 export async function install(ctx) {
   const { root, values, out } = ctx;
-  const r = installInto(root, { dryRun: values['dry-run'], force: values.force, skipHook: values['skip-hook'], skipCi: values['skip-ci'] });
+  if (values.claude && values['skip-claude']) throw new CliError('Use either --claude or --skip-claude, not both.');
+  const r = installInto(root, { dryRun: values['dry-run'], force: values.force, skipHook: values['skip-hook'], skipCi: values['skip-ci'], claude: values.claude, skipClaude: values['skip-claude'] });
   out(values['dry-run'] ? 'reins install (dry run, nothing written):' : 'reins install:');
   for (const a of r.actions) out(`  - ${a}`);
   if (r.notes.length) {

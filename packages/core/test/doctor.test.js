@@ -32,7 +32,7 @@ test('doctor.yml: defaults, partial overrides, clear errors', () => {
   const c = parseDoctorConfig('triage:\n  small: { max_files: 5 }\nprogress: { hot_max_lines: 60 }\n');
   assert.deepEqual(c.triage.small, { max_files: 5, max_domains: 1 });
   assert.equal(c.progress.hot_max_lines, 60);
-  assert.equal(c.agents_md.max_lines, 30);
+  assert.equal(c.agents_md.max_lines, 45);
   assert.throws(() => parseDoctorConfig('triage:\n  tiny: {}\nagents_md: { max_lines: -1 }\n', { file: 'd.yml' }), {
     message: 'd.yml is not valid:\n  - triage.tiny: unknown key (expected one of: small, medium)\n  - agents_md.max_lines: expected a whole number ≥ 0',
   });
@@ -103,7 +103,7 @@ test('reins and agent files do not count as task files; architecture.yml still d
 });
 
 test('agents-size', () => {
-  const long = Array.from({ length: 31 }, (_, i) => `line ${i}`).join('\n') + '\n\n';
+  const long = Array.from({ length: 46 }, (_, i) => `line ${i}`).join('\n') + '\n\n';
   assert.deepEqual(rules(doctor({ agentsMd: { file: 'AGENTS.md', text: long } })), ['agents-size']);
   assert.deepEqual(rules(doctor({ agentsMd: { file: 'AGENTS.md', text: null } })), []);
 });
@@ -149,7 +149,7 @@ test('progress-closed: closed with unchecked done criteria (subtasks don\'t coun
 test('every doctor finding is a warning with rule, why and fix; the result never fails by itself', () => {
   const r = doctor({
     changedFiles: ['src/a.js'],
-    agentsMd: { file: 'AGENTS.md', text: 'x\n'.repeat(40) },
+    agentsMd: { file: 'AGENTS.md', text: 'x\n'.repeat(50) },
     notebooks: [{ file: 'n.md', text: notebook({ subtasks: '- [~] a\n- [~] b' }, 'closed').replace('- [x] discount', '- [ ] discount') + 'x\n'.repeat(40) }],
   });
   assert.deepEqual(rules(r).sort(), ['agents-size', 'progress-closed', 'progress-format', 'progress-hot-size', 'triage-missing']);

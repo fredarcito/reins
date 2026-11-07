@@ -12,7 +12,7 @@ Read this for medium and large tasks. The notebook is local (`.reins/progress/`,
 
 ## Rules
 
-- At the start, if the notebook exists, read it and resume from "Next step". `npx reins resume` prints the notebook, the files changed on the branch and their module notes; in Claude Code it arrives on its own when a session starts, after `/clear` and after a compaction.
+- At the start, if the notebook exists, read it and resume from "Next step". `npx reins resume` prints the notebook, the files changed on the branch and their module notes. Client-specific session hooks may deliver this automatically; otherwise run the command directly.
 - Write the notebook so that it is enough to continue after the conversation is compacted: the goal, the decisions taken so far and the next step, not a log of what you did.
 - Write the done criteria **before** editing, not at the end.
 - Update it silently after each subtask and before switching topic, not "at the end".

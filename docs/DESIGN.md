@@ -47,15 +47,15 @@ El diseño tiene tres capas, de más a menos duradera, y cuatro ejes por los que
 | Capa | Qué contiene | Qué la sostiene |
 | --- | --- | --- |
 | 1. Núcleo | `architecture.yml`, `baseline.json`, comando `check`, hook de git, CI | Node + git; no depende de ningún agente |
-| 2. Contenido en markdown | `AGENTS.md`, notas, políticas, skills, agentes, checklist | Es texto portable; solo cambia dónde se coloca |
-| 3. Adaptadores de herramienta | `.claude/`, Husky | Archivos finos sin lógica que solo llaman al CLI; se generan con `harness sync` |
+| 2. Contenido en markdown | `AGENTS.md`, notas, políticas, skills, agentes, checklist | Es texto portable, independiente del proveedor |
+| 3. Adaptadores de herramienta | `.claude/` (opcional), Husky | Archivos finos sin lógica que solo llaman al CLI; se generan con `reins sync` |
 
 **Cuatro ejes de extensión** (solo el primero se formaliza en la fase 1)
 
 | Eje | Pregunta que responde | Mecanismo |
 | --- | --- | --- |
 | Lenguaje o framework | ¿Cómo leo las dependencias? | Adaptadores `packages/adapters/<x>` con contrato mínimo versionado |
-| Herramienta de agente | ¿Cómo le llegan las reglas? | Capa 3 generada (`.claude/`, `AGENTS.md`) |
+| Herramienta de agente | ¿Cómo le llegan las reglas? | Base común en `AGENTS.md` y adaptadores opcionales por cliente |
 | Qué se valida | ¿Qué compruebo? | Checks de herramienta o de agente (por ejemplo stylelint para CSS) |
 | Contenido | ¿Qué sabe y hace el agente? | Markdown en `.harness/` (notas, políticas, skills, agentes) |
 
@@ -253,7 +253,7 @@ Los umbrales viven en un archivo aparte, porque son valores iniciales sin calibr
 triage:
   pequeña: { max_files: 3, max_domains: 1 }
   media:   { max_domains: 1 }
-agents_md: { max_lines: 30 }
+agents_md: { max_lines: 45 }
 progress:  { hot_max_lines: 40 }
 ```
 
@@ -265,7 +265,7 @@ Todo lo de esta sección es contenido en markdown. Es una instrucción: el agent
 
 ### `AGENTS.md`: mapa corto
 
-Tope de unas 30 líneas, con divulgación progresiva: lo que se necesita siempre, y punteros a lo demás.
+Tope de unas 45 líneas, con divulgación progresiva: lo que se necesita siempre, y punteros a lo demás.
 
 ```markdown
 # <Proyecto>

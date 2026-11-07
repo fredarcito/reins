@@ -23,7 +23,7 @@ reins fixes both:
 | A shared component imports from a feature. Someone spots it in review, or nobody does | The commit is blocked; the agent reads the fix and corrects it |
 | A week later, the agent reads a whole module again to find out what it does and why | Its note (purpose, map, decisions with their why, traps) reaches the agent as soon as it opens the module |
 | A long conversation gets compacted and the task's decisions are lost | The notebook and the notes of the files in play come back right after the compaction |
-| Architecture rules live in a long prompt the agent skims | They live in `architecture.yml`, checked by a tool. The prompt stays at 30 lines |
+| Architecture rules live in a long prompt the agent skims | They live in `architecture.yml`, checked by a tool. The prompt stays at 45 lines |
 | "Review the whole project" every few weeks, from scratch | Findings stay in a backlog; the next audit rechecks them |
 | Adopting rules means fixing all the old debt first | Old debt is frozen in a baseline and can only shrink |
 
@@ -35,7 +35,7 @@ reins fixes both:
 | 🧠 **Context that survives** | Module notes carry what a module does and why, from one session to the next. A per-branch notebook carries the task, and comes back by itself after a compaction. |
 | 🟢 **Adopt it on the repo you already have** | `reins init` reads your code and drafts the architecture; `reins notes new` drafts a module's note from its imports. Today's violations are frozen in a baseline, so you start green and only *new* problems fail. |
 | 🤖 **Errors an agent can fix alone** | Every finding says the rule, the reason and the fix, as text or JSON. |
-| ✂️ **Less context, fewer tokens** | A 30-line `AGENTS.md` instead of a long prompt. A module's note arrives only when the agent works on that module. |
+| ✂️ **Less context, fewer tokens** | A 45-line `AGENTS.md` instead of a long prompt. A module's note arrives only when the agent works on that module. |
 | 🔓 **No lock-in** | A Node CLI and plain markdown. No service, no API keys, no telemetry. Switch agents or models and nothing breaks; every piece is optional. |
 
 ## Quick start
@@ -44,7 +44,8 @@ In the root of your project (Node 22 or newer):
 
 ```bash
 npm install -D @agentreins/cli @agentreins/adapter-js
-npx reins install                  # git hook, CI job, AGENTS.md, .claude/
+npx reins install                  # git hook, CI job, AGENTS.md
+# For a provider-neutral setup, use: npx reins install --skip-claude
 npx reins init                     # architecture plan, baseline, module notes
 npx reins check --update-baseline  # freeze today's violations
 npx reins check                    # from now on, only new violations fail
@@ -57,16 +58,15 @@ Between `init` and `check --update-baseline`:
 
 Later, after you add or edit a note, skill or agent in `.reins/` (by hand, with `reins notes new` or with `/reins-agent`), run `npx reins sync` so `AGENTS.md` and `.claude/` pick it up. `init` already does it for the notes it drafts.
 
-Nothing is overwritten: `install` and `init` only add files or ask first. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). Already installed? See [Updating](#updating). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+User-owned files are not overwritten: `install` and `init` only add files or ask first; `sync` refreshes its marked/generated files. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). Already installed? See [Updating](#updating). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
 
 ## Updating
 
 ```bash
-# 1. Update the packages (@agentreins/core comes along with the CLI)
-npm install -D @agentreins/cli@latest @agentreins/adapter-js@latest   # pnpm: pnpm add -D …
+# 1. Update the CLI and installed adapters, then sync the new core templates
+npx reins update                   # preference persists; use --skip-claude or --claude to change it
 
-# 2. Regenerate what reins owns, then check
-npx reins sync
+# 2. Check the local workflow
 npx reins doctor
 npx reins check
 
@@ -75,38 +75,42 @@ npx reins check
 npx reins notes stale
 ```
 
+The shared workflow is provider-neutral: reins stores its rules in Markdown, exposes them through `AGENTS.md`, and gives any coding agent the same CLI commands. `reins update` uses the project's package manager (pnpm, yarn, bun, or npm), updates the CLI and installed `@agentreins/adapter-*` packages, then runs the newly installed `reins sync`. Use `--skip-claude` to update only the shared core and leave Claude Code files untouched.
+
 Then read the [changelog](CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
 
 ```mermaid
 flowchart LR
-    pkg["npm install -D<br/>@agentreins/*@latest"] --> sync["reins sync"]
-    sync --> gen["regenerated<br/>.claude/ · AGENTS.md notes index"]
-    pkg -.-> tpl["new templates<br/>in node_modules"]
-    tpl -. "you merge by hand" .-> src[".reins/ sources<br/>skills · policies · agents"]
-    src --> sync
+    update["reins update"] --> pkg["latest CLI + installed adapters"]
+    pkg --> sync["reins sync"]
+    sync --> core[".reins/core/"]
+    sync --> gen["managed AGENTS.md blocks<br/>read by compatible agents"]
+    sync -. optional .-> claude["Claude Code adapter<br/>.claude/ · CLAUDE.md"]
+    custom["your overrides in .reins/"] --> sync
 ```
 
 What updates by itself and what doesn't:
 
 | What | On update |
 | --- | --- |
-| `.claude/skills/reins-*`, `.claude/agents/reins-*`, the hooks in `.claude/settings.json`, the notes index in `AGENTS.md` | `reins sync` regenerates them from `.reins/` |
-| `.reins/skills/`, `.reins/policies/`, `.reins/agents/` and the rest of what `install` copied | Kept: they are your sources and you may have edited them |
-| `AGENTS.md` outside the notes index, `architecture.yml`, `baseline.json`, your notes | Never touched |
+| `.reins/core/`, managed blocks in `AGENTS.md` | Refreshed by `reins sync` for the shared, provider-neutral workflow |
+| `.claude/skills/reins-*`, `.claude/agents/reins-*`, reins hooks in `.claude/settings.json`, `CLAUDE.md` | Optional Claude Code adapter; use `reins sync --skip-claude` to leave it untouched |
+| `.reins/skills/`, `.reins/agents/`, `.reins/policies/`, `.reins/templates/`, `.reins/review/` | Kept as user overrides. Unmodified copies an older `reins install` put there are removed, so the new `.reins/core/` applies |
+| The rules an older reins wrote in `AGENTS.md` (`## Always`, `## On demand`) | Moved into the managed rules block when unedited; if you edited them, `sync` warns and leaves them for you to move |
+| An `AGENTS.md` you wrote yourself, with no reins rules block | Gets no rules from `update`: run `npx reins install` once to append the block (it keeps everything else), or add `<!-- reins:rules:start -->` and `<!-- reins:rules:end -->` where you want them |
+| `AGENTS.md` outside the managed blocks, `architecture.yml`, `baseline.json`, your notes | Never touched |
 
-When a version changes the templates, the changelog says so. To bring them in, compare your copy with the new one and merge what you want:
+When a version changes the templates, the changelog says so. Core templates sync automatically; review the changelog for behavior changes and compare any overrides you maintain:
 
 ```bash
-diff -ru node_modules/@agentreins/cli/templates/.reins .reins
+diff -ru node_modules/@agentreins/cli/templates/.reins/core .reins/core
 ```
-
-A file you never edited can simply be deleted and copied again by `npx reins install`. Then run `npx reins sync`.
 
 Finally, commit what changed: `.reins/`, `.claude/` and `AGENTS.md`.
 
 ## Skills for your agent
 
-Commands for your agent, installed by `reins install`. In Claude Code, type them (`/reins-arch`), add details after them (`/reins-notes cart`), or just ask in your own words: Claude picks the skill whose description matches. Other agents read the same instructions in `.reins/skills/<name>/SKILL.md`.
+The workflow and skill sources are plain Markdown, independent of a model provider. In Claude Code, the optional adapter exposes commands such as `/reins-arch`; any other agent can follow `AGENTS.md`, read the same sources in `.reins/core/skills/` or `.reins/skills/`, and run the same `reins` CLI commands. Native skill discovery and automatic hooks are client-specific.
 
 | Skill | What your agent does | When |
 | --- | --- | --- |
@@ -431,7 +435,7 @@ After installing, a consumer repo gets this. Files marked *local* stay out of gi
 
 ```
 your-repo/
-├── AGENTS.md                      # ≤ 30 lines: commands, golden rules, path → note index (generated)
+├── AGENTS.md                      # ≤ 45 lines: commands, golden rules, path → note index (generated)
 ├── CLAUDE.md                      # one line: @AGENTS.md
 ├── .reins/
 │   ├── architecture.yml           # layers, domains, rules, exceptions  ← you decide this
@@ -493,7 +497,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | `adapter-js`: Vite + React and Next, JS or TS, `@/` aliases | stable | ✅ tested on [`examples/`](examples/) |
 | `next-server-client` rule | stable (optional) | ✅ |
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
-| `reins install` | experimental | ✅ npm and pnpm |
+| `reins install`, `reins update` | experimental | ✅ install tested with npm and pnpm; update package-manager selection tested in dry-run; shared `AGENTS.md` workflow does not require Claude Code |
 | `reins sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |
 | `reins impact` | experimental | ✅ the domains that consume a file, before the refactor |
 | `reins notes new`, `resume` + `SessionStart` hook | experimental | ✅ notebook and notes come back after a compaction |
@@ -580,7 +584,7 @@ flowchart LR
 | --- | --- |
 | `triage-missing` | The branch has changes but no line in `triage.log` (or a line can't be read) |
 | `triage-mismatch` | The branch diff exceeds the highest level declared on the branch: `small` = ≤ 3 files in 1 domain; `medium` = 1 domain; more domains, a public API or `architecture.yml` = `large` |
-| `agents-size` | `AGENTS.md` is longer than 30 lines (`sync` keeps its notes index inside this limit) |
+| `agents-size` | `AGENTS.md` is longer than 45 lines (`sync` keeps its notes index inside this limit) |
 | `progress-hot-size` | The hot notebook is longer than 40 lines |
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
 | `progress-closed` | `status: closed` with done criteria not checked |
@@ -598,7 +602,7 @@ Thresholds are starting values in `.reins/doctor.yml`; tune them to your team:
 triage:
   small:  { max_files: 3, max_domains: 1 }
   medium: { max_domains: 1 }
-agents_md: { max_lines: 30 }
+agents_md: { max_lines: 45 }
 progress:  { hot_max_lines: 40 }
 notes:     { max_lines: 60 }
 ```
@@ -620,25 +624,26 @@ Notebook format (`.reins/progress/<branch>.md`, local, outside git):
 
 ### `reins sync`, `reins notes`, `reins scope`, `reins impact`, `reins resume`
 
-`sync` generates the tool layer from the sources in `.reins/`. It only touches what it generated, recorded in `.reins/.generated.json`.
+`sync` refreshes the provider-neutral core sources and managed `AGENTS.md` blocks. By default it also generates the optional Claude Code adapter; `--skip-claude` updates only the shared files and leaves existing Claude files untouched. It only touches generated files recorded in `.reins/.generated.json`.
 
 ```mermaid
 flowchart LR
     subgraph src[".reins/ (sources, in git)"]
-        skills["skills/audit/<br/>skills/done/<br/>skills/notes/"]
-        agents["agents/reviewer.md<br/>agents/explorer.md"]
+        core["core/skills · core/agents<br/>core/policies · core/templates"]
+        skills["skills/ (user overrides)"]
+        agents["agents/ (user overrides)"]
         notes["notes/*.md<br/>(paths in frontmatter)"]
     end
     subgraph gen["generated (in git, never edit)"]
-        cskills[".claude/skills/reins-*/"]
-        cagents[".claude/agents/reins-*.md"]
-        index["AGENTS.md<br/>notes index block"]
-        settings[".claude/settings.json<br/>deny git commit/push<br/>+ notes and resume hooks"]
+        index["AGENTS.md<br/>shared rules + notes blocks"]
+        claude["optional Claude Code adapter<br/>.claude/ skills, agents, hooks"]
     end
-    skills --> cskills
-    agents --> cagents
+    core -. optional adapter .-> claude
+    skills -. optional adapter .-> claude
+    agents -. optional adapter .-> claude
     notes --> index
-    sync(["reins sync"]) -.-> gen
+    sync(["reins sync"]) --> index
+    sync -. unless --skip-claude .-> claude
     manifest[".reins/.generated.json<br/>what reins owns"] -.-> sync
 ```
 
@@ -648,8 +653,8 @@ flowchart LR
 | A file at a generated path that reins didn't create | Not touched; warning |
 | A generated file edited by hand | Overwritten, with a message (edit the source instead); `--check` fails |
 | A source deleted | Its generated files are removed (kept if edited by hand) |
-| `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only the notes block is managed) |
-| Notes index | Its first line says to run `npx reins notes <path…>` before changing a file (the hook only fires on Read/Edit/Write, not on shell commands or other tools), then one line per note |
+| `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only marked reins blocks are managed) |
+| Notes index | Its first line asks the agent to run `npx reins notes <path…>` before changing a file, then one line per note; hooks are an optional client-specific fast path |
 | More notes than fit in `AGENTS.md` | Only that first line and the number of notes, so `AGENTS.md` stays within doctor's `agents_md.max_lines` |
 
 `sync --check` writes nothing and fails if anything differs. Once `.generated.json` exists, `reins check` reports the same differences under `integrity`.
@@ -753,8 +758,8 @@ The packages are on npm under `@agentreins`. Without a registry (offline, or a v
 # 1. Install the CLI and the JavaScript/TypeScript adapter (pnpm: pnpm add -D …)
 npm install -D @agentreins/cli @agentreins/adapter-js
 
-# 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md, .claude/
-npx reins install
+# 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md
+npx reins install --skip-claude    # omit optional Claude Code files for a provider-neutral setup
 
 # 3. Draft the architecture and the module notes, review init-report.md, adjust architecture.yml,
 #    ask your agent to fill in the notes' TODO lines, then freeze today's violations
@@ -767,14 +772,14 @@ npx reins check
 
 ```mermaid
 flowchart LR
-    install["reins install"] --> src[".reins/ sources<br/>policies · skills · agents · hook"]
+    install["reins install"] --> src[".reins/ starter sources<br/>hook · doctor config"]
     install --> gi[".gitignore<br/>backlog/ · progress/"]
     install --> hook[".husky/pre-commit<br/>or lefthook.yml"]
     install --> wf[".github/workflows/reins.yml<br/>reins check only"]
-    install --> sync["reins sync<br/>AGENTS.md · CLAUDE.md · .claude/"]
+    install --> sync["reins sync<br/>.reins/core · AGENTS.md · CLAUDE.md · .claude/"]
 ```
 
-`reins install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`; an existing `AGENTS.md` only gets the notes index block appended at the end), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
+`reins install` is additive and idempotent: it never overwrites existing files (the workflow only with `--force`; existing `AGENTS.md` gets managed rules and notes blocks appended when missing), never installs packages, and tells you what is missing (e.g. no Husky or lefthook: it explains how to add one). `--dry-run` shows what it would do.
 
 Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**. See [How the JS adapter reads your project](#how-the-js-adapter-reads-your-project).
 

@@ -14,6 +14,7 @@ import * as auditCmd from './commands/audit.js';
 import * as progressCmd from './commands/progress.js';
 import * as reviewCmd from './commands/review.js';
 import * as installCmd from './commands/install.js';
+import * as updateCmd from './commands/update.js';
 
 export { SCOPE };
 
@@ -31,6 +32,7 @@ const COMMANDS = {
   progress: { run: progressCmd.progress, options: progressCmd.options, help: progressCmd.help, positionals: true },
   review: { run: reviewCmd.review, options: reviewCmd.options, help: reviewCmd.help },
   install: { run: installCmd.install, options: installCmd.options, help: installCmd.help },
+  update: { run: updateCmd.update, options: updateCmd.options, help: updateCmd.help },
 };
 
 const HELP = `Usage: reins <command> [options]
@@ -39,7 +41,7 @@ Commands:
   check    Check the architecture rules (git hook and CI)
   init     Draft .reins/architecture.yml and baseline.json from the code
   doctor   Local workflow checks: triage log, notebook, module notes, AGENTS.md size (experimental)
-  sync     Generate .claude/ and the AGENTS.md notes index from .reins/ (experimental)
+  sync     Sync provider-neutral rules and notes; optional Claude Code adapter (experimental)
   notes    Print the module notes for a path; "notes new" drafts one; --hook for Claude Code (experimental)
   scope    Domains, notes and minimum task level for some paths (experimental)
   impact   Domains that consume a file, public API bypasses and the blast radius (experimental)
@@ -48,6 +50,7 @@ Commands:
   progress Edit the branch notebook without rewriting it (experimental)
   review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
   install  Wire reins into this repo: sources, hook, CI, .gitignore, sync (experimental)
+  update   Update @agentreins/cli and sync provider-neutral core (experimental)
 
 Options:
   -h, --help     Show help (also: reins <command> --help)

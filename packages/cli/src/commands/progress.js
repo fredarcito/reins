@@ -17,7 +17,13 @@ import { readTemplate } from '../templates.js';
  */
 function notebookTemplate(root, rel) {
   const own = readText(root, rel);
-  return own === null ? { text: readTemplate(rel), source: `the packaged ${rel}` } : { text: own, source: rel };
+  if (own !== null) return { text: own, source: rel };
+  if (rel.startsWith('.reins/')) {
+    const coreRel = `.reins/core/${rel.slice('.reins/'.length)}`;
+    const coreText = readText(root, coreRel);
+    if (coreText !== null) return { text: coreText, source: coreRel };
+  }
+  return { text: readTemplate(rel), source: `the packaged ${rel}` };
 }
 
 export const options = {

@@ -1,0 +1,79 @@
+{
+  "about": "sha256 of the defaults reins install copied into .reins/ and of the AGENTS.md rules section, before templates/.reins/core/ (<= 0.7.4). Frozen: never add newer versions.",
+  "agentsRules": [
+    "5b22eea6400005d51e6b047834df9a477d89efd845d112c94d39008e40a044cf",
+    "79c02fb12b30ab149528efe966b69121d9c52e69d432f7a75b260723b8efc89d",
+    "b00030d528382061155022d75767abd2c8bebc1ab79612ed8fffee698b6864fe",
+    "f9c10139fe09225f2c66c0d2d6ab94cfb7be0ba6446bbb6dce3bca0efa55f435"
+  ],
+  "files": {
+    ".reins/agents/explorer.md": [
+      "465e1753c2948b65c115519d2a17aee1df6bdc4dff2ed880441982204867e776",
+      "ddeb66877a94aeeb15b81b04505225cb4ad3b8961fcc7a8c89510ce2511ba4c8"
+    ],
+    ".reins/agents/reviewer.md": [
+      "5d61700f5c286030200dd8d4c60666c5beeb38b4e75c8edd0ee3118daf090ef4"
+    ],
+    ".reins/policies/multiagent.md": [
+      "bf27dca2ed6f018b0f687717a5670df54078382b66842bc5fc28989019692d0d"
+    ],
+    ".reins/policies/progress.md": [
+      "54f2daf14fdc642b0864c85efe3236284ff4ea9b05eda8d85586b373f4c3a61f",
+      "dc3ee94bba05df4bb7f0bc64a465fb18d11606ea2284c728bbe5e7b6d8c1fbcc"
+    ],
+    ".reins/policies/triage.md": [
+      "713e16a350f9b8b2c3f3bb9fd624d162610469689e1e54acde421cc76f302828",
+      "8c88d83899b400d78e49ed85802e55c5ea54bb946a30e37c10039621fd70ec3c",
+      "a9bd88d68a2cd95dd31c4d3a0147c5f435d3f7274df2218627d68cd3a5e28c13",
+      "d21ffaccb72efb746a4ae78966f894a3d119160a069165ad9ccd5ab15e6bf4f8"
+    ],
+    ".reins/review/checklist.md": [
+      "8e6f13f1be6c85d635cc63ad22637d830b1e13e0b90104d4bbab860f66ac1767"
+    ],
+    ".reins/skills/agent/SKILL.md": [
+      "613641891e9ad9d3ac9b9719c4376cb1328c4fc39982ec680647f40004708513"
+    ],
+    ".reins/skills/arch/SKILL.md": [
+      "48a9a6e559aeaa4be6c3be9dc59d94d22b2425240bd944a168eec08eb546fa66",
+      "f9d6e830b3dbd4f015ec9ad6d76a7e437aeb99f013ea745a00c44f168faa9031"
+    ],
+    ".reins/skills/audit/SKILL.md": [
+      "4c62f319df2f19c18f58d4ba9a2870f85c699a3f859f3d3085787b6c52580e68",
+      "eb3c6860b8eb1e4bee942bd1ecb10864465cdd0b134ea3056d2a404ff007d6f7"
+    ],
+    ".reins/skills/backlog/SKILL.md": [
+      "9affee7b8c3ee2eb14b3aface0cdd03900a06319a176955c53987c2a80fc04c2"
+    ],
+    ".reins/skills/close-task/SKILL.md": [
+      "e03cf6a38bddc36999209a08679069cd949ff0371c32ba081eeedd32f1ccb444"
+    ],
+    ".reins/skills/done/SKILL.md": [
+      "d106cf1f6a9e2ed2f3a4cac5c2d97877e8e7fa32735965f7329e8cbe6efcf7e3",
+      "d1c3947a498035de247cfb7a041a0194f7100d2fd3f60b09854ae1241c2da8de",
+      "da9423e41cb3217aa7072e0fd511c07c0e1d0535510b069d186a92df757179df"
+    ],
+    ".reins/skills/fill-notes/SKILL.md": [
+      "fb5bd0af2592212eb06cd53ff14cd54af87bf146fed8bc1a86d7c3ccec8b89b0"
+    ],
+    ".reins/skills/notes/SKILL.md": [
+      "5d3a0038be7b6d72d06ce075fdc6136d527bff52118405c7fb3023630c2f3318",
+      "a3f158d3b015f5c9b3e30a6a19009e56fbd86c8248b5f448b312a7c2819860ef",
+      "b1d52d0130983672dcfcf8d69e1945106cfd54c9748ed08e0248eb5b562fdf9a"
+    ],
+    ".reins/templates/progress-cold/decisions.md": [
+      "216234331c4326d541ada778463170816dc4cef786bb3afb4cfc7b29934bb55b"
+    ],
+    ".reins/templates/progress-cold/delivery.md": [
+      "fba6dd4789b25c2141b9afc04a7ced80685f11edd52c7d59c4241ac65366f96a"
+    ],
+    ".reins/templates/progress-cold/verification.md": [
+      "51efde62c6ba83581a96cdaf6a62ae6697ae5b25caa50b7a72ace569a3c115a7"
+    ],
+    ".reins/templates/progress-hot.md": [
+      "b3eb77b1331bac3e4d2f76a0ba3fe80e95d246acf42f4e3092a62aa19f04c262"
+    ],
+    ".reins/templates/progress-mini.md": [
+      "4170a668deff8440b713072f20c8c1defa041ea6a4eb520e60c5b50efa41513d"
+    ]
+  }
+}

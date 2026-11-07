@@ -64,7 +64,7 @@ test('checks the current branch notebook and AGENTS.md', async () => {
   const dir = workingRepo();
   write(dir, '.reins/progress/triage.log', '2026-11-04 | feat/discounts | medium | cart discounts\n');
   write(dir, '.reins/progress/feat-discounts.md', '# feat/discounts · status: open · updated: 2026-11-04\n- [~] a\n- [~] b\n');
-  write(dir, 'AGENTS.md', 'line\n'.repeat(35));
+  write(dir, 'AGENTS.md', 'line\n'.repeat(50));
   const r = await cli(dir, ['doctor']);
   assert.match(r.stdout, /progress-format {2}\.reins\/progress\/feat-discounts\.md/);
   assert.match(r.stdout, /agents-size {2}AGENTS\.md/);
