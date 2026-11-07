@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.1 · 2026-11-07
+
+Your own skills, agents and policies have a visible home again.
+
+```bash
+npx reins update
+```
+
+- `sync` writes a short `README.md` into `.reins/skills/`, `.reins/agents/`, `.reins/policies/` and `.reins/review/`: what goes in each folder and which reins defaults you can override (skills, agents, the review checklist; not reins' policies or notebook templates, which `doctor` and `reins progress` rely on). In 0.8.0 the migration removed the old copies and left no trace of where your own files go.
+- The rules block in `AGENTS.md` now points agents to the team's skills and agents in `.reins/skills/` and `.reins/agents/`, not only to the ones in `.reins/core/`.
+
 ## 0.8.0 · 2026-11-07
 
 reins works the same with any coding agent, and updates itself.

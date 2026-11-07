@@ -16,7 +16,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - Resuming a task, or the conversation was compacted → run `npx reins resume`.
 - "What's pending?" → `npx reins audit list` (backlog) and `npx reins progress show` (current task).
 - Reviewing the diff → `npx reins review` (prompt with diff, checklist and notes).
-- Workflows → `.reins/core/skills/<name>/SKILL.md` (done: closing a task; audit, backlog, notes, arch, agent); delegated roles → `.reins/core/agents/{reviewer,explorer}.md`. Your overrides in `.reins/skills/`, `.reins/agents/` win.
+- Workflows → `.reins/skills/<name>/SKILL.md` (the team's, they win) or `.reins/core/skills/<name>/SKILL.md` (done: closing a task; audit, backlog, notes, arch, agent); delegated roles → `.reins/agents/` or `.reins/core/agents/`.
 - Medium or large task → read `.reins/core/policies/progress.md`.
 - Several agents (large only) → read `.reins/core/policies/multiagent.md`.
 - Every reins command → `npx reins --help`.

@@ -17,6 +17,7 @@ They ship inside `reins` (copied at pack time).
 | `.reins/core/review/checklist.md` | Short review checklist. Overridable in `.reins/review/checklist.md` | Reviewer agent, `reins review` |
 | `.reins/core/skills/{audit,backlog,done,notes,arch,agent}/` | Provider-neutral Markdown skill sources; optional Claude Code wrappers → `.claude/skills/reins-*` | On demand or when following `AGENTS.md` |
 | `.reins/core/agents/{reviewer,explorer}.md` | Provider-neutral agent definitions; optional Claude Code wrappers → `.claude/agents/reins-*` | When delegated |
+| `.reins/{skills,agents,policies,review}/README.md` | Where the team's own skills, agents, policies and review checklist go, and which reins defaults can be overridden. Written by `reins sync` | When adding your own |
 | `.reins/notes/_template.md` | Shape of a module note (files starting with `_` are not notes) | — |
 | `.reins/hooks/pre-commit.sh` | `reins check --files <staged files>` | Git, not the agent |
 | `.reins/doctor.yml` | Doctor thresholds | `reins doctor` |

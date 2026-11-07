@@ -8,7 +8,7 @@
     ".reins/core/policies/progress.md": "49044abd29669188e09d3d45767c03a1c5892007d44585882e326608da127d0d",
     ".reins/core/policies/triage.md": "d21ffaccb72efb746a4ae78966f894a3d119160a069165ad9ccd5ab15e6bf4f8",
     ".reins/core/review/checklist.md": "8e6f13f1be6c85d635cc63ad22637d830b1e13e0b90104d4bbab860f66ac1767",
-    ".reins/core/rules.md": "670d8c3617e3c3d9646740bdbc5cc1938e7a2558f8cdf8bcd5623f87a5b94e60",
+    ".reins/core/rules.md": "b1d88271745b5492294d233fd98dfc3bd8d345c4f7e9d45aa26485fe21692cc1",
     ".reins/core/skills/agent/SKILL.md": "2c96e48c4831413c87676f58179d0349b77bb107af5407f2cea42797f8627183",
     ".reins/core/skills/arch/SKILL.md": "48a9a6e559aeaa4be6c3be9dc59d94d22b2425240bd944a168eec08eb546fa66",
     ".reins/core/skills/audit/SKILL.md": "4c62f319df2f19c18f58d4ba9a2870f85c699a3f859f3d3085787b6c52580e68",
@@ -20,6 +20,10 @@
     ".reins/core/templates/progress-cold/verification.md": "51efde62c6ba83581a96cdaf6a62ae6697ae5b25caa50b7a72ace569a3c115a7",
     ".reins/core/templates/progress-hot.md": "b3eb77b1331bac3e4d2f76a0ba3fe80e95d246acf42f4e3092a62aa19f04c262",
     ".reins/core/templates/progress-mini.md": "4170a668deff8440b713072f20c8c1defa041ea6a4eb520e60c5b50efa41513d",
+    ".reins/skills/README.md": "34943d1dfb4be45e0f74621728f09549e6acdb410385d97104fd7c83d3873099",
+    ".reins/agents/README.md": "951589ac1822c43190be6497f9558b5e91e340299b0799a83350462924e75420",
+    ".reins/policies/README.md": "0178a174500db6af1981bcd8ba11d7d145f404c1de48e2d3151088616751bb54",
+    ".reins/review/README.md": "1424bcd2ea7dce0ce7d3b6d3786b2c0ec51a5eb79dda3c17bb60d28e72b515ea",
     ".claude/skills/reins-agent/SKILL.md": "47f9bdddc1fdba4f0d6ac3095f41e6036b88efc7c1bf6f6a9c5296323ea52195",
     ".claude/skills/reins-arch/SKILL.md": "82f90616bd598fb952829bd6c424189b4e6a335b8712b127af1cc62eec43226f",
     ".claude/skills/reins-audit/SKILL.md": "9ffa7e9ec25495cc2e52d075f7ed9cc099c07af118963bb44fb7387b7e47bb29",
@@ -30,7 +34,7 @@
     ".claude/agents/reins-reviewer.md": "400cd0ac60c95282a9008ebbfd9c872466368137b5c5891185fef5246aa0ad37"
   },
   "blocks": {
-    "AGENTS.md#rules": "670d8c3617e3c3d9646740bdbc5cc1938e7a2558f8cdf8bcd5623f87a5b94e60",
+    "AGENTS.md#rules": "b1d88271745b5492294d233fd98dfc3bd8d345c4f7e9d45aa26485fe21692cc1",
     "AGENTS.md#notes": "e3df864a98e92df87aa497c1a30556a143639d0c0d8fd802a08bdf37ad38a7d2"
   },
   "adapters": {

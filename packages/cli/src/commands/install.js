@@ -52,7 +52,8 @@ function reinsSources() {
   const out = [];
   const walk = (rel) => {
     for (const name of readdirSync(path.join(base, rel)).sort()) {
-      if (name === 'core') continue; // core is managed by reins sync
+      // core/ and the READMEs of the override folders are managed by reins sync
+      if (rel === '.reins' && ['core', 'skills', 'agents', 'policies', 'templates', 'review'].includes(name)) continue;
       const r = `${rel}/${name}`;
       if (statSync(path.join(base, r)).isDirectory()) walk(r);
       else out.push(r);

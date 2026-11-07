@@ -1,6 +1,7 @@
 // reins sync: updates provider-neutral core sources and AGENTS.md, plus an optional Claude Code adapter.
 //
 //   templates/.reins/core/** -> .reins/core/**
+//   templates/.reins/<override folder>/README.md -> .reins/<override folder>/README.md (where your own versions go)
 //   .reins/core/skills/<n>/ (or .reins/skills/<n>/ override) -> .claude/skills/reins-<n>/ (optional)
 //   .reins/core/agents/<n>.md (or .reins/agents/<n>.md override) -> .claude/agents/reins-<n>.md (optional)
 //   .reins/notes/*.md -> notes index block inside AGENTS.md
@@ -113,6 +114,12 @@ export function planSync(root, opts = {}) {
     }
   }
 
+  // 1b. a README in each override folder, so people know where their own skills, agents and policies go
+  for (const dir of LEGACY_DIRS) {
+    const rel = `${REINS_DIR}/${dir}/README.md`;
+    if (existsSync(path.join(tpl, rel))) files.push({ path: rel, content: readFileSync(path.join(tpl, rel), 'utf8'), source: `templates/${rel}` });
+  }
+
   // 2. Claude Code adapter: skills and agents are generated only when enabled.
   if (!opts.skipClaude) {
     // skills: base from templates/.reins/core/skills, overridable in .reins/skills
@@ -174,7 +181,7 @@ export function planSync(root, opts = {}) {
       }
     }
     if (existsSync(userAgentsDir)) {
-      for (const name of readdirSync(userAgentsDir).filter((n) => n.endsWith('.md')).sort()) {
+      for (const name of readdirSync(userAgentsDir).filter((n) => n.endsWith('.md') && n !== 'README.md').sort()) {
         agentNames.add(name);
       }
     }

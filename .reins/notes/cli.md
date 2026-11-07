@@ -36,6 +36,8 @@ The `reins` command line: wires the provider-neutral core and language adapter t
 - 2026-11-07: shared workflows use plain Markdown in `AGENTS.md` and the reins CLI; `sync`, `install`, and `update` accept `--skip-claude` to avoid touching provider-specific files. Client-level instruction loading outside Claude Code is unverified.
 - 2026-11-07: `sync` persists whether the optional Claude Code adapter is enabled in its generated manifest so bare `sync --check` and CI use the same choice; `--claude` explicitly re-enables it.
 
+- 2026-11-07: `sync` writes a README into `.reins/{skills,agents,policies,review}/`; `templates/` gets none on purpose (the notebook format is parsed by `progress`, `resume` and doctor, so overriding it is not advertised, and the policies README asks not to shadow reins' policies): without it, after the migration removes the old copies nobody knows where their own skills go. `install` skips those folders; agent scanning skips `README.md`.
+
 ## Traps
 - `update` at a pnpm workspace root must pass `-w` to `pnpm add`, or pnpm refuses to install.
 - `legacy-defaults.json` is frozen history: never add new core versions to it; the current core is compared at runtime.

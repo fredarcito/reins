@@ -95,7 +95,7 @@ What updates by itself and what doesn't:
 | --- | --- |
 | `.reins/core/`, managed blocks in `AGENTS.md` | Refreshed by `reins sync` for the shared, provider-neutral workflow |
 | `.claude/skills/reins-*`, `.claude/agents/reins-*`, reins hooks in `.claude/settings.json`, `CLAUDE.md` | Optional Claude Code adapter; use `reins sync --skip-claude` to leave it untouched |
-| `.reins/skills/`, `.reins/agents/`, `.reins/policies/`, `.reins/templates/`, `.reins/review/` | Kept as user overrides. Unmodified copies an older `reins install` put there are removed, so the new `.reins/core/` applies |
+| `.reins/skills/`, `.reins/agents/`, `.reins/policies/`, `.reins/templates/`, `.reins/review/` | Yours: `skills/`, `agents/`, `policies/` and `review/` each have a `README.md` (written by `sync`) saying what goes there. Kept as user overrides. Unmodified copies an older `reins install` put there are removed, so the new `.reins/core/` applies |
 | The rules an older reins wrote in `AGENTS.md` (`## Always`, `## On demand`) | Moved into the managed rules block when unedited; if you edited them, `sync` warns and leaves them for you to move |
 | An `AGENTS.md` you wrote yourself, with no reins rules block | Gets no rules from `update`: run `npx reins install` once to append the block (it keeps everything else), or add `<!-- reins:rules:start -->` and `<!-- reins:rules:end -->` where you want them |
 | `AGENTS.md` outside the managed blocks, `architecture.yml`, `baseline.json`, your notes | Never touched |
