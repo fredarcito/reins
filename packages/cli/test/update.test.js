@@ -49,3 +49,13 @@ test('update rejects conflicting Claude adapter options before updating dependen
   assert.match(result.stderr, /Use either --claude or --skip-claude/);
   assert.doesNotMatch(result.stdout, /updating/);
 });
+
+test('update adds -w at a pnpm workspace root', async () => {
+  const result = await cli(tempDir({
+    'package.json': JSON.stringify({}),
+    'pnpm-lock.yaml': '',
+    'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
+  }), ['update', '--dry-run']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /pnpm add -D -w @agentreins\/cli@latest/);
+});

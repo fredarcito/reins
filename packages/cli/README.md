@@ -34,7 +34,7 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 In the root of your project:
 
 ```bash
-npx reins install                  # git hook, CI job, AGENTS.md, .claude/
+npx reins install                  # git hook, CI job, AGENTS.md, .reins/core/, .claude/ (--skip-claude to omit it)
 npx reins init                     # architecture plan, baseline, module notes
 npx reins check --update-baseline  # freeze today's violations
 npx reins check                    # from now on, only new violations fail
@@ -100,7 +100,7 @@ A boundary crossing is an import that reaches a domain's internals instead of it
 
 What `install` sets up, in the order the agent hits it:
 
-1. **Announce.** Every task gets a level — `small`, `medium`, `large` — from the triage policy in `.reins/policies/`. `reins scope <paths>` gives the objective signals: domains touched, notes to read, minimum level.
+1. **Announce.** Every task gets a level — `small`, `medium`, `large` — from the triage policy in `.reins/core/policies/`. `reins scope <paths>` gives the objective signals: domains touched, notes to read, minimum level.
 2. **Plan.** Before changing a file other domains may import (a util, a type, a barrel, a public API), the agent runs `reins impact` on it. "Medium, but could be large if another domain shows up" stops being a guess.
 3. **Edit.** The module note arrives the moment the agent opens a file — a Claude Code hook, or the notes index in `AGENTS.md` for any other agent.
 4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes.
@@ -109,14 +109,15 @@ What `install` sets up, in the order the agent hits it:
 
 | Command | What it does |
 | --- | --- |
-| `reins install` | Wires reins into the repo: `.reins/` sources, pre-commit hook (Husky or lefthook), CI workflow, `.gitignore`, `AGENTS.md`, `.claude/`. `--dry-run` |
+| `reins install` | Wires reins into the repo: pre-commit hook (Husky or lefthook), CI workflow, `.gitignore`, the reins rules and notes blocks in `AGENTS.md`, then `sync`. `--dry-run`, `--skip-claude` |
 | `reins init` | Drafts `architecture.yml`, the baseline, a review report and the module notes from the code. `--dry-run`, `--preset <name>` |
 | `reins check` | Checks the rules (git hook and CI). `--update-baseline`, `--coverage`, `--json`, `--files` |
 | `reins scope <paths>` | Domains, public APIs, notes to read and the minimum task level for some paths. `--json` |
 | `reins impact <file-or-folder>` | The reverse of `scope`: the domains that consume a file, imports that bypass a public API, violations that already involve it, and the minimum level if the change breaks its importers. `--json` |
 | `reins notes <path...>` | Prints the module notes for a path (`--hook`: the Claude Code fast path). `notes new <domain\|folder>` drafts one from the import graph; `notes stale` ranks notes behind the code. `--json` |
 | `reins resume` | Notebook, changed files and notes to resume a task. `--json`, `--hook` (Claude Code `SessionStart`) |
-| `reins sync` | Regenerates `.claude/` and the notes index in `AGENTS.md` from `.reins/`. `--check` |
+| `reins sync` | Refreshes `.reins/core/` (rules, policies, skills, agents), the rules and notes blocks in `AGENTS.md`, and the optional Claude Code files. `--check`, `--skip-claude`, `--claude` |
+| `reins update` | Updates the CLI and installed adapters with your package manager, then runs the new `reins sync`. `--dry-run`, `--skip-claude`, `--claude` |
 | `reins doctor` | Local workflow checks: declared task level vs the branch diff, the notebook, the notes, `AGENTS.md` size. Warns, never blocks, never in CI |
 | `reins audit`, `reins progress`, `reins review` | Local backlog of findings, branch notebook, review prompt |
 
@@ -124,7 +125,7 @@ What `install` sets up, in the order the agent hits it:
 
 ## Skills for your agent
 
-`reins install` adds these skills. In Claude Code, type them or ask in your own words; other agents read the same instructions in `.reins/skills/<name>/SKILL.md`.
+`reins sync` keeps these skills in `.reins/core/skills/` (your own versions in `.reins/skills/` win). In Claude Code, type them or ask in your own words; other agents find them through `AGENTS.md`.
 
 | Skill | What your agent does |
 | --- | --- |
@@ -133,11 +134,17 @@ What `install` sets up, in the order the agent hits it:
 | `/reins-arch` | Reviews `architecture.yml` against the code and proposes changes; applies nothing until you approve |
 | `/reins-audit` | Looks for improvements and adds only new findings to the backlog |
 | `/reins-backlog` | Shows what is pending and proposes what to do next |
-| `/reins-agent` | Creates a new subagent in `.reins/agents/` |
+| `/reins-agent` | Creates a new agent definition in `.reins/agents/` |
 
 ## Updating
 
-After every update, read the [changelog](https://github.com/fredarcito/reins/blob/main/CHANGELOG.md): each release says what to run afterwards (`reins sync`, `reins install`) and when. `install` only copies files that are missing; the ones you already have are yours to merge.
+```bash
+npx reins update   # from 0.8.0 on: updates the packages, then runs reins sync
+```
+
+Coming from 0.7 or earlier, `update` does not exist yet: update the packages yourself (`npm i -D @agentreins/cli@latest @agentreins/adapter-js@latest`), then run `npx reins sync` once.
+
+Read the [changelog](https://github.com/fredarcito/reins/blob/main/CHANGELOG.md) of each version you skipped: it says when something else is worth doing.
 
 ## Learn more
 

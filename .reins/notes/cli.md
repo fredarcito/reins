@@ -37,6 +37,7 @@ The `reins` command line: wires the provider-neutral core and language adapter t
 - 2026-11-07: `sync` persists whether the optional Claude Code adapter is enabled in its generated manifest so bare `sync --check` and CI use the same choice; `--claude` explicitly re-enables it.
 
 ## Traps
+- `update` at a pnpm workspace root must pass `-w` to `pnpm add`, or pnpm refuses to install.
 - `legacy-defaults.json` is frozen history: never add new core versions to it; the current core is compared at runtime.
 - `cwd` and root are real paths on purpose: macOS `/var` -> `/private/var` would break `--files` repo-relative paths.
 - Adapter resolution starts at the consumer repo, not the CLI folder: with pnpm the CLI can't see packages it doesn't declare.

@@ -25,8 +25,9 @@ function packageManager(root) {
   return 'npm';
 }
 
-function updateCommand(pm, packages) {
-  if (pm === 'pnpm') return ['pnpm', ['add', '-D', ...packages.map((p) => `${p}@latest`)]];
+function updateCommand(pm, packages, root) {
+  // at a pnpm workspace root, `pnpm add` refuses to run without -w
+  if (pm === 'pnpm') return ['pnpm', ['add', '-D', ...(existsSync(path.join(root, 'pnpm-workspace.yaml')) ? ['-w'] : []), ...packages.map((p) => `${p}@latest`)]];
   if (pm === 'yarn') return ['yarn', ['add', '-D', ...packages.map((p) => `${p}@latest`)]];
   if (pm === 'bun') return ['bun', ['add', '-d', ...packages.map((p) => `${p}@latest`)]];
   return ['npm', ['install', '-D', ...packages.map((p) => `${p}@latest`)]];
@@ -65,7 +66,7 @@ export async function update(ctx) {
   }
 
   const pm = packageManager(root);
-  const [cmd, args] = updateCommand(pm, packagesToUpdate);
+  const [cmd, args] = updateCommand(pm, packagesToUpdate, root);
 
   out(`reins update: updating ${packagesToUpdate.join(', ')} with ${pm}...`);
   if (!values['dry-run']) {

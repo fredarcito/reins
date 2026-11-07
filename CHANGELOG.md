@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.8.0 · 2026-11-07
+
+reins works the same with any coding agent, and updates itself.
+
+**Coming from 0.7 or earlier** (`reins update` does not exist yet in your version):
+
+```bash
+npm i -D @agentreins/cli@latest @agentreins/adapter-js@latest   # or pnpm add -D / yarn add -D
+npx reins sync
+```
+
+`sync` migrates the repo: it creates `.reins/core/`, removes the copies an older `install` put in `.reins/` that nobody edited, and moves the rules an older reins wrote in `AGENTS.md` into the managed rules block. Then check three things by hand:
+
+- `.reins/doctor.yml` says `agents_md: { max_lines: 30 }`: change it to `45`, or delete the line to use the new default.
+- Your `AGENTS.md` was your own and never had the reins rules: run `npx reins install` once to append the rules block (everything else is kept).
+- You edited the reins rules in `AGENTS.md`: `sync` warns and leaves them. Put `<!-- reins:rules:start -->` and `<!-- reins:rules:end -->` where they go, move your own lines outside, and run `npx reins sync`.
+
+From now on, `npx reins update` does it all: it updates the CLI and installed adapters with your package manager, then runs the new `reins sync`.
+
+- **Provider-neutral core.** Policies, skills, agents, notebook templates and the review checklist now ship in `.reins/core/`, refreshed by every `sync`. Your own versions in `.reins/skills/`, `.reins/agents/`, `.reins/templates/` and `.reins/review/checklist.md` still win.
+- **Rules block in `AGENTS.md`.** The reins rules live between `reins:rules` markers and are updated by `sync`, so new rules reach every repo. They now also point any agent to the skills and agents in `.reins/core/`.
+- **Claude Code is optional.** `install`, `sync` and `update` accept `--skip-claude` (and `--claude` to turn it back on); the choice is saved so CI checks the same thing. Claude Code stays on by default.
+- **`reins update`** (new, experimental). Uses pnpm, yarn, bun or npm, whichever the repo uses; adds `-w` at a pnpm workspace root.
+- **`AGENTS.md` limit is 45 lines** (was 30), so the rules block fits next to your own rules and the notes index.
+- `install` no longer copies policies, skills and agents into `.reins/`; it adds the rules block to an existing `AGENTS.md` above its notes, and never twice.
+
 ## 0.7.4 · 2026-11-07
 
 Make architecture impact guidance easier for agents to find and follow.
