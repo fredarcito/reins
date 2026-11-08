@@ -47,6 +47,8 @@ test('hook: returns additionalContext for Read/Edit of a noted path, once per no
   assert.equal(call('src/features/billing/Invoice.tsx', 's1', 'Edit'), null, 'same note, same session: not repeated');
   assert.notEqual(call('src/lib/date.ts'), null, 'another note in the same session');
   assert.notEqual(call('src/features/billing/tax.ts', 's2'), null, 'a new session gets it again');
+  const cursor = hookResponse(dir, { session_id: 'c1', hook_event_name: 'preToolUse', tool_name: 'Read', tool_input: { file_path: path.join(dir, 'src/features/billing/tax.ts') } });
+  assert.equal(JSON.parse(cursor ?? '{}').hookSpecificOutput?.hookEventName, 'PreToolUse', 'Cursor runs this hook with its own spelling; the answer keeps Claude\'s (VERIFIED P12)');
   assert.equal(call('src/components/Button.tsx'), null, 'no note');
   assert.equal(hookResponse(dir, { session_id: 's3', tool_input: { file_path: '/etc/hosts' } }), null, 'outside the repo');
   assert.equal(hookResponse(dir, { session_id: 's3', tool_input: { command: 'ls' } }), null, 'no file path');

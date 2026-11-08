@@ -54,6 +54,10 @@ test('the same task from a new session, after a compaction, and without a sessio
   assert.doesNotMatch(own, /has not claimed/);
   assert.match((await cli(dir, ['progress', 'show', '--task', 'nope'], as('s3'))).stderr, /Task "nope" has no notebook on feat\/checkout/);
 
+  assert.match((await cli(dir, ['progress', 'show'], { env: { CURSOR_CONVERSATION_ID: 's3' } })).stdout, /feat-checkout\/css\/notebook\.md/, 'Cursor\'s agent shell has its session id too');
+  const cursor = JSON.parse(hookResponse(dir, { session_id: 's3', hook_event_name: 'sessionStart' }, {}, '2026-11-04')).hookSpecificOutput;
+  assert.deepEqual([cursor.hookEventName, /## Your task css/.test(cursor.additionalContext)], ['SessionStart', true], 'Cursor\'s spelling is answered in Claude\'s');
+
   const noId = (await cli(dir, ['resume'], as(null))).stdout;
   assert.match(noId, /## Your task css/, 'no session id and one open task: as before');
   assert.match(noId, /it was picked because it is the only open task\. If the request is a different task, create a new one/);

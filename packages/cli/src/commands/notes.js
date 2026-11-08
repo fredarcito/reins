@@ -4,7 +4,7 @@
 import { existsSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { matchesAny, notesFor, NOTES_DIR, rankStaleNotes } from '@agentreins/core';
-import { CliError, isGitRepo, toRepoPath } from '../context.js';
+import { CliError, hookEventName, isGitRepo, toRepoPath } from '../context.js';
 import { impactHint } from '../impact-map.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
@@ -176,7 +176,7 @@ export function hookResponse(root, input) {
   if (!parts.length) return null;
   return JSON.stringify({
     hookSpecificOutput: {
-      hookEventName: input.hook_event_name ?? 'PreToolUse',
+      hookEventName: hookEventName(input.hook_event_name, 'PreToolUse'),
       additionalContext: parts.join('\n\n'),
     },
   });

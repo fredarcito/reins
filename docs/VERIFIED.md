@@ -22,6 +22,7 @@ Scripts to rerun them: [`scripts/verify/`](../scripts/verify/). The Claude Code 
 | P8 | npm scope `@harness` is free | **Could not be fully tested** | Pending decision |
 | P9 | A `SessionStart` hook restores context after a compaction | **Pass** | Yes: notes must be re-delivered, see P9 |
 | P10 | Other coding-agent clients consume the shared `AGENTS.md` rules and can use the reins CLI | **Unverified** | The shared workflow avoids provider APIs; client-level instruction loading still needs testing |
+| P12 | Cursor runs reins' hooks and its agent can know its session | **Pass, with gaps** (Cursor 3.29.9, 1 run) | Yes: a Cursor adapter is mostly not needed, see P12 |
 | P11 | Bash tool commands see `CLAUDE_CODE_SESSION_ID`, and it survives `--resume` / `--continue` | **Pass** (print mode) | No: per-session notebooks can rely on it, see P11 |
 
 ## P1. `PreToolUse` hook with per-path context — pass, with a caveat
@@ -233,6 +234,24 @@ Needed by the multi-session notebooks ([proposal](proposals/multi-session-progre
   - `--resume <id> --fork-session`: a new id, and the variable follows it.
 - Side finding: Bash permission rules reject `echo $CLAUDE_CODE_SESSION_ID` ("a variable in this command can't be checked before it runs"); `printenv` passes. reins reads the variable from `process.env`, so this does not affect it.
 - **Unverified:** the interactive terminal UI (no TTY in the test; same binary, so expected to match) and `/resume` picked from inside a running session.
+
+## P12. Cursor hooks — pass, with gaps
+
+Cursor 3.29.9 (IDE, Agent mode, model grok-4.7), 2026-11-08, one run of [`cursor-hooks-probe.sh`](../scripts/verify/cursor-hooks-probe.sh): Cursor's own hooks and Claude Code format hooks in `.claude/settings.json` (the ones `reins sync` generates) log their input and answer with keywords; the agent then listed the keywords it could see.
+
+- **Cursor runs Claude Code format hooks from `.claude/settings.json`**, with no setting changed: `SessionStart` and `PreToolUse` (matcher `Read|Edit|Write|MultiEdit` matched Cursor's `Read` and `Write`). Their `hookSpecificOutput.additionalContext` reached the model: at session start, and on the Read calls and the edit.
+- Cursor's own hooks: `sessionStart` and `postToolUse` `additional_context` reached the model. `preToolUse` `agent_message` with `permission: allow` did not.
+- Payload of a Claude-format hook in Cursor: `session_id` (equal to `conversation_id`), `tool_name` (`Read`, `Write`, `Shell`; edits are `Write`), `tool_input.file_path`, but `hook_event_name` is Cursor's (`preToolUse`, `sessionStart`) and `SessionStart` has **no `source`**.
+- Environment: hooks get `CLAUDE_PROJECT_DIR` (alias) and `CURSOR_PROJECT_DIR`. The agent's shell gets **`CURSOR_CONVERSATION_ID`**, equal to the hooks' `session_id`; not `CLAUDE_CODE_SESSION_ID`. `env` returned by `sessionStart` reached later hooks, not the agent's shell. The shell runs sandboxed (`CURSOR_SANDBOX=seatbelt`).
+- **Gaps for reins:** (1) `reins progress` run by the Cursor agent sees no session id it knows (it reads `CLAUDE_CODE_SESSION_ID` / `REINS_SESSION`); (2) reins echoes `hook_event_name` into `hookEventName`, which in Cursor would be `preToolUse`: whether Cursor accepts that was not tested (the probe answered with the Claude names); (3) no `source`, and `preCompact` cannot add context, so after a compaction in Cursor nothing re-delivers the notebook and notes.
+- **reins' real hooks in this repo opened in Cursor** (after fixes 1 and 2, same day, one run; Cursor's hook log in `~/Library/Application Support/Cursor/logs/*/cursor.hooks.*.log`):
+  - **Pass:** `reins notes --hook` ran on the Read calls (~150 ms) and Cursor accepted its answer as valid, turning `additionalContext` into `additional_context`. The agent reported the `core` note and the impact warning for `packages/core/src/index.js` (large vs. the declared medium), and none for `notebooks.js` (medium, within the declared level).
+  - **Pass:** `reins progress new` / `show` from the agent's shell claimed the task with Cursor's conversation id (`session:` in the header), through `CURSOR_CONVERSATION_ID`.
+  - **Fail:** no `sessionStart` step was requested in that window at all, so `reins resume --hook` never ran: no task context at the start and no background impact map (an older map was used). In the probe project, which also had a `.cursor/hooks.json` with `sessionStart`, the Claude-format `SessionStart` did run. Unknown whether Cursor only fires it when a native `sessionStart` hook exists.
+  - **Unclear:** the `cli` note for `notebooks.js` was produced and accepted (log), but the agent said it got no note for that file. The two Reads ran in parallel and the note is ~6 KB; lost context, a size limit or a wrong self-report are all possible.
+  - **Follow-up, session start — pass with a native trigger** (2 more runs): with a `.cursor/hooks.json` holding only a no-op `sessionStart`, a **new** conversation fired `sessionStart` and Cursor ran all four sources: the native one, the Claude **project** `SessionStart` (`reins resume --hook`), the Claude user one and plugin hooks. The agent got the resume context (task files, `cli` note), no repeat of the `cli` note on reading `notebooks.js` (already delivered), and the impact warning plus the `core` note on `index.js`; the impact map was rebuilt in the background. Without that native file no `sessionStart` was requested (1 run). A run in the **same** conversation got neither `sessionStart` nor repeated notes, as designed. Likely rule, from these runs: Cursor only requests `sessionStart` when some native config defines it. `reins sync` now writes that no-op trigger.
+  - Side finding: Cursor also runs the person's Claude Code **user** hooks and plugins (`~/.claude/settings.json`, plugin hooks).
+- **Not tested:** compaction; Cursor CLI agent; cloud agents (no `sessionStart` there).
 
 ## Still unverified
 

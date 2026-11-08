@@ -21,6 +21,7 @@ Version 0.3.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 | `triage`: each task anchored to its start commit; doctor and resume per task; `triage.log` cleaned by `resume` | core + cli | experimental | Yes (2026-11-08, backlog A2), tested on temporary repos; not yet tried on a real long-lived branch |
 | `sync`, `notes`, `scope` | cli | experimental | Yes (phase 6), tested; notes hook verified with Claude Code (2/2) |
 | `impact` | core + cli | experimental | Yes (2026-11-06), tested; pure core function over the `check` graph, no new dependency |
+| Cursor: runs the `.claude/settings.json` hooks; `sync` adds a no-op `sessionStart` to `.cursor/hooks.json`; session id from `CURSOR_CONVERSATION_ID` | cli | experimental | Yes (2026-11-08), tested; verified by hand in Cursor 3.29.9 (P12, few runs); compaction in Cursor not covered |
 | Impact warning in the notes hook (`impact --map` built in the background at session start) | cli | experimental | Yes (2026-11-08), tested; background build checked by hand; not yet seen changing a real agent's behavior |
 | Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `reins` |
 | Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |

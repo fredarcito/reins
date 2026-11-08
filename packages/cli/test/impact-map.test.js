@@ -46,6 +46,9 @@ test('notes hook: warns when a shared file is touched under a lower declared lev
 
   triage(dir, 'large');
   assert.equal(said(dir, 'src/features/orders/OrderList.tsx'), null, 'declared large: silence');
+
+  const fromCursor = hookResponse(dir, { session_id: 's9', hook_event_name: 'preToolUse', tool_name: 'Read', tool_input: { file_path: path.join(dir, 'src/features/orders/types.ts') } });
+  assert.equal(fromCursor, null, 'declared large: silence in Cursor too');
 });
 
 test('notes hook: an untriaged task is told once to triage; no map, no word about impact; notes still arrive', async () => {

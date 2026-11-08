@@ -5,7 +5,7 @@
 // --hook is the Claude Code SessionStart hook that reins sync installs (matcher startup|compact|clear).
 import { execFileSync } from 'node:child_process';
 import { notesFor } from '@agentreins/core';
-import { isGitRepo } from '../context.js';
+import { hookEventName, isGitRepo } from '../context.js';
 import { buildImpactMapInBackground } from '../impact-map.js';
 import { branchTasks, cleanNotebooks, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
@@ -133,7 +133,7 @@ export function hookResponse(root, input, env, today) {
   const notes = takeUnseen(root, session, g.notes, { reset: input?.source === 'compact' || input?.source === 'clear' });
   const text = render(g, notes);
   if (!text) return null;
-  return JSON.stringify({ hookSpecificOutput: { hookEventName: input?.hook_event_name ?? 'SessionStart', additionalContext: text } });
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: hookEventName(input?.hook_event_name, 'SessionStart'), additionalContext: text } });
 }
 
 async function readStdin() {

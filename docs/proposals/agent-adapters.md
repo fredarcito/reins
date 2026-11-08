@@ -1,7 +1,7 @@
 # Proposal: one adapter per coding agent (Claude Code, Codex, Cursor)
 
 - **Date:** 2026-11-08
-- **Status:** Proposed. Nothing here is verified for Codex or Cursor; step 1 verifies before anything is built.
+- **Status:** Proposed. Cursor verified on 2026-11-08 (`docs/VERIFIED.md` P12): it runs the Claude Code hooks reins already generates, so Cursor needs small fixes, not an adapter. Codex still unverified.
 - **Why now:** the team uses both Codex and Cursor next to Claude Code (stated 2026-11-08). Today only Claude Code gets the hooks that deliver the task notebook, module notes and the impact warning at the right moment; the others only get `AGENTS.md` and `reins doctor` afterwards.
 
 ## 1. Principle
@@ -42,6 +42,16 @@ Unverified for Codex and Cursor: from their docs and third-party guides as of 20
 1. Can add context → same as Claude Code.
 2. Can only deny → for the impact warning, deny the first edit of a shared file under a lower declared level, with the warning as the reason (the "stricter" option deferred in DECISIONS, "Impact through the notes hook"). Notes are not worth a deny: skip them.
 3. No hook → `AGENTS.md` and `reins doctor`, as today. Session id from `REINS_SESSION` if the agent can set it; otherwise the "no session id" rules of the multi-session notebooks.
+
+## 2b. Cursor result (P12)
+
+Cursor 3.29.9 loads `.claude/settings.json` hooks and honors `additionalContext`, so the existing Claude Code adapter already covers Cursor's session start and file reads/edits. Instead of a Cursor adapter, three small fixes:
+
+1. `sessionId` also reads `CURSOR_CONVERSATION_ID` (the agent's shell has it, equal to the hooks' `session_id`).
+2. Hook responses always use Claude's event names (`SessionStart`, `PreToolUse`) instead of echoing `hook_event_name`, which in Cursor is `sessionStart` / `preToolUse`.
+3. After a compaction Cursor can't re-deliver context: rely on the `AGENTS.md` line "the conversation was compacted → run `npx reins resume`".
+
+Fixes 1 and 2 were built on 2026-11-08, and reins' real hooks were verified in this repo opened in Cursor (P12). One more fix came out of it: Cursor only fires session start when a native hook defines it, so `sync` writes a no-op `sessionStart` into `.cursor/hooks.json` (with the Claude Code adapter; merged like `.claude/settings.json`). Codex is the only agent left to verify.
 
 ## 3. Plan
 

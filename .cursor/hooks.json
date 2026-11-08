@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "echo '{}' # reins: makes Cursor run the SessionStart hooks of .claude/settings.json"
+      }
+    ]
+  }
+}

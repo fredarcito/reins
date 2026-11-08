@@ -47,3 +47,11 @@ export class CliError extends Error {
     this.exitCode = exitCode;
   }
 }
+
+/**
+ * The event name a hook response must carry, in Claude Code's spelling. Cursor runs the same hooks from
+ * .claude/settings.json but sends its own spelling (`preToolUse`, `sessionStart`; VERIFIED P12).
+ * @param {unknown} name the payload's `hook_event_name`
+ * @param {string} fallback
+ */
+export const hookEventName = (name, fallback) => (typeof name === 'string' && name ? name[0].toUpperCase() + name.slice(1) : fallback);

@@ -698,6 +698,8 @@ sequenceDiagram
 
 **The same hook guards shared files.** At session start reins builds an impact map in the background (who imports each file, and the minimum task level if a change breaks them). When the agent opens a shared file that needs a higher level than the one it declared, it gets told to stop, tell you, and re-plan before editing. It says it once per file, and stays quiet when the level already fits.
 
+**Cursor too.** Cursor runs the same hooks from `.claude/settings.json`, so notes, the task notebook and the impact warning reach Cursor's agent as well. `reins sync` adds a one-line `.cursor/hooks.json` that makes Cursor fire its session start; commit it with the rest.
+
 The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the Claude Code fast path. Tested with Claude Code: the note arrives when the file is read, so the very first edit already follows it ([details](docs/VERIFIED.md#phase-6-findings)).
 
 `scope` goes **path → domain**: the files a task will touch. `impact` goes the other way, **file → consuming domains**, and answers the question an agent has before touching a shared file: *who else imports this?*

@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo } from './helpers.js';
-import { fitNotesIndex, mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
+import { CURSOR_HOOKS, fitNotesIndex, mergeCursorHooks, mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
 const HOW = '- Before changing a file, run `npx reins notes <path…>` to get its module notes (the hook delivers them only on Read/Edit/Write)';
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
@@ -30,7 +30,7 @@ const GENERATED = [
   '.reins/skills/README.md', '.reins/agents/README.md', '.reins/policies/README.md', '.reins/review/README.md',
   '.claude/skills/reins-audit/SKILL.md', '.claude/skills/reins-done/SKILL.md', '.claude/skills/reins-notes/SKILL.md', '.claude/skills/reins-arch/SKILL.md', '.claude/skills/reins-agent/SKILL.md', '.claude/skills/reins-backlog/SKILL.md',
   '.claude/agents/reins-reviewer.md', '.claude/agents/reins-explorer.md',
-  '.claude/settings.json', 'AGENTS.md', 'CLAUDE.md', '.reins/.generated.json',
+  '.claude/settings.json', '.cursor/hooks.json', 'AGENTS.md', 'CLAUDE.md', '.reins/.generated.json',
 ];
 
 test('first sync generates everything; a second sync does nothing; --check passes', async () => {
@@ -82,11 +82,13 @@ test('--skip-claude leaves an existing Claude Code adapter untouched and managed
   await cli(dir, ['sync']);
   write(dir, '.claude/skills/reins-audit/SKILL.md', 'manual Claude adapter change\n');
   write(dir, '.claude/settings.json', '{"manual":true}\n');
+  write(dir, '.cursor/hooks.json', '{"manual":true}\n');
 
   const skipped = await cli(dir, ['sync', '--skip-claude']);
   assert.match(skipped.stdout, /nothing to do/);
   assert.equal(read(dir, '.claude/skills/reins-audit/SKILL.md'), 'manual Claude adapter change\n');
   assert.equal(read(dir, '.claude/settings.json'), '{"manual":true}\n');
+  assert.equal(read(dir, '.cursor/hooks.json'), '{"manual":true}\n', 'the Cursor trigger belongs to the Claude Code adapter');
   assert.equal((await cli(dir, ['sync', '--check', '--skip-claude'])).code, 0);
 });
 
@@ -255,6 +257,20 @@ test('mergeSettings: removes entries reins no longer wants, keeps everything els
   assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit']);
   assert.deepEqual(r.owned.deny, SETTINGS.deny);
   assert.equal(mergeSettings(r.text, r.owned).changed, false);
+});
+
+test('mergeCursorHooks: adds the session start trigger next to the team\'s hooks, removes what reins no longer wants', () => {
+  const created = mergeCursorHooks(null, { hooks: [] });
+  assert.deepEqual(JSON.parse(created.text ?? ''), { version: 1, hooks: { sessionStart: [{ command: CURSOR_HOOKS[0].command }] } });
+  assert.match(CURSOR_HOOKS[0].command, /^echo '\{\}' # reins: /, 'a no-op that prints valid JSON and says why it is there');
+
+  const previous = { hooks: [{ event: 'stop', command: 'old reins hook' }] };
+  const team = JSON.stringify({ version: 1, hooks: { sessionStart: [{ command: 'team.sh' }], stop: [{ command: 'old reins hook' }], afterFileEdit: [{ command: 'fmt.sh' }] } });
+  const r = mergeCursorHooks(team, previous);
+  assert.deepEqual(JSON.parse(r.text ?? ''), { version: 1, hooks: { sessionStart: [{ command: 'team.sh' }, { command: CURSOR_HOOKS[0].command }], afterFileEdit: [{ command: 'fmt.sh' }] } });
+  assert.deepEqual(r.owned.hooks, [...CURSOR_HOOKS]);
+  assert.equal(mergeCursorHooks(r.text, r.owned).changed, false);
+  assert.match(mergeCursorHooks('{ nope', { hooks: [] }).problem ?? '', /\.cursor\/hooks\.json is not valid JSON.*not touched/);
 });
 
 test('notes index: parts of a module go on its line, so AGENTS.md does not grow a line per part', () => {
