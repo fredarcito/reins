@@ -21,5 +21,7 @@ A task is anything that needs reading the repo, running a command or changing a 
   1. when the task restructures, refactors or optimizes a domain or folder: on that folder, while mapping, before the plan;
   2. before editing a file other code may import (a component, util, type, hook, barrel or public API). Unsure whether it's shared → run it: one call is cheaper than a wrong level.
 
+  In Claude Code, opening a shared file whose minimum level is above the declared one (or with no level declared) brings a warning from reins: stop, tell the person, re-triage with `npx reins triage`, and for large present the plan before editing.
+
   Never conclude "nothing shared changes" without it. It prints the consuming domains, the imports that bypass a public API, the notes to read and the minimum level if the change breaks importers; it is not exploring, so it applies at every level. It sees imports, not HTTP calls: find callers of an API route with grep. For symbol-level questions, grep inside the domains it lists.
 - **Escalate mid-task:** stop and propose a higher level if a second domain appears, the thresholds are exceeded, you need to change a public API, a rule or the baseline, or `reins check` fails for something unexpected. Run `npx reins triage <new level> "<reason>"` again. Don't escalate "just in case".

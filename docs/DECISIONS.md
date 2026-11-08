@@ -301,7 +301,7 @@ Proposed from a real working session: `scope` goes path → domain, but nothing 
 | Level | `scopeSignals` + `suggestLevel` over the target plus its importers | Same thresholds as `scope` and `triage-mismatch`; the level of a breaking change, announced before the work |
 | Barrels | Importers that reach the target through a barrel count as consumers (kind `barrel`), from the adapter's existing `uses`; crossings stay on real edges | Without it, a util re-exported by `utils/index.ts` shows the barrel as its only consumer and the level comes out too low — confidently wrong. Going through a domain's public API barrel is the legal path, so it is never a crossing |
 | Symbols | File or folder, not `<file-or-export>`; `names[]` on edges rejected | Symbol questions stay a one-liner grep inside the domains impact lists; altitude stays at domains |
-| Making agents use it | The generated `AGENTS.md` carries an unconditional trigger (restructuring a domain/folder, or editing a file others may import; unsure → run it; every level) plus a short command index ending in `reins --help`; the triage policy, the explorer and the audit skill repeat it where they act | First real use (2026-11-07): on "restructure cloud-index, full optimization" the agent ran `scope` on two files and skipped `impact` because it "didn't propose changing a shared contract" — before having a plan. The instruction lived only in `triage.md`, which agents skip because `AGENTS.md` already summarizes it; it was conditional on judging a file "shared", and small said "don't explore". A hook that delivers impact on Edit (like notes) is the stronger fix, pending a measure of graph build time |
+| Making agents use it | The generated `AGENTS.md` carries an unconditional trigger (restructuring a domain/folder, or editing a file others may import; unsure → run it; every level) plus a short command index ending in `reins --help`; the triage policy, the explorer and the audit skill repeat it where they act | First real use (2026-11-07): on "restructure cloud-index, full optimization" the agent ran `scope` on two files and skipped `impact` because it "didn't propose changing a shared contract" — before having a plan. The instruction lived only in `triage.md`, which agents skip because `AGENTS.md` already summarizes it; it was conditional on judging a file "shared", and small said "don't explore". A hook that delivers impact on Edit (like notes) is the stronger fix: built on 2026-11-08, see "Impact through the notes hook" |
 | Cache | None: the graph is recomputed per run, exactly like `check` | Freshness is the property that makes the answer trustworthy; cache only if extraction cost becomes a measured problem |
 
 ## Tasks anchored to their start commit (2026-11-08, backlog A2)
@@ -335,7 +335,21 @@ Design and the cases it covers: [`proposals/multi-session-progress.md`](proposal
 | Overlaps | Policy only: the agent asks the person and writes one line in its own notebook | The person already talks to every session |
 | Deferred to phase 2 | Feature notebook, `**Needs:**` requests between tasks, "new from other sessions" after each edit, cleanup log and configurable margin | Built only if real use asks for them |
 
+## Impact through the notes hook (2026-11-08)
+
+Agents still skipped `reins impact`, this repo's own agent included (2026-11-08: core's public API changed under a declared `medium`; doctor caught it only at the end). The rule is read at session start but applies right before an edit, where nothing recalls it — the same failure notes had before their hook.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Where | The existing `PreToolUse` notes hook (Read, Edit, Write) adds the impact warning | The agent reads before editing, so it arrives in time (P1). No new hook to install |
+| When it speaks | Only when the file has importers **and** the declared level of the current task (same window as doctor) is lower than impact's minimum, or no level is declared. Once per file and session; while untriaged, once per minimum level | An actionable "stop and re-triage" at the right moment, not one more line per file read |
+| Cost | `reins impact --map` (importers count and level of every imported file, one pass over the graph, same `scopeSignals`/`suggestLevel` as `impact`) runs detached from the `SessionStart` hook into `.reins/progress/.impact-map.json`; the notes hook only reads it. ~0.7 s on this repo, off the critical path | Building the graph per edit costs seconds on large repos. Not on compaction; only when `CLAUDE_PROJECT_DIR` is set (Claude Code) |
+| Staleness | The map is from session start; imports added during the session are not in it | Shared files rarely change shape mid-session; the next session rebuilds it |
+| Not built | Denying the first edit of a shared file | Intrusive and untested (P1 only verified delivering context); only if warnings turn out not to be enough |
+| Other agents | Unchanged: the `AGENTS.md` rule and doctor's `triage-mismatch` afterwards | No provider-neutral way to intercept an edit |
+
 ## Open
 
+- **Agent adapters for Codex and Cursor (proposed 2026-11-08):** [`proposals/agent-adapters.md`](proposals/agent-adapters.md). All logic stays in the CLI; each agent gets a generated adapter that only translates hook config and payloads.
 - **Provider compatibility:** `AGENTS.md` plus the CLI is the shared baseline; actual instruction loading and native skill discovery in other clients remain unverified (see [`VERIFIED.md`](VERIFIED.md)).
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

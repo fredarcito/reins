@@ -7,11 +7,13 @@ import { emptyBaseline, impactOf, notesFor, runCheck, scopeSignals, suggestLevel
 import { ARCHITECTURE_FILE, CliError, toRepoPath } from '../context.js';
 import { loadNotes, readDoctorConfig } from '../project.js';
 import { analyze, readBaseline } from './check.js';
+import { IMPACT_MAP, impactMap, writeImpactMap } from '../impact-map.js';
 
-export const options = { json: { type: 'boolean' } };
+export const options = { json: { type: 'boolean' }, map: { type: 'boolean' } };
 export const positionals = true;
 
 export const help = `Usage: reins impact <file-or-folder> [--json]
+       reins impact --map
 
 What a change to one file (or everything under a folder) would reach, from the import graph:
 the domains that consume it, which imports bypass a domain's public_api, which violations already
@@ -19,7 +21,11 @@ involve it, the notes to read first, and the minimum task level if the change br
 (same thresholds as \`reins scope\`).
 
 Fine-grained questions (who calls one symbol inside a domain) stay with grep: run it inside the
-domains listed here.`;
+domains listed here.
+
+--map writes ${IMPACT_MAP}: the importers count and minimum level of every imported file. The Claude
+Code session hook builds it in the background; the notes hook uses it to warn when a shared file is touched
+under a lower declared task level.`;
 
 /** "no domain" group of consumers, for the text output. */
 const group = (g) => `${g.domain ?? 'no domain'} (${g.files.length})`;
@@ -31,6 +37,13 @@ const group = (g) => `${g.domain ?? 'no domain'} (${g.files.length})`;
  */
 export async function impact(ctx) {
   const { root, cwd, values, out } = ctx;
+  if (values.map) {
+    const { config, graph } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
+    const map = impactMap(root, graph, config.domains);
+    writeImpactMap(root, map);
+    out(`Wrote ${IMPACT_MAP}: ${Object.keys(map).length} imported files.`);
+    return 0;
+  }
   if (ctx.positionals.length !== 1) {
     out(help);
     return 2;

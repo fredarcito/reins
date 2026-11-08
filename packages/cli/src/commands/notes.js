@@ -5,6 +5,7 @@ import { existsSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { matchesAny, notesFor, NOTES_DIR, rankStaleNotes } from '@agentreins/core';
 import { CliError, isGitRepo, toRepoPath } from '../context.js';
+import { impactHint } from '../impact-map.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { dirtyFiles, loadNotes, readDomains, readHistory, walk } from '../project.js';
@@ -158,16 +159,25 @@ export function hookResponse(root, input) {
   const realTarget = existsSync(target) ? real(target) : path.join(real(path.dirname(target)), path.basename(target));
   const file = toRepoPath(realRoot, realRoot, realTarget);
   if (file.startsWith('..') || path.isAbsolute(file)) return null;
+  const session = typeof input.session_id === 'string' ? input.session_id : null;
+  const parts = [];
+  // a shared file touched under a lower declared level, or with no level declared (impactHint says how often)
+  let hint = null;
+  try {
+    hint = impactHint(root, file);
+  } catch {
+    /* unreadable map: say nothing about impact */
+  }
+  if (hint && takeUnseen(root, session, [{ file: hint.key }]).length) parts.push(hint.text);
   const notes = notesFor(file, loadNotes(root).notes);
-  if (!notes.length) return null;
-
   // once per note and session
-  const unseen = takeUnseen(root, typeof input.session_id === 'string' ? input.session_id : null, notes);
-  if (!unseen.length) return null;
+  const unseen = notes.length ? takeUnseen(root, session, notes) : [];
+  if (unseen.length) parts.push(`Module notes for ${file} (from .reins/notes; follow them):\n\n${render(file, unseen)}`);
+  if (!parts.length) return null;
   return JSON.stringify({
     hookSpecificOutput: {
       hookEventName: input.hook_event_name ?? 'PreToolUse',
-      additionalContext: `Module notes for ${file} (from .reins/notes; follow them):\n\n${render(file, unseen)}`,
+      additionalContext: parts.join('\n\n'),
     },
   });
 }

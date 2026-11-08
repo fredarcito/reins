@@ -257,6 +257,7 @@ Everything below is assumed, not tested. Each is a candidate for the pilot or fo
 - Permissions denying `git commit`/`git push` are bypassable (`git -c … commit`, `bash -c`); a `Bash` hook that blocks them is proposed, not built (deferred by decision).
 - `SessionStart` with `source: clear`, other models than haiku for the resume context, and very large notebooks or many notes (the hook output is capped at 30 files and 6 full notes, never measured in tokens).
 - That agents fill the TODO lines of a drafted note and keep notes current when closing (instructions plus doctor warnings, not enforced).
-- Any behavior in Codex or Cursor.
+- Any behavior in Codex or Cursor, including their hooks (events, added context, deny, session id): see [`proposals/agent-adapters.md`](proposals/agent-adapters.md), whose step 1 verifies them. Not testable on the 2026-11-08 machine (no Codex; Cursor 0.47.8, older than its hooks).
+- That an agent actually stops and re-triages when the notes hook delivers the impact warning (tested only as hook output), and that the detached `reins impact --map` started by the `SessionStart` hook keeps running after the hook returns inside a real Claude Code session (checked by hand from a shell).
 - That agents write `triage.log` lines, keep the notebook format and use `harness progress` / `harness audit` instead of rewriting files (instructions, not enforced).
 - That agents skip triage (no level, announcement or `triage.log` line) for information-only messages, and still triage questions that need repository work (policy text, not enforced).

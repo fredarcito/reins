@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { notesFor } from '@agentreins/core';
 import { isGitRepo } from '../context.js';
+import { buildImpactMapInBackground } from '../impact-map.js';
 import { branchTasks, cleanNotebooks, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
 import { loadNotes } from '../project.js';
@@ -148,7 +149,11 @@ export async function resume(ctx) {
   if (values.hook) {
     try {
       const raw = ctx.stdin ?? (await readStdin());
-      const response = hookResponse(env.CLAUDE_PROJECT_DIR || root, JSON.parse(raw || '{}'), env, ctx.today);
+      const hookRoot = env.CLAUDE_PROJECT_DIR || root;
+      const input = JSON.parse(raw || '{}');
+      // a fresh graph per session (not per compaction); only from Claude Code, which always sets CLAUDE_PROJECT_DIR
+      if (env.CLAUDE_PROJECT_DIR && input?.source !== 'compact') buildImpactMapInBackground(hookRoot);
+      const response = hookResponse(hookRoot, input, env, ctx.today);
       if (response) out(response);
     } catch {
       /* never break the session start */
