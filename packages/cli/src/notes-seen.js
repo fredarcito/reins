@@ -1,9 +1,12 @@
 // Which module notes each Claude Code session already received, so the hooks deliver each note once per
 // session. After a compaction the session keeps its id but loses the notes from its context, so `reins
 // resume --hook` forgets that session's record and the notes are delivered again.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+// Parallel tool calls run their hooks at the same time: the read-decide-write runs under a short lock and the
+// file is replaced atomically, or two hooks deliver the same note and interleaved writes corrupt the JSON.
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { REINS_DIR } from './context.js';
+import { withFileLock, writeFileAtomic } from './local-state.js';
 
 export const SEEN_FILE = `${REINS_DIR}/progress/.notes-seen.json`;
 const MAX_SESSIONS = 50;
@@ -22,8 +25,7 @@ function write(root, seen) {
   const sessions = Object.keys(seen);
   for (const old of sessions.slice(0, Math.max(0, sessions.length - MAX_SESSIONS))) delete seen[old];
   try {
-    mkdirSync(path.dirname(path.join(root, SEEN_FILE)), { recursive: true });
-    writeFileSync(path.join(root, SEEN_FILE), JSON.stringify(seen));
+    writeFileAtomic(path.join(root, SEEN_FILE), JSON.stringify(seen));
   } catch {
     /* read-only checkout: notes may repeat, which is harmless */
   }
@@ -40,11 +42,13 @@ function write(root, seen) {
  */
 export function takeUnseen(root, session, notes, opts = {}) {
   if (!session) return notes;
-  const seen = read(root);
-  const already = new Set(opts.reset ? [] : (seen[session] ?? []));
-  const unseen = notes.filter((n) => !already.has(n.file));
-  if (!unseen.length && !opts.reset) return unseen;
-  seen[session] = [...already, ...unseen.map((n) => n.file)];
-  write(root, seen);
-  return unseen;
+  return withFileLock(path.join(root, SEEN_FILE), () => {
+    const seen = read(root);
+    const already = new Set(opts.reset ? [] : (seen[session] ?? []));
+    const unseen = notes.filter((n) => !already.has(n.file));
+    if (!unseen.length && !opts.reset) return unseen;
+    seen[session] = [...already, ...unseen.map((n) => n.file)];
+    write(root, seen);
+    return unseen;
+  });
 }
