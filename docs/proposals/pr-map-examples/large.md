@@ -3,8 +3,9 @@
 
 **2 new domains** · **12 new dependencies** · **6 removed** · **1 mutual dependency** · **2 violations**
 
-<sub>Compared with `main` at `c08e5d4` · 142 files · touched: 15 domains · affected: 7 domains (64 files import changed code)</sub><br>
-<sub>7 touched domains have no structural change and are not on the map: see Files by domain.</sub>
+<sub>Compared with `main` at `c08e5d4` · 142 files</sub><br>
+<sub>7 touched domains have no structural change and are not on the map: see Files by domain.</sub><br>
+<sub>7 affected domains are not on the map (64 files import changed code): see Details.</sub>
 
 > [!CAUTION]
 > **domain-boundary:** `invoices/totals.ts` imports `billing/internal/tax.ts`. Import from billing's public API (`billing/index.ts`) instead.<br>

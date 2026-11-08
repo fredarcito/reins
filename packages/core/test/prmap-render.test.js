@@ -116,6 +116,7 @@ test('render: more than 20 structural edges skips the map and says so; the diff 
   assert.doesNotMatch(text, /```mermaid/);
   assert.doesNotMatch(text, /Boxes:/);
   assert.match(text, /<sub>Map skipped: 21 structural changes\. Consider splitting this PR\.<\/sub>/);
+  assert.match(text, /· 142 files · touched: \d+ domains · affected: 7 domains \(64 files import changed code\)<\/sub>/, 'without a map the context line names what the PR reaches');
   assert.match(text, /```diff/);
   assert.match(text, /<summary><b>Details<\/b>/);
 });
@@ -165,7 +166,8 @@ test('render: the short form never draws more than 8 touched boxes', () => {
   const model = { ...SHORT, nodes: [...touched, node('jobs', 'affected', 0, [], 3)], edges: [edge('jobs', 't11', 'affected'), edge('jobs', 't00', 'affected')], fileCount: 100 };
   const text = renderPrMap(model);
   assert.equal(text.match(/:::touched/g).length, 8);
-  assert.match(text, /\+ 4 more touched/);
+  assert.match(text, /4 more touched domains are not on the map: see Files by domain\./);
+  assert.doesNotMatch(text, /touched: /, 'with a map, the context line does not repeat the boxes');
   assert.doesNotMatch(text, /t11\*\*/, 'a ninth box is not drawn just to hold an edge');
 });
 

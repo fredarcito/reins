@@ -3,7 +3,7 @@
 
 **1 new domain** · **5 new dependencies** · **1 removed** · **1 folder outside architecture.yml** · **1 violation**
 
-<sub>Compared with `main` at `9a1e07b` · 23 files · touched: `billing`, `profile` · affected: `jobs` (12 files import changed code)</sub>
+<sub>Compared with `main` at `9a1e07b` · 23 files</sub>
 
 > [!CAUTION]
 > **domain-boundary:** `profile/PlanBadge.tsx` imports `billing/internal/plans.ts`. Import from billing's public API (`billing/index.ts`) instead.

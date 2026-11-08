@@ -43,7 +43,7 @@ test('review --map: a PR that reaches into another domain shows a new dependency
   assert.match(r.stdout, /\*\*1 violation\*\*/);
   assert.match(r.stdout, /> \[!CAUTION\]\n> \*\*domain-boundary:\*\*/);
   assert.match(r.stdout, /- catalog +now uses +cart internals +✖ breaks domain-boundary/);
-  assert.match(r.stdout, /touched: `catalog`/);
+  assert.match(r.stdout, /\*\*catalog\*\*/);
   assert.doesNotMatch(r.stdout, /no-cycles/, 'the violation that was already there is not the PR\'s');
   assert.equal(worktrees(dir).length, 1);
 });
@@ -89,7 +89,7 @@ test('review --map: imports between workspace packages are not new when base = H
   write(dir, 'packages/a/src/index.js', "import { b } from '@t/b';\nexport const a = b + 2;\n");
   git(dir, 'commit', '-qam', 'touch a');
   const r2 = await cli(dir, ['review', '--map', '--base', 'main']);
-  assert.match(r2.stdout, /touched: `a`/);
+  assert.match(r2.stdout, /\*\*a\*\*/);
   assert.match(r2.stdout, /\*\*No structural changes\*\*/);
   assert.equal(worktrees(dir).length, 1);
 });
@@ -115,7 +115,7 @@ test('review --map: an accented file name and a rename are counted once each and
   git(dir, 'mv', 'src/features/catalog/api.js', 'src/features/catalog/Catálogo.js');
   const r = await cli(dir, ['review', '--map', '--base', 'main']);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /touched: `catalog`/);
+  assert.match(r.stdout, /\*\*catalog\*\*/);
   assert.match(r.stdout, /`Catálogo\.js`, `api\.js`|`api\.js`, `Catálogo\.js`/);
   assert.doesNotMatch(r.stdout, /\\\d{3}|"src\//, 'no octal escapes or quoted paths');
 });
@@ -150,7 +150,7 @@ export default {
   git(dir, 'commit', '-qm', 'adapter change');
   const r = await cli(dir, ['review', '--map', '--base', 'main'], { adapterSearchPaths: [] });
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /touched: `a`/);
+  assert.match(r.stdout, /\*\*a\*\*/);
   // with the head adapter on both sides the extra edge exists in base and head: nothing new in the structure
   assert.match(r.stdout, /\*\*No structural changes\*\*/);
   assert.doesNotMatch(r.stdout, /now uses|new dependenc/);

@@ -266,11 +266,22 @@ function build(model, opts = {}) {
   // Every changed file, as GitHub counts them; the ones off the map get one short reason, not a list.
   const offMap = (model.notAnalyzed ?? 0) + (model.outsideLayers ?? 0);
   parts.push(plural(model.fileCount + offMap, 'file') + (offMap ? ` (${offMap} not on the map: they don't change the architecture)` : ''));
-  if (touchedNames.length) parts.push(`touched: ${touchedText}${!full && undrawn > 0 ? ` (+ ${undrawn} more touched)` : ''}`);
-  if (affected.length) parts.push(`affected: ${affectedText} (${model.affectedFiles === 1 ? '1 file imports' : `${model.affectedFiles} files import`} changed code)`);
+  const importers = `${model.affectedFiles === 1 ? '1 file imports' : `${model.affectedFiles} files import`} changed code`;
+  // With a map, touched and affected domains are its boxes: naming them again is noise. Without one
+  // (skipped, or no code), this line is the only place that says which domains the PR reaches.
+  if (!map && touchedNames.length) parts.push(`touched: ${touchedText}`);
+  if (!map && affected.length) parts.push(`affected: ${affectedText} (${importers})`);
   const context = [`<sub>${parts.join(' · ')}</sub>`];
   if (skipMap) context.push(`<sub>${skipMap}</sub>`);
-  else if (full && map && undrawn > 0) context.push(`<sub>${plural(undrawn, 'touched domain')} ${undrawn === 1 ? 'has' : 'have'} no structural change and ${undrawn === 1 ? 'is' : 'are'} not on the map: see Files by domain.</sub>`);
+  if (map && undrawn > 0) {
+    context.push(full
+      ? `<sub>${plural(undrawn, 'touched domain')} ${undrawn === 1 ? 'has' : 'have'} no structural change and ${undrawn === 1 ? 'is' : 'are'} not on the map: see Files by domain.</sub>`
+      : `<sub>${plural(undrawn, 'more touched domain')} ${undrawn === 1 ? 'is' : 'are'} not on the map: see Files by domain.</sub>`);
+  }
+  const affectedDrawn = map ? map.drawnNodes.filter((n) => n.status === 'affected').length : 0;
+  if (map && affected.length > affectedDrawn) {
+    context.push(`<sub>${plural(affected.length, 'affected domain')} ${affected.length === 1 ? 'is' : 'are'} not on the map (${importers})${full ? ': see Details' : `: ${affectedText}`}.</sub>`);
+  }
 
   const out = [MARKER, '### Architecture changes', '', summary.join(' · '), '', context.join('<br>\n')];
   const quote = (head, lines) => ['', head, `> ${lines.join('<br>\n> ')}`];

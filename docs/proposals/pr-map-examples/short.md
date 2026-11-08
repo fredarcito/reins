@@ -3,7 +3,7 @@
 
 **No structural changes**
 
-<sub>Compared with `main` at `7b41d02` · 4 files · touched: `billing` · affected: `jobs` (12 files import changed code)</sub>
+<sub>Compared with `main` at `7b41d02` · 4 files</sub>
 
 ```mermaid
 %%{init: {"theme": "base", "flowchart": {"curve": "basis", "padding": 18, "nodeSpacing": 28, "rankSpacing": 70}, "themeVariables": {"fontFamily": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif", "fontSize": "13px", "primaryColor": "#ffffff", "primaryBorderColor": "#d0d7de", "primaryTextColor": "#1f2328", "lineColor": "#8c959f", "edgeLabelBackground": "#ffebe9", "textColor": "#1f2328"}}}%%

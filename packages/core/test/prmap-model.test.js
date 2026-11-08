@@ -171,7 +171,7 @@ test('4.1 a file outside every layer is not a node and not a structural change: 
   assert.deepEqual(model.nodes.map((n) => n.name), ['billing']);
   const text = renderPrMap(model);
   assert.match(text, /\*\*No structural changes\*\*/);
-  assert.match(text, /· 4 files \(3 not on the map: they don't change the architecture\) ·/);
+  assert.match(text, /· 4 files \(3 not on the map: they don't change the architecture\)<\/sub>/);
   assert.doesNotMatch(text, /outside architecture\.yml/);
 });
 
