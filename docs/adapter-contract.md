@@ -11,6 +11,7 @@ flowchart LR
     g --> core["core rules<br/>layer-direction · domain-boundary · no-cycles"]
     g --> evaluate["evaluate(repoPath, config, graph)<br/>adapter rules, e.g. next-server-client"]
     evaluate --> core2["merged into the same report<br/>and the same baseline"]
+    graphfn -. "base commit (review --map)" .-> prep["prepareCheckout(dir, repoRoot)<br/>optional"]
 ```
 
 ## Shape
@@ -28,6 +29,7 @@ export default {
   presets: ['vite-react', 'next-app', 'next-pages'], // optional, used by `reins init`
   suggestPreset(repoPath) {},    // optional: best preset name, or null
   loadPreset(name) {},           // optional: { description, layers, domains_from, route_domains_from?, entries, default_rules? }
+  prepareCheckout(dir, repoRoot) {}, // optional: make a checkout of another commit analyzable → { warnings }
 };
 ```
 
@@ -74,6 +76,14 @@ Rules that need more than edges (file contents, directives) live in the adapter.
 - `severity` comes from the rule's entry in `architecture.yml`; a rule that isn't listed is off.
 - `key` must be stable across runs: it is what the baseline stores.
 
+## Checkout of another commit: `prepareCheckout()`
+
+`reins review --map` compares the branch with its merge base, so it needs the graph of **another commit**. The CLI checks that commit out in a `git worktree` (`.reins/tmp/pr-map-base-<pid>/`, removed afterwards) and calls the **already loaded** adapter's `graph()` on it (the adapter is never resolved again inside the checkout). A fresh checkout has no installed dependencies, and for a language where resolution depends on them the base graph would differ from the head's for reasons that have nothing to do with the PR.
+
+`prepareCheckout(checkoutDir, repoRoot)` is optional. When the adapter has it, the CLI calls it after creating the worktree and before `graph()`. It makes the checkout analyzable **without installing anything**, and returns `{ warnings: string[] }` (what could not be prepared; the CLI prints them). It must not touch `repoRoot`.
+
+The JS adapter mirrors every `node_modules` entry by entry: workspace links are recreated so they resolve to the checkout's own packages (the base version), and everything else points at the main checkout's install. With Yarn Plug'n'Play it only warns. Details and why not whole folders: [proposals/pr-map.md](proposals/pr-map.md), section 5. An adapter whose language needs nothing (no installed dependencies to resolve) omits it.
+
 ## What adapters may import from the core
 
 Only `@agentreins/core/contract` (the core's `exports` field blocks everything else):
@@ -101,7 +111,7 @@ Heavy dependencies (dependency-cruiser…) belong to the adapter, never to the c
 
 The CLI refuses an adapter whose `contract` differs from the core's `CONTRACT_VERSION`, and says which version to install. Package managers only **warn** on an incompatible peer dependency ([VERIFIED.md, P7](VERIFIED.md#p7-peerdependencies-with-pnpm--pass)), so this check is the real one.
 
-Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`. All optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
+Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`; for the PR map, `prepareCheckout`. All optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
 
 ## Reference implementation: `@agentreins/adapter-js`
 
@@ -111,4 +121,5 @@ Version 1 grew without breaking: in phase 3 `graph()` may return an object inste
 | aliases | Reads `jsconfig.json`/`tsconfig.json` `paths` and `baseUrl` (following `extends` and `references`) and `resolve.alias` in `vite.config.*`, statically. No TypeScript needed for JS projects |
 | `graph` | dependency-cruiser with those aliases. Edge kinds: `type` (type-only imports), `dynamic` (`import()`), `static` |
 | presets | `vite-react`, `next-app`, `next-pages`: starting layers for `init` and entry-point globs |
+| `prepareCheckout` | Mirrors `node_modules` into a worktree of another commit (pnpm workspace links stay relative); warns with Yarn PnP |
 | `next-server-client` | Optional rule: a `'use client'` component must not reach a module that imports `server-only` or `next/headers` |

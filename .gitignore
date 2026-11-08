@@ -12,3 +12,4 @@ packages/adapters/*/LICENSE
 
 # reins: local state (not shared)
 .reins/init-report.md
+.reins/tmp/

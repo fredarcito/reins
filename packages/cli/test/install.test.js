@@ -28,7 +28,7 @@ test('husky repo: sources, .gitignore, script, hook, CI workflow and sync, in on
     assert.ok(existsSync(path.join(dir, f)), f);
   }
   assert.ok(statSync(path.join(dir, '.reins/hooks/pre-commit.sh')).mode & 0o100, 'hook script is executable');
-  assert.match(read(dir, '.gitignore'), /# reins: local state \(not shared\)\n\.reins\/backlog\/\n\.reins\/progress\/\n\.reins\/init-report\.md\n$/);
+  assert.match(read(dir, '.gitignore'), /# reins: local state \(not shared\)\n\.reins\/backlog\/\n\.reins\/progress\/\n\.reins\/tmp\/\n\.reins\/init-report\.md\n$/);
   assert.equal(JSON.parse(read(dir, 'package.json')).scripts['reins:check'], 'reins check');
   assert.equal(read(dir, '.husky/pre-commit'), 'sh .reins/hooks/pre-commit.sh\n');
   assert.ok(statSync(path.join(dir, '.husky/pre-commit')).mode & 0o100);
@@ -36,7 +36,18 @@ test('husky repo: sources, .gitignore, script, hook, CI workflow and sync, in on
   const wf = parse(read(dir, '.github/workflows/reins.yml'));
   assert.deepEqual(wf.on, { pull_request: null, push: { branches: ['main'] } });
   const runs = wf.jobs.reins.steps.map((s) => s.run ?? s.uses);
-  assert.deepEqual(runs, ['actions/checkout@v4', 'actions/setup-node@v4', 'npm ci', 'npx reins check']);
+  assert.deepEqual(runs.slice(0, 4), ['actions/checkout@v4', 'actions/setup-node@v4', 'npm ci', 'npx reins check']);
+  assert.deepEqual(wf.permissions, { contents: 'read', 'pull-requests': 'write', issues: 'write' });
+  const map = wf.jobs.reins.steps.at(-1);
+  assert.equal(map.name, 'Architecture map comment');
+  assert.equal(map['continue-on-error'], true);
+  assert.match(map.if, /reins:no-map/);
+  assert.match(map.run, /npx reins review --map --base "origin\/\$BASE_REF" > "\$RUNNER_TEMP\/pr-map\.md"/);
+  assert.equal(map.env.BASE_REF, '${{ github.base_ref }}', 'untrusted values go through env, never into the script');
+  assert.doesNotMatch(map.run, /\$\{\{/);
+  assert.match(map.if, /!cancelled\(\)/);
+  assert.doesNotMatch(map.if, /always\(\)/);
+  assert.match(wf.concurrency.group, /pull_request\.number/);
   assert.equal(wf.jobs.reins.steps[0].with['fetch-depth'], 0);
 
   assert.match(r.stdout, /No \.reins\/architecture\.yml yet: run `npx reins init`/);
@@ -71,7 +82,7 @@ test('install is idempotent and never overwrites existing files', async () => {
   await cli(dir, ['install']);
   assert.equal(read(dir, '.reins/policies/triage.md'), 'our own policy\n');
   assert.equal(read(dir, '.husky/pre-commit'), 'npm test\nsh .reins/hooks/pre-commit.sh\n');
-  assert.equal(read(dir, '.gitignore'), 'node_modules\n.reins/progress/\n\n# reins: local state (not shared)\n.reins/backlog/\n.reins/init-report.md\n');
+  assert.equal(read(dir, '.gitignore'), 'node_modules\n.reins/progress/\n\n# reins: local state (not shared)\n.reins/backlog/\n.reins/tmp/\n.reins/init-report.md\n');
 
   git(dir, 'add', '-A');
   git(dir, 'commit', '-qm', 'install');

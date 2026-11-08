@@ -55,6 +55,9 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * @property {string[]} [presets] preset names (used by `reins init`)
  * @property {(repoPath: string) => string | null} [suggestPreset] best preset for the repo, or null
  * @property {(name: string) => Preset} [loadPreset] starting point for `reins init`
+ * @property {(checkoutDir: string, repoRoot: string) => { warnings: string[] } | Promise<{ warnings: string[] }>} [prepareCheckout]
+ *   makes a fresh checkout of another commit (a git worktree) analyzable, e.g. by linking installed dependencies;
+ *   the CLI calls it before `graph` on that checkout. Warnings say what could not be prepared.
  */
 
 /**
@@ -97,7 +100,7 @@ export function validateAdapter(adapter) {
     problems.push('"rules" must be a list of rule ids');
   }
   if (a.evaluate !== undefined && typeof a.evaluate !== 'function') problems.push('"evaluate" must be a function');
-  for (const fn of ['suggestPreset', 'loadPreset']) {
+  for (const fn of ['suggestPreset', 'loadPreset', 'prepareCheckout']) {
     if (a[fn] !== undefined && typeof a[fn] !== 'function') problems.push(`"${fn}" must be a function`);
   }
   if (a.presets !== undefined && !(Array.isArray(a.presets) && a.presets.every((p) => typeof p === 'string'))) {

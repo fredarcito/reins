@@ -76,6 +76,12 @@ test('lint flags mermaid diagrams GitHub would fail to render', () => {
   assert.match(found[2], /^line 6: reserved word used as a node id/);
 });
 
+test('lint does not read a mermaid %%{init}%% directive as a label', () => {
+  const files = base();
+  files['docs/a.md'] = '# a\n\n```mermaid\n%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Arial, sans-serif"}}}%%\nflowchart LR\n    a("`**ok**`") --> b\n```\n';
+  assert.deepEqual(lint(fakeRepo(files)).filter((p) => p.rule === 'diagrams'), []);
+});
+
 test('renameScope rewrites names and imports, skips history and longer scopes', () => {
   const files = base();
   files['README.md'] = 'npm i -D @h/cli @h/adapter-js\nnot @h-other/x\n';

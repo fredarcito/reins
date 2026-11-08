@@ -51,7 +51,7 @@ Commands:
   audit    Local audit backlog: list, add, set status, recheck (experimental)
   progress Edit the branch notebook without rewriting it (experimental)
   triage   Record the level of the task being started, anchored to HEAD (experimental)
-  review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
+  review   Print a review prompt (diff + checklist + notes), or with --map the architecture map comment of the branch; calls no API (experimental)
   install  Wire reins into this repo: sources, hook, CI, .gitignore, sync (experimental)
   update   Update @agentreins/cli and sync provider-neutral core (experimental)
 

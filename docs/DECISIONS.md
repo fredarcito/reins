@@ -348,6 +348,31 @@ Agents still skipped `reins impact`, this repo's own agent included (2026-11-08:
 | Not built | Denying the first edit of a shared file | Intrusive and untested (P1 only verified delivering context); only if warnings turn out not to be enough |
 | Other agents | Unchanged: the `AGENTS.md` rule and doctor's `triage-mismatch` afterwards | No provider-neutral way to intercept an edit |
 
+## Architecture map comment on PRs (2026-11-08)
+
+Plan and rejected alternatives: [`proposals/pr-map.md`](proposals/pr-map.md). No new dependency.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Base graph | A `git worktree` at the merge base, analyzed with the head `architecture.yml`; the adapter's optional `prepareCheckout` makes it resolvable | The adapter reads files from disk, so the base needs a checkout. Phase 0b showed a bare worktree reports every cross-package import as new (25 false edges here) |
+| `prepareCheckout` | Mirror each `node_modules` entry by entry: workspace links (target inside the repo, not under `node_modules`) are recreated relative, the rest are absolute links to the main install. Optional contract field in adapter-js, core unaware of `node_modules`; Yarn PnP only warns | Linking whole folders resolves pnpm's relative workspace links against the head, so the base would be the head. Installing in the worktree costs network and minutes in CI |
+| Contract | `prepareCheckout` added as an optional field; contract stays at version 1 | Same rule as `files`, `uses`, `presets`: additions do not break existing adapters |
+| Only analyzed files are nodes | Changed files outside `graph.files` (docs, JSON, other languages) are not nodes; the context line says `N files not analyzed`. A file outside every layer and domain is not a node either (`N files outside layers`); "no domain" means inside a layer that has domains | Otherwise every docs or config folder shows up as "outside architecture.yml" (seen on this repo's first run; its tests sit outside every layer on purpose) |
+| New violations | Violations in head's `check` that are not in the merge base's (same config, no baseline, no integrity) | A debt already there is not the PR's, and a baseline entry added in the PR must still show |
+| Base graph adapter | The base graph is built by the head adapter and config (`analyze` with `loaded`), not by an adapter resolved inside the worktree | The worktree is inside the repo, so resolution can walk up to the head's copy, or find the base's through the mirrored links; either way a PR that changes the adapter would look like a change in the code (test with a workspace adapter) |
+| Base side placement | Deleted files and the old path of a rename are placed with the base `architecture.yml`; no file at the base means every head domain is new | With the head config, the files of a removed domain landed in "not in architecture.yml" |
+| Existing pair, new violation | A new violation on a node pair that already had an edge draws it red and adds a `-` row | The map must show every new violation, not only those on new edges |
+| No code changes | A PR whose changed files include no analyzed code file says "No code changes", with no map | "No structural changes" over an empty map reads as an analysis result when nothing was analyzed |
+| Comment limits | Details lists up to 150 rows (the diff's "more in Details" is then true); the short form draws at most 8 boxes; truncation is on a line boundary with fences closed | A cut in the middle of a fence breaks the whole comment |
+| CI safety | Concurrency group per PR, `!cancelled()`, the comment in `$RUNNER_TEMP`, event values through `env:`, first marker id only | Races created two comments; a branch name in the script is an injection; `always()` also ran cancelled jobs |
+| Words before picture | The `diff` block with verbs ("now uses") is the main view; Mermaid supports it | A tester read bare arrows backwards (P13) |
+| Prefix = severity | `-` forbidden, `!` mutual, `+` new allowed, space removed, not git semantics | GitHub colors a `diff` block by its first character; it is the only color available there |
+| Violet for new | New domains and dependencies are violet, never green; red only for a broken rule; orange for mutual | Green reads as "approved" |
+| Always comment | Every PR gets the comment, in the short form when nothing structural changed; skipped only with the label `reins:no-map` or by deleting the step | Silence is ambiguous: did the job fail? |
+| Mutual in v1 | A new edge whose reverse exists is reported as mutual (a warning box), not blocked | Day-to-day PRs create them; no rule blocks them, so a person should decide |
+| Never fails the job | `continue-on-error`, comment found by marker (never `--edit-last`), `check` stays the gate | Fork PRs have a read-only token; another bot's comment is never edited |
+| Size | Diff capped at 40 lines, Details at 30 rows, map skipped over 20 structural edges (assumption until phase 0c) or if the comment would pass 60,000 characters | GitHub rejects comments over 65,536 |
+
 ## Open
 
 - **Agent adapters for Codex and Cursor (proposed 2026-11-08):** [`proposals/agent-adapters.md`](proposals/agent-adapters.md). All logic stays in the CLI; each agent gets a generated adapter that only translates hook config and payloads.

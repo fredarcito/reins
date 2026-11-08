@@ -17,3 +17,5 @@ export { NOTE_TODO_RE, summarizeModule, draftNote } from './notes/draft.js';
 export { rankStaleNotes } from './notes/stale.js';
 export { BACKLOG_FILE, BACKLOG_HEADER, STATUSES, parseBacklog, renderFinding, addFinding, setStatus, markRecheck } from './backlog/index.js';
 export { NotebookError, SECTIONS, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, setHeader } from './doctor/progress-edit.js';
+export { prStructure, nodeResolver, staticPrefix } from './prmap/index.js';
+export { renderPrMap, MAP_EDGE_LIMIT, MAX_COMMENT_CHARS, MARKER as PR_MAP_MARKER } from './prmap/render.js';
