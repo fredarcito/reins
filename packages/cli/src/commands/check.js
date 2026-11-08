@@ -53,9 +53,12 @@ export function pickBaseRef(root, explicit, env = process.env) {
  * Loads config + adapter and computes every violation. Shared by `check` and `init`.
  * @param {string} root
  * @param {{ searchPaths?: string[] }} adapterOpts
- * @param {{ configText?: string }} [over] use this architecture.yml text instead of the file
+ * @param {{ configText?: string, loaded?: { adapter: import('@agentreins/core/contract').Adapter, packageName: string }, config?: import('@agentreins/core').Config }} [over]
+ *   `configText`: use this architecture.yml text instead of the file. `loaded` + `config`: analyze `root` with an adapter and
+ *   config that are already loaded (the PR map's base checkout must use the head's adapter, never the one inside the checkout)
  */
 export async function analyze(root, adapterOpts, over = {}) {
+  if (over.loaded && over.config) return analyzeWith(root, over.loaded, over.config);
   const file = path.join(root, ARCHITECTURE_FILE);
   if (over.configText === undefined && !existsSync(file)) {
     throw new CliError(`${ARCHITECTURE_FILE} not found. Run \`reins init\` to draft it.`);
@@ -72,6 +75,10 @@ export async function analyze(root, adapterOpts, over = {}) {
     if (e instanceof ConfigError) throw new CliError(e.message);
     throw e;
   }
+  return analyzeWith(root, loaded, config);
+}
+
+async function analyzeWith(root, loaded, config) {
   const { adapter } = loaded;
   let graph;
   try {

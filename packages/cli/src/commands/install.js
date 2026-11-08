@@ -40,7 +40,7 @@ Wires reins into this repo without overwriting user-owned files:
 It never installs packages. Run \`reins init\` afterwards if there is no architecture.yml yet.`;
 
 export const HOOK_LINE = 'sh .reins/hooks/pre-commit.sh';
-export const GITIGNORE_LINES = ['.reins/backlog/', '.reins/progress/', '.reins/init-report.md'];
+export const GITIGNORE_LINES = ['.reins/backlog/', '.reins/progress/', '.reins/tmp/', '.reins/init-report.md']; // tmp: the PR map's base worktree
 export const WORKFLOW_FILE = '.github/workflows/reins.yml';
 export const SCRIPT = { name: 'reins:check', command: 'reins check' };
 const deps = (pkg) => ({ ...pkg.dependencies, ...pkg.devDependencies });

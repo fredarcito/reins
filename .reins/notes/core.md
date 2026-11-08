@@ -16,6 +16,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 - `check/baseline.js`, `check/integrity.js`: baseline file format; integrity compares with the merge base via `git.js`.
 - `glob.js`: own glob matcher (`*`, `**`, `?`, `{a,b}`), shared with adapters.
 - `doctor/`: process rules (triage, notebook, notes, AGENTS.md size); `progress-edit.js` edits the notebook safely. `triage.js`: `parseTriageLog` (optional trailing `commit:`/`task:` fields), `formatTriageLine`, `taskAnchor`, `checkTriage` (with an `anchor`, only the lines with that commit count). `progress.js`: `notebookFile(branch, task?)`, `taskFolder`, `HEADER_RE` with optional `task:`/`session:`, `summarizeNotebook`, pure `cleanupPlan` (7-day margin).
+- `prmap/index.js`: `prStructure` (nodes, edges new/removed/mutual/forbidden/affected, touched, affected, structural or not) → plain model; `prmap/render.js`: `renderPrMap` (Markdown, Mermaid, caps, size limit). Spec: `docs/proposals/pr-map.md`; the three examples in `docs/proposals/pr-map-examples/` are the snapshot targets of `prmap-render.test.js`.
 - `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format. `notesFor` returns the most general note first (shortest matching glob), so a module's note comes before its parts'. Parts live in `.reins/notes/<module>/<part>.md` (`parentNoteFile`, `pathsInside`); doctor's `note-layout` checks that layout. `notes/stale.js`: `rankStaleNotes` (commits to a note's paths since the note last changed, from history the CLI reads).
 
 ## How it works
@@ -28,6 +29,7 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - 2026-11-04: integrity only makes changes visible (warn by default); it reports a changed `architecture.yml` and a growing baseline, never first adoption or shrinking.
 - 2026-11-04: contract grew with optional fields (`files`, `entries`, `warnings`, `rules`/`evaluate`, presets) while staying at version 1. 2026-11-05: `barrels` and `uses`, read by `init`; `impact` reads `uses` too (importers behind a barrel).
 - 2026-11-07: default `agents_md.max_lines` is 45 (was 30): the managed reins rules block (~19 lines) must fit next to a repo's own rules and the notes index.
+- 2026-11-08: the PR map model is pure data and the renderer pure templates, so the CLI does all I/O and tests build models by hand. Only files the adapter analyzes become nodes; new violations are head's minus the merge base's. See `docs/DECISIONS.md`.
 
 ## Traps
 - `note-dead-refs` only checks backticked paths whose first folder exists at the repo root: paths relative to a module (`src/main.js` in a package's note) are skipped, not checked.
@@ -35,4 +37,5 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - Never import from `cli` or adapters. Anything adapters need must be exported from `contract/` (that is why `matchesAny` is re-exported there).
 - Integrity findings never go into the baseline and are never marked `baseline`.
 - With `rules:` present, unlisted rules are off except `integrity` (stays `warn` unless explicitly `off`). Unknown config keys are errors on purpose.
+- `renderPrMap` output is fixed byte for byte by the examples: change a template and update the example and the docs together. Node ids are `n1…` in render order, so `linkStyle` indexes are computed, never written by hand. A map with no edges is `flowchart TB` on purpose: in `LR` Mermaid stacks loose boxes in one tall column (seen on GitHub, 2026-11-09).
 - With `files` (pre-commit) no stale entries are computed; cycles still use the full graph.

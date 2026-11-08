@@ -253,6 +253,40 @@ Cursor 3.29.9 (IDE, Agent mode, model grok-4.7), 2026-11-08, one run of [`cursor
   - Side finding: Cursor also runs the person's Claude Code **user** hooks and plugins (`~/.claude/settings.json`, plugin hooks).
 - **Not tested:** compaction; Cursor CLI agent; cloud agents (no `sessionStart` there).
 
+## P13. Mermaid in GitHub Markdown for the PR map — pass (dark theme)
+
+Needed by the PR map comment ([proposal](proposals/pr-map.md)). 2026-11-08, a secret gist (`.md` file) viewed by the person in GitHub's dark theme, several iterations of [`pr-map-examples/`](proposals/pr-map-examples/).
+
+- **Renders:** `flowchart LR`, the `%%{init: …}%%` line (theme `base`, `curve: basis`, spacing, fonts, `edgeLabelBackground`), Markdown string labels with bold and a second line, `classDef` fills/strokes/dash, `linkStyle` by index, `-.->` dashed edges, `#nbsp;` padding in an edge label, `> [!CAUTION]` / `> [!WARNING]` alerts, emoji squares in `<sub>`.
+- `diff` blocks color by first character: `+` green, `-` red, `!` orange, space none.
+- **Layout finding:** subgraphs per layer with unchanged edges produced a tall, crossing layout (rejected); a flat `LR` graph with only the changed edges read well.
+- **Reading finding:** the person read most bare `A → B` arrows backwards (as "B imports from A"). The diff block now uses verbs ("now uses").
+- **Not verified:** light theme; a real PR comment (gists and comments use the same renderer, assumed); the 65,536-character comment limit; how Mermaid lays out 20+ edges (the `large.md` example was not rendered yet).
+
+## P14. Base graph through a git worktree — pass with a mirrored `node_modules`
+
+Phase 0b of the PR map ([proposal](proposals/pr-map.md), section 5). 2026-11-08, this monorepo (pnpm, three packages importing each other), HEAD `ad71e46`, spike script plus the automated tests below.
+
+- **Failed first.** A worktree at HEAD analyzed with the head `architecture.yml` gave 225 head edges and 200 base edges: **25 new edges, 0 removed**, all to `@agentreins/core`. Same result with the worktree inside the repo and outside it. pnpm resolves `core` through `packages/<pkg>/node_modules/@agentreins/core` symlinks; the worktree has none and the root `node_modules` only has `adapter-js` and `cli`. No warning, and no base edge pointed outside the worktree, so the plan's "drop base edges outside the worktree" would not have caught it.
+- **Passes with `prepareCheckout`** (adapter-js, section 5 of the proposal): 225 base edges = 225 head edges, zero new, zero removed, in repeated runs. A relative workspace link is recreated with its relative target; every other entry is an absolute link to the main install.
+- **Automated:** `packages/cli/test/pr-map.test.js` builds a temp git repo with a clean commit and two workspace packages linked as pnpm does (a relative symlink in `packages/a/node_modules`), checks that the cross-package edge exists at head, and that base = HEAD prints the short form with no dependencies; it fails when `prepareCheckout` is removed (checked by hand). `packages/adapters/js/test/checkout.test.js` covers the relative workspace link, an absolute one, `@scope` folders, a store link, a link outside the repo, `.bin`, a package missing at the base commit, and the Yarn PnP warning.
+- **Timing, this repo only** (294 files, warm disk, one machine): worktree add ~100 ms, mirror ~7 ms, base analysis ~130 ms, worktree remove ~55 ms; the head graph took 520–860 ms because it is the first analysis of the process. **CI timing is unverified**: it depends on the repo size, a cold runner and a fresh process; measure it on the first real PR run.
+- **Not tested:** a Next fixture or a real repvue-next PR; npm, yarn classic and bun layouts (only pnpm-style and the real-folder case are covered by tests); Yarn PnP beyond the warning; a base commit whose dependencies differ from the head install (the mirror points at the head install by design).
+
+**PR map on GitHub Actions — pass on the first real PR** (2026-11-09, `fredarcito/reins` PR #1, branch from the same repo, two pushes, dark theme, seen by the person):
+- The step ran on `pull_request`, with `fetch-depth: 0`, `origin/main` as base and `git worktree add` on the runner, and `github-actions` posted the comment (short form, "No structural changes", `Compared with origin/main at ad71e46`). The workflow-level `permissions:` did not break the `check` step (3 checks green).
+- Second push: the same comment was **edited in place** ("edited", still one comment), so the marker search (`gh api … --paginate --jq … | sed -n 1p`), the PATCH and the file in `$RUNNER_TEMP` work.
+- Test files outside every layer showed as `6 files outside layers`, not as folders outside `architecture.yml`.
+- **Layout finding:** a map with no edges in `flowchart LR` stacked the boxes in one tall column; with `flowchart TB` (second push) they sit in one row.
+
+**PR map: still unverified on GitHub:**
+- PRs from forks: read-only token, the step fails and `continue-on-error` keeps the job green.
+- The label condition `!contains(github.event.pull_request.labels.*.name, 'reins:no-map')`, and the step creating the label with `issues: write`.
+- `concurrency` racing two quick pushes, and `!cancelled()` on a cancelled run.
+- CI timing of the base graph on a cold runner (not read from the run yet).
+- Light theme, a structural-change comment (new edges, violations, mutual) in a real PR, and the 65,536-character limit (the renderer caps at 60,000 and is tested with a synthetic 300-domain PR).
+- The map-skipped limit (20 structural edges) is an assumption until phase 0c.
+
 ## Still unverified
 
 Everything below is assumed, not tested. Each is a candidate for the pilot or for a script in `scripts/verify/`.

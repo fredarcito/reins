@@ -79,3 +79,9 @@ test('report json: stable shape for agents', () => {
   assert.equal(data.partial, true);
   assert.deepEqual(Object.keys(data.violations[0]), ['rule', 'severity', 'status', 'from', 'to', 'files', 'message', 'fix', 'key']);
 });
+
+test('validateAdapter: prepareCheckout is optional and must be a function', () => {
+  const ok = { name: 'x', contract: CONTRACT_VERSION, detect() {}, graph() {} };
+  assert.deepEqual(validateAdapter({ ...ok, prepareCheckout() {} }), []);
+  assert.deepEqual(validateAdapter({ ...ok, prepareCheckout: 'yes' }), ['"prepareCheckout" must be a function']);
+});

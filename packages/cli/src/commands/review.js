@@ -7,6 +7,7 @@ import { CliError, isGitRepo } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate } from '../templates.js';
 import { pickBaseRef } from './check.js';
+import { buildPrMap } from '../pr-map.js';
 
 export const CHECKLIST_FILE = '.reins/review/checklist.md';
 export const CORE_CHECKLIST_FILE = '.reins/core/review/checklist.md';
@@ -24,13 +25,19 @@ export const options = {
   base: { type: 'string' },
   executor: { type: 'string' },
   'max-bytes': { type: 'string' },
+  map: { type: 'boolean' },
 };
 
 export const help = `Usage: reins review [--base <ref>] [--max-bytes <n>] [--executor print]
+       reins review --map [--base <ref>]
 
 Builds a review prompt with the diff of this branch (committed and uncommitted, untracked files included),
 ${CHECKLIST_FILE} and the module notes of the touched paths, and prints it. Paste it into any agent, or pipe it.
-It does not call any API. Executors available: ${Object.keys(EXECUTORS).join(', ')}.`;
+It does not call any API. Executors available: ${Object.keys(EXECUTORS).join(', ')}.
+
+--map prints instead the architecture map comment of this branch (what CI posts on pull requests): new and removed
+dependencies between domains, violations, reach. It compares with the merge base through a temporary git worktree.
+Exit code 0 even with violations (check is the gate), 2 when it could not run.`;
 
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] });
 
@@ -81,6 +88,19 @@ export async function review(ctx) {
     }
   }
 
+  if (values.map) {
+    let result;
+    try {
+      result = await buildPrMap(ctx);
+    } catch (e) {
+      if (e instanceof CliError) throw e;
+      throw new CliError(`reins review --map could not run: ${e.message}`); // exit 2, never a stack trace
+    }
+    const { markdown, warnings } = result;
+    for (const w of warnings) ctx.err?.(`! warning  ${w}`);
+    out(markdown.trimEnd());
+    return 0;
+  }
   const baseRef = pickBaseRef(root, values.base, ctx.env);
   const base = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : 'HEAD';
   const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n').filter((f) => f && !f.startsWith('.reins/progress/') && !f.startsWith('.reins/backlog/'));

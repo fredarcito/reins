@@ -203,6 +203,22 @@ flowchart LR
 
 The hook can be skipped with `--no-verify`, so **CI plus branch protection is the real guarantee**. The hook is there to fail fast.
 
+### The architecture map on every pull request
+
+A text diff hides the shape of the change: one new import between two domains is a single line among hundreds. So the CI job also posts **one comment per PR** that shows, before anyone opens a file, how the PR changes the structure: new and removed dependencies between domains, new domains, folders no rule covers, violations, and which domains import the changed code. It is plain templates filled with data (no AI, no API besides posting the comment), and it is edited in place on every push.
+
+```mermaid
+flowchart LR
+    pr["Push to a PR"] --> head["Graph of the branch"]
+    pr --> wt["Graph of the merge base<br/>(temporary git worktree,<br/>dependencies linked, nothing installed)"]
+    head --> diff["Compare:<br/>new, removed, mutual,<br/>violations, reach"]
+    wt --> diff
+    diff --> md["Markdown comment:<br/>words first, map second"]
+    md --> post["One comment,<br/>edited in place"]
+```
+
+You can see the same comment locally with `npx reins review --map`. To skip it on one PR, add the label `reins:no-map`; to turn it off for the repo, delete the "Architecture map comment" step from `.github/workflows/reins.yml` (ask your agent). Repos installed before this feature keep their old workflow: paste the step from [`templates/.github/workflows/reins.yml`](templates/.github/workflows/reins.yml), because `install` never rewrites it. It is experimental: see [`docs/STATUS.md`](docs/STATUS.md) and [`docs/VERIFIED.md`](docs/VERIFIED.md#p14-base-graph-through-a-git-worktree--pass-with-a-mirrored-node_modules).
+
 ### How `check` sees your code
 
 The core never opens a `.js` file. A language adapter turns the repo into a list of edges, and the core applies the rules to that list.

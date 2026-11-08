@@ -3,6 +3,7 @@
 import { CONTRACT_VERSION } from '@agentreins/core/contract';
 import { detect, detectFramework } from './detect.js';
 import { graph } from './graph.js';
+import { prepareCheckout } from './checkout.js';
 import { loadPreset, PRESETS } from './presets.js';
 import * as nextServerClient from '../rules/next-server-client.js';
 
@@ -19,10 +20,11 @@ const adapter = {
   presets: [...PRESETS],
   suggestPreset: (repoPath) => detectFramework(repoPath)?.suggestedPreset ?? null,
   loadPreset,
+  prepareCheckout,
 };
 
 export default adapter;
 export { detectFramework };
 export { readAliases, parseJsonc } from './aliases.js';
 export { loadPreset, PRESETS };
-export { graph };
+export { graph, prepareCheckout };

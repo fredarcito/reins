@@ -8,6 +8,18 @@ on:
   push:
     branches: [{{branch}}]
 
+# The architecture map comment (last step) needs to write comments and create its opt-out label.
+# To turn it off for the whole repo, delete that step. For one PR, add the label reins:no-map.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write # labels live under issues: lets the step create reins:no-map
+
+# One run per PR at a time: two quick pushes must not race to create the comment twice.
+concurrency:
+  group: reins-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   reins:
     runs-on: ubuntu-latest
@@ -18,3 +30,22 @@ jobs:
 {{setup}}
       - run: {{install}}
       - run: npx reins check
+      - name: Architecture map comment
+        if: "!cancelled() && github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'reins:no-map')"
+        continue-on-error: true # PRs from forks get a read-only token: the comment fails, the job does not
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create reins:no-map --description "Skip the reins architecture map comment" --color ededed 2>/dev/null || true
+          npx reins review --map --base "origin/$BASE_REF" > "$RUNNER_TEMP/pr-map.md"
+          # the first comment that starts with the marker (sed, not head: head would end the pipe early under pipefail)
+          id=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate \
+            --jq '.[] | select(.body | startswith("<!-- reins:pr-map -->")) | .id' | sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@"$RUNNER_TEMP/pr-map.md"
+          else
+            gh pr comment "$PR_NUMBER" --body-file "$RUNNER_TEMP/pr-map.md"
+          fi

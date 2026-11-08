@@ -123,6 +123,7 @@ export function lint(root) {
     for (const m of text.matchAll(/```mermaid\n([\s\S]*?)```/g)) {
       const line = text.slice(0, m.index).split('\n').length;
       m[1].split('\n').forEach((l, i) => {
+        if (/^\s*%%/.test(l)) return; // directives and comments (the PR map's %%{init: {...}}%%) are not labels
         const at = `line ${line + 1 + i}`;
         if (/&(quot|lt|gt|amp|#\d+);/.test(l)) report('diagrams', file, `${at}: HTML entity in a mermaid diagram (GitHub decodes it and the diagram breaks); reword the label`);
         for (const label of l.matchAll(/\["([^\]]*)"\]|\{"([^}]*)"\}|\("([^)]*)"\)/g)) {

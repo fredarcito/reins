@@ -24,6 +24,7 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - 2026-11-04: `typescript` is an optional peer; `graph()` throws when TS files exist and it is missing, because dependency-cruiser would skip them silently (zero edges, green check).
 - 2026-11-04: `exportsFields`/`conditionNames` passed to dependency-cruiser and the root is a real path, so `exports`-only workspace packages and symlinked workspaces keep their edges (bug found in phase 9).
 - 2026-11-04: presets are YAML data, not code. `next-server-client` is opt-in, and `'use server'` files are allowed targets.
+- 2026-11-08: `prepareCheckout` recreates workspace links (target inside the repo, not under `node_modules`) with their relative target so they resolve to the worktree's copy, and links everything else by absolute path to the main install. Whole-folder links would give the base the head's packages. Yarn PnP only warns.
 
 ## Traps
 - Silent edge loss is the main risk: an unresolved alias or missing TS just removes edges and `check` passes. Keep the loud failure and the unresolved-import warning.
