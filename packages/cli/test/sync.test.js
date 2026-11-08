@@ -182,6 +182,28 @@ test('--check detects hand edits, stale sources, new notes and removed settings;
   assert.equal((await cli(dir, ['sync', '--check'])).code, 0);
 });
 
+test('overwriting a file that ships with reins never points to a path inside the package', async () => {
+  const dir = repo();
+  await cli(dir, ['sync']);
+  write(dir, '.reins/core/skills/audit/SKILL.md', 'edited\n');
+  write(dir, '.reins/core/policies/triage.md', 'edited\n');
+  write(dir, '.reins/skills/README.md', 'edited\n');
+  write(dir, '.claude/agents/reins-reviewer.md', 'edited\n');
+
+  const r = await cli(dir, ['sync']);
+  assert.doesNotMatch(r.stdout, /templates\//);
+  assert.match(r.stdout, /overwrote \.reins\/core\/skills\/audit\/SKILL\.md \(.*copy it to \.reins\/skills\/audit\/SKILL\.md/);
+  assert.match(r.stdout, /overwrote \.reins\/core\/policies\/triage\.md \(it had manual changes; reins rewrites it on every sync\)/);
+  assert.match(r.stdout, /overwrote \.reins\/skills\/README\.md \(it had manual changes; reins rewrites it on every sync\)/);
+  assert.match(r.stdout, /overwrote \.claude\/agents\/reins-reviewer\.md \(.*copy it to \.reins\/agents\/reviewer\.md/);
+
+  write(dir, '.reins/agents/reviewer.md', read(dir, '.reins/core/agents/reviewer.md') + '\nOurs.\n');
+  await cli(dir, ['sync']);
+  write(dir, '.claude/agents/reins-reviewer.md', 'edited\n');
+  const own = await cli(dir, ['sync']);
+  assert.match(own.stdout, /overwrote \.claude\/agents\/reins-reviewer\.md \(it had manual changes; edit \.reins\/agents\/reviewer\.md instead\)/);
+});
+
 test('removing a source removes its generated files (unless edited by hand)', async () => {
   const dir = repo();
   write(dir, '.reins/skills/custom/SKILL.md', '---\nname: custom\ndescription: custom skill\n---\nbody\n');

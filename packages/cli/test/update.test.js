@@ -59,3 +59,11 @@ test('update adds -w at a pnpm workspace root', async () => {
   assert.equal(result.code, 0, result.stderr);
   assert.match(result.stdout, /pnpm add -D -w @agentreins\/cli@latest/);
 });
+
+test('update says which version it installed, and why it may not have changed', async () => {
+  const { versionReport } = await import('../src/commands/update.js');
+  assert.equal(versionReport('@agentreins/cli', '0.8.0', '0.8.1', 'npm'), 'reins update: @agentreins/cli 0.8.0 -> 0.8.1');
+  assert.match(versionReport('@agentreins/cli', '0.8.0', '0.8.0', 'pnpm'), /still 0\.8\.0.*pnpm held a newer release back.*minimumReleaseAge/);
+  assert.doesNotMatch(versionReport('@agentreins/cli', '0.8.0', '0.8.0', 'npm'), /minimumReleaseAge/);
+  assert.equal(versionReport('@agentreins/cli', null, null, 'npm'), null);
+});

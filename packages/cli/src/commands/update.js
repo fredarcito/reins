@@ -41,6 +41,31 @@ function syncCommand(pm, options) {
   return ['npm', ['exec', '--', ...args]];
 }
 
+/** Version of `name` installed at the repo root, or null. */
+function installedVersion(root, name) {
+  try {
+    return JSON.parse(readText(root, `node_modules/${name}/package.json`) ?? 'null')?.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What to tell after the package manager ran. Package managers may hold `@latest` back on purpose
+ * (pnpm 11's `minimumReleaseAge` waits a day by default), and they exit 0 when they do: say so instead of staying silent.
+ * @param {string} name
+ * @param {string | null} before
+ * @param {string | null} after
+ * @param {string} pm
+ * @returns {string | null}
+ */
+export function versionReport(name, before, after, pm) {
+  if (!after) return null;
+  if (before && before !== after) return `reins update: ${name} ${before} -> ${after}`;
+  const hint = pm === 'pnpm' ? ' (pnpm waits before installing new releases: `minimumReleaseAge`, a day by default)' : '';
+  return `reins update: ${name} is still ${after}. Either it is the latest, or ${pm} held a newer release back${hint}. Run \`reins update\` again later, or install an exact version with ${pm}.`;
+}
+
 /** @param {{ root: string, values: Record<string, any>, out: (s: string) => void }} ctx */
 export async function update(ctx) {
   const { root, values, out } = ctx;
@@ -70,11 +95,14 @@ export async function update(ctx) {
 
   out(`reins update: updating ${packagesToUpdate.join(', ')} with ${pm}...`);
   if (!values['dry-run']) {
+    const before = installedVersion(root, cliPkg.name);
     try {
       execFileSync(cmd, args, { cwd: root, stdio: 'inherit' });
     } catch (e) {
       throw new CliError(`Failed to update dependencies: ${e.message}`);
     }
+    const report = versionReport(cliPkg.name, before, installedVersion(root, cliPkg.name), pm);
+    if (report) out(`\n${report}`);
   } else {
     out(`  (dry run: would run ${cmd} ${args.join(' ')})`);
   }

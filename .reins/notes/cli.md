@@ -35,10 +35,12 @@ The `reins` command line: wires the provider-neutral core and language adapter t
 - 2026-11-07: `update` launches the installed `reins sync` via the project's package manager after upgrading; calling the imported sync function would use the old CLI code already loaded in memory.
 - 2026-11-07: shared workflows use plain Markdown in `AGENTS.md` and the reins CLI; `sync`, `install`, and `update` accept `--skip-claude` to avoid touching provider-specific files. Client-level instruction loading outside Claude Code is unverified.
 - 2026-11-07: `sync` persists whether the optional Claude Code adapter is enabled in its generated manifest so bare `sync --check` and CI use the same choice; `--claude` explicitly re-enables it.
-
 - 2026-11-07: `sync` writes a README into `.reins/{skills,agents,policies,review}/`; `templates/` gets none on purpose (the notebook format is parsed by `progress`, `resume` and doctor, so overriding it is not advertised, and the policies README asks not to shadow reins' policies): without it, after the migration removes the old copies nobody knows where their own skills go. `install` skips those folders; agent scanning skips `README.md`.
+- 2026-11-08: when `sync` overwrites a hand-edited file it never points to `templates/…` (inside the package) or `.reins/core/` (rewritten too): `editHint` names the override folder (skills, agents, review) or says reins rewrites it.
+- 2026-11-08: `update` reads the installed CLI version before and after the package manager and says `X -> Y` or "still X" (`versionReport`), because package managers exit 0 when they hold `@latest` back.
 
 ## Traps
+- pnpm 11 has `minimumReleaseAge` (a day by default): `pnpm add pkg@latest` resolves to the newest release old enough and says "Already up to date". An exact version installs and adds a `minimumReleaseAgeExclude` entry. Don't bypass it from `update`.
 - `update` at a pnpm workspace root must pass `-w` to `pnpm add`, or pnpm refuses to install.
 - `legacy-defaults.json` is frozen history: never add new core versions to it; the current core is compared at runtime.
 - `cwd` and root are real paths on purpose: macOS `/var` -> `/private/var` would break `--files` repo-relative paths.

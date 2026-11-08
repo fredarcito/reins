@@ -341,6 +341,24 @@ export function mergeSettings(currentText, previous) {
   return { text: `${JSON.stringify(settings, null, 2)}\n`, changed, owned, problem: null };
 }
 
+/**
+ * Where to make a change instead of editing a generated file. Sources under `templates/` ship inside the reins
+ * package and don't exist in the consumer repo, and `.reins/core/` is rewritten too, so neither is a place to edit:
+ * point to the override folder when there is one.
+ * @param {{ path: string, source: string }} f
+ * @returns {string}
+ */
+export function editHint(f) {
+  const fromPackage = f.source.startsWith('templates/');
+  const src = fromPackage ? f.source.slice('templates/'.length) : f.source;
+  const core = `${REINS_DIR}/core/`;
+  const rest = src.startsWith(core) ? src.slice(core.length) : '';
+  if (['skills', 'agents', 'review'].includes(rest.split('/')[0])) {
+    return `reins rewrites ${src} on every sync; to change it, copy it to ${REINS_DIR}/${rest} and edit that copy`;
+  }
+  return fromPackage || rest ? 'reins rewrites it on every sync' : `edit ${f.source} instead`;
+}
+
 /** Removes empty folders from `dir` up to (not including) `stop`. */
 function pruneDirs(root, dir, stop) {
   let d = dir;
@@ -393,7 +411,7 @@ export function sync(root, opts = {}) {
       changes.push(`created ${f.path}`);
       divergences.push(`${f.path}: missing (source: ${f.source})`);
     } else if (sha(disk) !== manifest.files[f.path]) {
-      changes.push(`overwrote ${f.path} (it had manual changes; edit ${f.source} instead)`);
+      changes.push(`overwrote ${f.path} (it had manual changes; ${editHint(f)})`);
       divergences.push(`${f.path}: edited by hand (source: ${f.source})`);
     } else {
       changes.push(`updated ${f.path}`);

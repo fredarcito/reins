@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `reins update` says which version it installed (`0.8.0 -> 0.8.1`), or that it is still on the same one and why: pnpm 11 waits a day before installing new releases (`minimumReleaseAge`) and reports nothing.
+- When `sync` overwrites a file you edited by hand, it tells you where your change belongs (for example `copy it to .reins/skills/audit/SKILL.md`) instead of pointing to a template inside the reins package.
+
 ## 0.8.1 · 2026-11-07
 
 Your own skills, agents and policies have a visible home again.
