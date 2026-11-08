@@ -5,7 +5,7 @@ description: Close a coding task. Use it when the person says the task is done, 
 # Close the task
 
 1. Run once: `npx reins check`, `npx reins doctor` and the tests related to the change.
-2. If the notebook exists (`.reins/progress/<branch>.md`), mark what is done (`npx reins progress done <n>`) and check the done criteria one by one.
+2. If the task has a notebook (`npx reins progress show`), mark what is done (`npx reins progress done <n>`) and check the done criteria one by one.
 3. Update the module notes, so the next session doesn't rediscover this module from the code. For medium and large tasks, for each module you touched (`npx reins scope <files>` lists their notes):
    - add the decisions you took, each with its why, and the traps you found;
    - update "Map" and "How it works" if they changed;
@@ -21,4 +21,4 @@ description: Close a coding task. Use it when the person says the task is done, 
    - how many done criteria are met, and which are not;
    - the module notes you created or updated, and what you added;
    - what you did **not** verify.
-6. Don't set `status: closed`: only the person closes the task.
+6. Only the person decides the task is done. Ask; when they confirm, close it with `npx reins progress close`, never by editing the header. Closing lets reins delete the notebook a week later, so steps 2–3 must already be done.

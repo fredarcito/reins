@@ -16,4 +16,4 @@ tools: [Read, Grep, Glob]
 3. Search inside the domains involved; read public APIs before internals.
 4. Stop when you can answer the question; don't read the whole repo.
 
-**Returns:** files and symbols involved, how they connect, the notes that apply, and risks (public APIs, cycles, other domains). Keep it short. If you write a report file, write it to `.reins/progress/<branch>/explorer_<subtask>.md` and reply only `done -> <path>`.
+**Returns:** files and symbols involved, how they connect, the notes that apply, and risks (public APIs, cycles, other domains). Keep it short. If you write a report file, write it to `.reins/progress/<branch>/<task>/explorer_<subtask>.md` (the task's folder) and reply only `done -> <path>`.

@@ -304,8 +304,38 @@ Proposed from a real working session: `scope` goes path → domain, but nothing 
 | Making agents use it | The generated `AGENTS.md` carries an unconditional trigger (restructuring a domain/folder, or editing a file others may import; unsure → run it; every level) plus a short command index ending in `reins --help`; the triage policy, the explorer and the audit skill repeat it where they act | First real use (2026-11-07): on "restructure cloud-index, full optimization" the agent ran `scope` on two files and skipped `impact` because it "didn't propose changing a shared contract" — before having a plan. The instruction lived only in `triage.md`, which agents skip because `AGENTS.md` already summarizes it; it was conditional on judging a file "shared", and small said "don't explore". A hook that delivers impact on Edit (like notes) is the stronger fix, pending a measure of graph build time |
 | Cache | None: the graph is recomputed per run, exactly like `check` | Freshness is the property that makes the answer trustworthy; cache only if extraction cost becomes a measured problem |
 
+## Tasks anchored to their start commit (2026-11-08, backlog A2)
+
+`triage.log` only grew, and doctor compared the whole branch diff with the highest level ever declared on the branch. On long-lived branches (main, staging, epics) one old `large` line hid every `triage-mismatch` and any old line hid `triage-missing`; and the local base was `origin/main`, so on feature → staging flows the diff included other people's staging work.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Writing the line | The agent runs `reins triage <level> <reason> [--task <name>]`; reins adds the date, the branch and `commit:<HEAD>` (12 chars), and `task:` when given. The fields go at the end, so old lines and old reins versions still parse | The agent can't be trusted to copy a sha by hand; one command keeps the format valid |
+| What doctor compares | The diff since the commit on the branch's latest line (plus uncommitted changes), against the highest level among lines with that same commit | Agents don't commit, so tasks started at the same commit share the uncommitted diff and can't be told apart; tasks after a commit get a clean diff |
+| Fallback | Latest line without a commit, or a commit that is no longer an ancestor of HEAD (rebased): the branch diff against the base and the highest level of the branch, as before | Keeps hand-written lines and older installs working |
+| Cleanup | `resume` (hook and command) drops lines whose branch is gone (no local branch, no remote-tracking ref; the current branch always counts) and lines whose task has landed: commits exist since its commit and all of them are in the base. doctor applies the same filter without writing | The backlog's wording, "start commit already in the base", would drop every task that starts on `main` or right after branching, where the start commit is always in the base. Landing means the task's own commits reached the base; merging `main` into a feature does not count, since the feature's own commits are not in the base |
+| Shared helper | `liveBranches` in `cli/src/project.js` (local + remote-tracking refs), reused by the notebook cleanup of the multi-session proposal | One definition of "the branch exists" |
+| Not changed | `check` and `review` keep their base (`--base`, `REINS_BASE`, CI PR target, `origin/HEAD`) | They judge what enters git, not a task |
+| Rejected | Detecting the parent branch from the reflog | Reflogs are local, expire and say nothing about the flow the team uses |
+| Known limit | On `main`, if the person commits and pushes in the middle of a task, the task's line is dropped and doctor asks for a new line (`triage-missing`) | Committing is the person's signal that the work is done; one extra `reins triage` line is cheap |
+
+## One notebook per task (2026-11-08, phase 1)
+
+Design and the cases it covers: [`proposals/multi-session-progress.md`](proposals/multi-session-progress.md). A branch had one notebook, so tasks one after another, parallel sessions on one feature and a fresh session per task all collided on it.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Unit | One notebook per **task**, `.reins/progress/<branch>/<task>/notebook.md`; the task folder holds its cold files and agent reports | A task outlives a session (a new session continues it) and several tasks share a branch. A task is one folder: reading, closing or deleting it touches one place |
+| Rejected | A. one notebook per session (a new session can't continue a task); C. one per branch, closed ones skipped (breaks parallel sessions and a new session with the previous task open); D. one file per branch with a block per session (unsafe concurrent writes without a lock) | See the proposal, section 4 |
+| Session | `session:` in the header holds the last session that claimed the task: from the hook payload, `CLAUDE_CODE_SESSION_ID` (verified, P11) or `REINS_SESSION`. No ownership check | Every `reins progress` command claims what it acts on, so compaction and `/clear` find the task again |
+| Choosing | Explicit `--task`/`REINS_TASK`; else the open task this session claimed; else none, and `resume` lists the open tasks. Never taken silently | At session start reins can't tell "continue yesterday's task" from "next task"; the person's first message can |
+| Compatibility | No migration. Without a session id and one open notebook, it is used, as before. The older `<branch>.md` keeps working as a task without a name until it is closed; its cold files are the plain files of `<branch>/` | Agents without session ids (Codex, Cursor) and notebooks in progress keep working |
+| Read view | `resume` shows the own notebook in full, other open tasks in 1–2 lines (5 at most), closed ones in one line only while others are open | About 100 tokens per session with three parallel sessions; nothing extra with one |
+| Cleanup | `resume`, fixed 7-day margin: closed → deleted 7 days after closing or with its branch; open → only when its branch is gone and it has not changed for 7 days. Open removals add one line; the rest is silent. Uses the A2 `liveBranches` helper | Nothing piles up, and open work on a live branch is never lost |
+| Overlaps | Policy only: the agent asks the person and writes one line in its own notebook | The person already talks to every session |
+| Deferred to phase 2 | Feature notebook, `**Needs:**` requests between tasks, "new from other sessions" after each edit, cleanup log and configurable margin | Built only if real use asks for them |
+
 ## Open
 
-- **Multi-session progress notebooks per branch (proposed 2026-11-07):** See [`docs/proposals/multi-session-progress.md`](proposals/multi-session-progress.md). Decouples branch, task, and session with `.reins/progress/<branch>/<session>.md`, isolated writes, and cross-session awareness in `reins resume`.
 - **Provider compatibility:** `AGENTS.md` plus the CLI is the shared baseline; actual instruction loading and native skill discovery in other clients remain unverified (see [`VERIFIED.md`](VERIFIED.md)).
 - From the design, undecided: whether the team's repos share a base `architecture.yml`; what to do with monorepos; who updates the baseline and with what review.

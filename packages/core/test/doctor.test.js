@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, scopeSignals, suggestLevel, runDoctor,
+  parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel, runDoctor,
   parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES, rankStaleNotes,
+  taskFolder, formatHeader, summarizeNotebook, cleanupPlan, newNotebook, setHeader,
 } from '@agentreins/core';
 
 const domains = [
@@ -44,6 +45,19 @@ test('triage.log: entries, comments and malformed lines', () => {
   assert.deepEqual(log.malformed.map((m) => m.line), [3, 4]);
 });
 
+test('triage.log: optional commit and task fields at the end of a line', () => {
+  const line = formatTriageLine({ date: '2026-11-08', branch: 'feat/x', level: 'medium', reason: ' split\n the cart ', commit: 'abc123def456', task: 'css-refactor' });
+  assert.equal(line, '2026-11-08 | feat/x | medium | split the cart | commit:abc123def456 | task:css-refactor');
+  assert.equal(formatTriageLine({ date: '2026-11-08', branch: 'main', level: 'small', reason: 'x' }), '2026-11-08 | main | small | x');
+  const { entries, malformed } = parseTriageLog(`${line}\n2026-11-08 | main | small | a | b | commit:111\n2026-11-08 | main | small | commit:222\n`);
+  assert.deepEqual(entries.map((e) => [e.reason, e.commit, e.task]), [['split the cart', 'abc123def456', 'css-refactor'], ['a | b', '111', null], ['commit:222', null, null]],
+    'a reason is never taken for a field');
+  assert.deepEqual(malformed, []);
+  assert.equal(taskAnchor(entries, 'main'), null, 'the latest line of the branch decides');
+  assert.equal(taskAnchor(entries, 'feat/x'), 'abc123def456');
+  assert.equal(taskAnchor(entries, 'other'), null);
+});
+
 test('suggested level: the thresholds of `reins scope`', () => {
   const t = DOCTOR_DEFAULTS.triage;
   const level = (files) => suggestLevel(scopeSignals(files, domains, ARCH), t).level;
@@ -62,7 +76,7 @@ test('triage-missing: a diff without a line for the branch; nothing without a di
   const r = doctor({ changedFiles: ['src/a.js'], triageLog: { file: LOG, text: '2026-11-04 | other | small | x\n' } });
   assert.deepEqual(rules(r), ['triage-missing']);
   assert.match(r.violations[0].message, /Branch feat\/x has 1 changed file\(s\) but no line in/);
-  assert.match(r.violations[0].fix, /\| feat\/x \| <small\|medium\|large> \| <reason>/);
+  assert.match(r.violations[0].fix, /npx reins triage <small\|medium\|large> "<reason>"/);
   assert.deepEqual(rules(doctor({ changedFiles: ['src/a.js'] })), ['triage-missing'], 'no triage.log at all');
 });
 
@@ -87,6 +101,19 @@ test('triage-mismatch: the highest level declared on the branch is compared with
   assert.deepEqual(rules(escalated), ['note-missing']);
   const large = doctor({ changedFiles: ['README.md'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | large | refactor\n' } });
   assert.deepEqual(rules(large), [], 'declaring more than needed is not flagged');
+});
+
+test('triage-mismatch with an anchor: only the lines of the current task count, against its own diff', () => {
+  const files = ['src/features/billing/a.js', 'src/features/billing/b.js', 'src/features/billing/c.js', 'src/features/billing/d.js'];
+  const text = ['feat/x | large | old refactor | commit:aaa1111', 'feat/x | small | tweak | commit:bbb2222', 'feat/x | small | question | commit:bbb2222']
+    .map((l) => `2026-11-04 | ${l}\n`).join('');
+  const r = doctor({ changedFiles: files, triageLog: { file: LOG, text }, anchor: 'bbb2222' });
+  assert.deepEqual(rules(r), ['triage-mismatch', 'note-missing'], 'an older large task does not hide this one');
+  assert.match(r.violations[0].message, /Level declared for the current task on feat\/x is small \(line 3: "question"\), but its diff \(since bbb2222\) looks medium/);
+  assert.match(r.violations[0].fix, /npx reins triage medium/);
+  const escalated = `${text}2026-11-04 | feat/x | medium | it grew | commit:bbb2222\n`;
+  assert.deepEqual(rules(doctor({ changedFiles: files, triageLog: { file: LOG, text: escalated }, anchor: 'bbb2222' })), ['note-missing']);
+  assert.deepEqual(rules(doctor({ changedFiles: files, triageLog: { file: LOG, text } })), ['note-missing'], 'without an anchor, the whole branch counts');
 });
 
 test('malformed triage lines are reported even without a diff', () => {
@@ -122,6 +149,41 @@ test('a valid notebook produces nothing', () => {
   assert.equal(notebookFile('feat/x'), '.reins/progress/feat-x.md');
   assert.deepEqual(rules(nb(notebook({}))), []);
   assert.deepEqual(formatProblems(parseNotebook(notebook({}))), []);
+});
+
+test('one notebook per task: paths, optional task and session in the header', () => {
+  assert.equal(notebookFile('feat/x', 'css-refactor'), '.reins/progress/feat-x/css-refactor/notebook.md');
+  assert.equal(taskFolder('feat/x', 'css-refactor'), '.reins/progress/feat-x/css-refactor');
+  assert.equal(taskFolder('feat/x'), '.reins/progress/feat-x', 'the older notebook keeps its cold folder');
+  const text = notebook({}).replace('# feat/x · status', '# feat/x · task: css · session: s1 · status');
+  assert.deepEqual(rules(nb(text)), []);
+  const { header } = parseNotebook(text);
+  assert.deepEqual([header?.branch, header?.task, header?.session, header?.status], ['feat/x', 'css', 's1', 'open']);
+  assert.equal(formatHeader(/** @type {any} */ (header)), text.split('\n')[0]);
+  assert.deepEqual(summarizeNotebook(text), { task: 'css', session: 's1', status: 'open', updated: '2026-11-04', goal: 'add discounts.', inProgress: 'UI' });
+  assert.deepEqual(summarizeNotebook('no header'), { task: null, session: null, status: null, updated: null, goal: null, inProgress: null });
+
+  const created = newNotebook('# <branch> · status: open · updated: YYYY-MM-DD\n', 'feat/x', '2026-11-09', { task: 'css', session: 's1' });
+  assert.equal(created, '# feat/x · task: css · session: s1 · status: open · updated: 2026-11-09\n');
+  const claimed = setHeader(created, { session: 's2' }, '2026-11-10');
+  assert.equal(claimed.split('\n')[0], '# feat/x · task: css · session: s2 · status: open · updated: 2026-11-10');
+  assert.equal(setHeader(claimed, { session: 's2' }, '2026-11-11'), claimed, 'no change, no new date');
+  assert.match(setHeader(claimed, { status: 'closed' }, '2026-11-11'), /session: s2 · status: closed · updated: 2026-11-11/);
+});
+
+test('cleanupPlan: closed after 7 days or with its branch; open only when the branch is gone and quiet for 7 days', () => {
+  const today = '2026-11-20';
+  const live = new Set(['main', 'feat-a']);
+  const plan = cleanupPlan([
+    { folder: 'feat-a', status: 'closed', updated: '2026-11-12', changed: '2026-11-12' }, // 8 days: removed
+    { folder: 'feat-a', status: 'closed', updated: '2026-11-14', changed: '2026-11-14' }, // 6 days: kept
+    { folder: 'gone', status: 'closed', updated: '2026-11-19', changed: '2026-11-19' }, // branch gone: removed
+    { folder: 'main', status: 'open', updated: '2025-01-01', changed: '2025-01-01' }, // paused work: kept
+    { folder: 'gone', status: 'open', updated: '2026-11-01', changed: '2026-11-01' }, // gone and quiet: removed
+    { folder: 'gone', status: 'open', updated: '2026-11-01', changed: '2026-11-18' }, // gone but changed lately: kept
+    { folder: 'gone', status: null, updated: null, changed: '2026-11-01' }, // no header: like an open one
+  ], live, today);
+  assert.deepEqual(plan, [0, 2, 4, 6]);
 });
 
 test('progress-hot-size', () => {

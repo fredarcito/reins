@@ -1,12 +1,11 @@
 // reins doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { runDoctor, notebookFile, formatText, formatJson } from '@agentreins/core';
-import { ARCHITECTURE_FILE, CliError, REINS_DIR, isGitRepo } from '../context.js';
-import { DOCTOR_FILE, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
+import { runDoctor, formatText, formatJson } from '@agentreins/core';
+import { ARCHITECTURE_FILE, CliError, isGitRepo } from '../context.js';
+import { DOCTOR_FILE, listNotebooks, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
+import { TRIAGE_LOG, readTriage, taskFiles } from '../triage-log.js';
 import { pickBaseRef } from './check.js';
-export const TRIAGE_LOG = `${REINS_DIR}/progress/triage.log`;
-const LOCAL_DIRS = [`${REINS_DIR}/progress/`, `${REINS_DIR}/backlog/`];
 
 export const options = {
   strict: { type: 'boolean' },
@@ -16,25 +15,18 @@ export const options = {
 
 export const help = `Usage: reins doctor [options]
 
-Local, informational checks of the workflow: triage log vs. the diff, AGENTS.md size, progress notebook
-format, the module notes of what the branch touched (missing, not updated, still a draft, too long) and, for every
+Local, informational checks of the workflow: the current task's level vs. its diff (since the commit on its
+triage line, or the branch diff when the line has none), AGENTS.md size, the format of every progress notebook
+of the branch, the module notes of what the branch touched (missing, not updated, still a draft, too long) and, for every
 note, paths that match no file and files it names that no longer exist. Never blocks (exit 0) unless --strict. Not meant for CI or git hooks: it is skipped when CI is set.
 Thresholds: ${DOCTOR_FILE}.
 
 Options:
   --strict      Exit 1 when there is any warning
   --json        JSON output
-  --base <ref>  Base branch to compute the diff of this branch (default: as in reins check)`;
+  --base <ref>  Base branch for the branch diff and for tasks already merged (default: as in reins check)`;
 
 const git = (root, args) => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-
-/** Files changed on this branch compared to the base (committed, staged, unstaged and untracked). */
-export function changedFiles(root, baseRef) {
-  const base = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : 'HEAD';
-  const tracked = git(root, ['diff', '--name-only', base]).split('\n');
-  const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n');
-  return [...new Set([...tracked, ...untracked])].filter((f) => f && !LOCAL_DIRS.some((d) => f.startsWith(d))).sort();
-}
 
 /**
  * @param {{ root: string, values: Record<string, any>, out: (s: string) => void, env?: NodeJS.ProcessEnv }} ctx
@@ -53,6 +45,8 @@ export async function doctor(ctx) {
   const notes = [];
   let branch = 'HEAD';
   let files = [];
+  let anchor = null;
+  let triage = { text: read(root, TRIAGE_LOG), log: null };
   if (!isGitRepo(root)) notes.push('Not a git repository: triage rules were skipped.');
   else {
     branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']).trim();
@@ -64,21 +58,21 @@ export async function doctor(ctx) {
       }
     }
     const baseRef = pickBaseRef(root, values.base, env);
-    files = changedFiles(root, baseRef);
-    if (!baseRef) notes.push('No base branch found: only uncommitted changes were compared.');
+    triage = readTriage(root, baseRef);
+    ({ files, anchor } = taskFiles(root, triage.log, branch, baseRef));
+    if (!baseRef && !anchor) notes.push('No base branch found: only uncommitted changes were compared.');
   }
 
-  const nbFile = notebookFile(branch);
-  const nbText = read(root, nbFile);
   const result = runDoctor({
     config,
     branch,
     changedFiles: files,
     domains: readDomains(root, notes),
     architectureFile: ARCHITECTURE_FILE,
-    triageLog: { file: TRIAGE_LOG, text: read(root, TRIAGE_LOG) },
+    triageLog: { file: TRIAGE_LOG, text: triage.text, log: triage.log },
+    anchor,
     agentsMd: { file: 'AGENTS.md', text: read(root, 'AGENTS.md') },
-    notebooks: nbText === null ? [] : [{ file: nbFile, text: nbText }],
+    notebooks: listNotebooks(root, branch).map((n) => ({ file: n.file, text: n.text })),
     notes: loadNotes(root).notes,
     repoFiles: listRepoFiles(root),
   });

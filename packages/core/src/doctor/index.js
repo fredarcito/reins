@@ -16,14 +16,16 @@ export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 
  * @param {string[]} input.changedFiles repo-relative files changed on this branch (committed or not)
  * @param {{ name: string, paths: string[], publicApi: string[] }[]} input.domains from architecture.yml (may be empty)
  * @param {string} input.architectureFile
- * @param {{ file: string, text: string | null }} input.triageLog
+ * @param {{ file: string, text: string | null, log?: ReturnType<typeof parseTriageLog> | null }} input.triageLog `log`: already
+ *   parsed and without the lines that no longer matter (the CLI drops gone branches and merged tasks); else `text` is parsed
+ * @param {string | null} [input.anchor] start commit of the current task; `changedFiles` is then the task's diff
  * @param {{ file: string, text: string | null }} input.agentsMd
  * @param {{ file: string, text: string }[]} input.notebooks hot notebooks to check (usually the current branch's)
  * @param {{ file: string, paths: string[], body: string }[]} [input.notes] module notes of the repo
  * @param {string[] | null} [input.repoFiles] every file of the repo; without it the note-dead-* rules are skipped
  * @returns {import('../check/index.js').CheckResult}
  */
-export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [], repoFiles = null }) {
+export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [], repoFiles = null, anchor = null }) {
   const findings = [];
   const signals = scopeSignals(changedFiles, domains, architectureFile);
 
@@ -31,10 +33,11 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
     ...checkTriage({
       branch,
       changedFiles,
-      log: triageLog.text === null ? null : parseTriageLog(triageLog.text),
+      log: triageLog.log ?? (triageLog.text === null ? null : parseTriageLog(triageLog.text)),
       logFile: triageLog.file,
       signals,
       thresholds: config.triage,
+      anchor,
     }),
   );
 
@@ -66,5 +69,8 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
 }
 
 export { parseDoctorConfig, DOCTOR_DEFAULTS } from './config.js';
-export { LEVELS, parseTriageLog, scopeSignals, suggestLevel } from './triage.js';
-export { parseNotebook, formatProblems, notebookFile, MARKERS, countLines } from './progress.js';
+export { LEVELS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel } from './triage.js';
+export {
+  parseNotebook, formatProblems, notebookFile, taskFolder, branchFolder, PROGRESS_DIR, NOTEBOOK_NAME, TASK_RE, formatHeader, summarizeNotebook,
+  cleanupPlan, MARKERS, countLines,
+} from './progress.js';

@@ -1,7 +1,7 @@
 // Mechanical edits of the progress notebook, so the agent doesn't rewrite the whole file.
 // Every edit parses the notebook, refuses to work on an invalid one, applies one change, bumps
 // `updated:` and validates the result: an edit can never leave the notebook badly formatted.
-import { HEADER_RE, ITEM_RE, formatProblems, parseNotebook } from './progress.js';
+import { HEADER_RE, ITEM_RE, formatHeader, formatProblems, parseNotebook } from './progress.js';
 
 const SECTION_HEADER = (name) => new RegExp(`^(?:\\*\\*${name}:?\\*\\*|#{2,6}\\s+${name}:?)\\s*(.*)$`, 'i');
 export const SECTIONS = Object.freeze({ criteria: 'Done criteria', subtasks: 'Subtasks', next: 'Next step' });
@@ -112,8 +112,32 @@ export function setNext(text, next, date) {
   return finish(lines, date);
 }
 
-/** A new notebook from a template: fills `<branch>` and the date. */
-export function newNotebook(template, branch, date) {
+/**
+ * A new notebook from a template: fills `<branch>` and the date, and puts `task:` and `session:` in the header.
+ * @param {{ task?: string | null, session?: string | null }} [fields]
+ */
+export function newNotebook(template, branch, date, { task = null, session = null } = {}) {
   const text = template.replaceAll('<branch>', branch).replace(/updated:\s*YYYY-MM-DD/, `updated: ${date}`);
-  return text;
+  if (!task && !session) return text;
+  const lines = text.split('\n');
+  const i = lines.findIndex((l) => HEADER_RE.test(l));
+  if (i === -1) return text;
+  const h = /** @type {RegExpExecArray} */ (HEADER_RE.exec(lines[i]));
+  lines[i] = formatHeader({ branch: h[1], task: task ?? h[2], session: session ?? h[3], status: h[4], updated: h[5] });
+  return lines.join('\n');
+}
+
+/**
+ * Sets header fields: `session` (a session claims the task) or `status` (closing). Bumps the date. The notebook must
+ * be valid. Returns the text unchanged when nothing changes.
+ * @param {{ session?: string, status?: 'open' | 'closed' }} fields
+ */
+export function setHeader(text, fields, date) {
+  const nb = valid(text);
+  const h = /** @type {import('./progress.js').NotebookHeader} */ (nb.header);
+  const next = { ...h, ...Object.fromEntries(Object.entries(fields).filter(([, v]) => v)) };
+  if (next.session === h.session && next.status === h.status) return text;
+  const lines = [...nb.lines];
+  lines[h.line - 1] = formatHeader(next);
+  return finish(lines, date);
 }

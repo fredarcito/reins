@@ -8,11 +8,12 @@ export { REPORT_SCHEMA, formatText, formatJson } from './report/index.js';
 export { globToRegExp, matchesAny } from './glob.js';
 export { impactOf } from './impact/index.js';
 export {
-  DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, scopeSignals, suggestLevel,
-  parseNotebook, formatProblems, notebookFile, MARKERS, countLines,
+  DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel,
+  parseNotebook, formatProblems, notebookFile, taskFolder, branchFolder, PROGRESS_DIR, NOTEBOOK_NAME, TASK_RE, formatHeader, summarizeNotebook,
+  cleanupPlan, MARKERS, countLines,
 } from './doctor/index.js';
 export { NOTES_DIR, parseNote, parseFrontmatter, isNoteFile, notesFor, parentNoteFile, pathsInside } from './notes/index.js';
 export { NOTE_TODO_RE, summarizeModule, draftNote } from './notes/draft.js';
 export { rankStaleNotes } from './notes/stale.js';
 export { BACKLOG_FILE, BACKLOG_HEADER, STATUSES, parseBacklog, renderFinding, addFinding, setStatus, markRecheck } from './backlog/index.js';
-export { NotebookError, SECTIONS, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook } from './doctor/progress-edit.js';
+export { NotebookError, SECTIONS, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, setHeader } from './doctor/progress-edit.js';

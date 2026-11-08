@@ -2,7 +2,9 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR } from '@agentreins/core';
+import {
+  CORE_RULES, ConfigError, parseConfig, parseDoctorConfig, parseNote, isNoteFile, NOTES_DIR, PROGRESS_DIR, NOTEBOOK_NAME, branchFolder,
+} from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, REINS_DIR, isGitRepo } from './context.js';
 
 export const DOCTOR_FILE = `${REINS_DIR}/doctor.yml`;
@@ -110,4 +112,91 @@ export function readHistory(root, max = 5000) {
 export function dirtyFiles(root) {
   if (!isGitRepo(root)) return [];
   return git(root, ['status', '--porcelain', '--untracked-files=all']).split('\n').filter(Boolean).map((l) => l.slice(3).replace(/^.* -> /, ''));
+}
+
+const LOCAL_DIRS = [`${REINS_DIR}/progress/`, `${REINS_DIR}/backlog/`];
+
+/**
+ * Files changed on this branch (committed, staged, unstaged and untracked), without reins' local folders.
+ * @param {string} root
+ * @param {{ base?: string | null, since?: string }} from `since`: a commit (the diff since it); `base`: a base ref
+ *   (the diff since the merge base with it); neither: uncommitted changes only.
+ */
+export function changedFiles(root, { base = null, since } = {}) {
+  const start = since ?? (base ? git(root, ['merge-base', 'HEAD', base]).trim() : 'HEAD');
+  const tracked = git(root, ['diff', '--name-only', start]).split('\n');
+  const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n');
+  return [...new Set([...tracked, ...untracked])].filter((f) => f && !LOCAL_DIRS.some((d) => f.startsWith(d))).sort();
+}
+
+/**
+ * Branches that still exist, each with a ref to its tip: local branches, plus remote-tracking refs (`origin/x` → `x`)
+ * so a branch deleted locally whose PR is still open counts as live. The current branch always counts, even before
+ * its first commit. Shared by the triage.log cleanup and the notebook cleanup.
+ * @returns {Map<string, string>} branch name → ref
+ */
+export function liveBranches(root) {
+  const live = new Map();
+  if (!isGitRepo(root)) return live;
+  const refs = (prefix) => {
+    try {
+      return git(root, ['for-each-ref', '--format=%(refname)', prefix]).split('\n').filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+  for (const ref of refs('refs/remotes/')) {
+    const name = ref.split('/').slice(3).join('/');
+    if (name && name !== 'HEAD') live.set(name, ref);
+  }
+  for (const ref of refs('refs/heads/')) live.set(ref.slice('refs/heads/'.length), ref);
+  try {
+    live.set(git(root, ['rev-parse', '--abbrev-ref', 'HEAD']).trim(), 'HEAD');
+  } catch {
+    try {
+      live.set(git(root, ['symbolic-ref', '--short', 'HEAD']).trim(), 'HEAD'); // no commits yet
+    } catch {
+      /* not on a branch */
+    }
+  }
+  return live;
+}
+
+/**
+ * @typedef {{ folder: string, task: string | null, file: string, dir: string | null, text: string, changed: string }} NotebookEntry
+ *   `folder`: the branch folder name; `task`: null for the older per-branch notebook; `dir`: the task folder (its cold
+ *   files), or the branch folder for the older notebook when it exists; `changed`: date the file last changed (UTC)
+ */
+
+/**
+ * Progress notebooks: `<branch>/<task>/notebook.md` and the older `<branch>.md`, of one branch or of every branch.
+ * The tasks of a branch are the subfolders of its folder that contain a notebook.md; plain files there are cold
+ * files of the older notebook, never tasks.
+ * @param {string} root
+ * @param {string} [branch] only this branch
+ * @returns {NotebookEntry[]}
+ */
+export function listNotebooks(root, branch) {
+  const base = path.join(root, PROGRESS_DIR);
+  if (!existsSync(base)) return [];
+  const only = branch === undefined ? null : branchFolder(branch).slice(PROGRESS_DIR.length + 1);
+  const entries = readdirSync(base, { withFileTypes: true }).filter((e) => !/^[_.]/.test(e.name));
+  const out = [];
+  const add = (folder, task, rel, dir) => {
+    const abs = path.join(root, rel);
+    out.push({ folder, task, file: rel, dir, text: readFileSync(abs, 'utf8'), changed: statSync(abs).mtime.toISOString().slice(0, 10) });
+  };
+  const folders = new Set(entries.filter((e) => e.isDirectory()).map((e) => e.name));
+  for (const e of entries) {
+    if (e.isFile() && e.name.endsWith('.md')) {
+      const folder = e.name.slice(0, -3);
+      if (only === null || folder === only) add(folder, null, `${PROGRESS_DIR}/${e.name}`, folders.has(folder) ? `${PROGRESS_DIR}/${folder}` : null);
+    } else if (e.isDirectory() && (only === null || e.name === only)) {
+      for (const t of readdirSync(path.join(base, e.name), { withFileTypes: true })) {
+        const rel = `${PROGRESS_DIR}/${e.name}/${t.name}`;
+        if (t.isDirectory() && !/^[_.]/.test(t.name) && existsSync(path.join(root, rel, NOTEBOOK_NAME))) add(e.name, t.name, `${rel}/${NOTEBOOK_NAME}`, rel);
+      }
+    }
+  }
+  return out.sort((a, b) => (a.file < b.file ? -1 : 1));
 }

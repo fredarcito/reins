@@ -12,6 +12,7 @@ import * as impactCmd from './commands/impact.js';
 import * as resumeCmd from './commands/resume.js';
 import * as auditCmd from './commands/audit.js';
 import * as progressCmd from './commands/progress.js';
+import * as triageCmd from './commands/triage.js';
 import * as reviewCmd from './commands/review.js';
 import * as installCmd from './commands/install.js';
 import * as updateCmd from './commands/update.js';
@@ -30,6 +31,7 @@ const COMMANDS = {
   resume: { run: resumeCmd.resume, options: resumeCmd.options, help: resumeCmd.help },
   audit: { run: auditCmd.audit, options: auditCmd.options, help: auditCmd.help, positionals: true },
   progress: { run: progressCmd.progress, options: progressCmd.options, help: progressCmd.help, positionals: true },
+  triage: { run: triageCmd.triage, options: triageCmd.options, help: triageCmd.help, positionals: true },
   review: { run: reviewCmd.review, options: reviewCmd.options, help: reviewCmd.help },
   install: { run: installCmd.install, options: installCmd.options, help: installCmd.help },
   update: { run: updateCmd.update, options: updateCmd.options, help: updateCmd.help },
@@ -48,6 +50,7 @@ Commands:
   resume   Notebook, changed files and notes to resume a task; --hook for Claude Code (experimental)
   audit    Local audit backlog: list, add, set status, recheck (experimental)
   progress Edit the branch notebook without rewriting it (experimental)
+  triage   Record the level of the task being started, anchored to HEAD (experimental)
   review   Print a review prompt: diff + checklist + notes; calls no API (experimental)
   install  Wire reins into this repo: sources, hook, CI, .gitignore, sync (experimental)
   update   Update @agentreins/cli and sync provider-neutral core (experimental)

@@ -22,6 +22,7 @@ Scripts to rerun them: [`scripts/verify/`](../scripts/verify/). The Claude Code 
 | P8 | npm scope `@harness` is free | **Could not be fully tested** | Pending decision |
 | P9 | A `SessionStart` hook restores context after a compaction | **Pass** | Yes: notes must be re-delivered, see P9 |
 | P10 | Other coding-agent clients consume the shared `AGENTS.md` rules and can use the reins CLI | **Unverified** | The shared workflow avoids provider APIs; client-level instruction loading still needs testing |
+| P11 | Bash tool commands see `CLAUDE_CODE_SESSION_ID`, and it survives `--resume` / `--continue` | **Pass** (print mode) | No: per-session notebooks can rely on it, see P11 |
 
 ## P1. `PreToolUse` hook with per-path context — pass, with a caveat
 
@@ -220,6 +221,18 @@ Copy of `examples/vite-react` with a `src/generated/` file, installed from this 
 
 - `claude -p "/reins-review-architecture"` (Read/Grep/Glob and `npx reins` only): `architecture.yml` unchanged (same hash). It ran `check --coverage` and `--verbose`, confirmed each baseline item in the code (wrong-layer import in `Button.jsx`, `Home.jsx` bypassing the catalog public API, the `format`/`currency` cycle), proposed `ignore: ["src/generated/**"]` with evidence, kept every existing violation as baseline debt, and ended with questions. Gap found: it couldn't confirm `ignore:` was a valid key; the skill now lists the keys and links the reference.
 - `claude -p "/reins-new-agent …a read-only a11y checker…"` (`acceptEdits`): wrote `.reins/agents/a11y-checker.md` in the house format (read-only, Role/When/How/Returns, under 40 lines), ran `reins sync` (`.claude/agents/reins-a11y-checker.md`, `sync --check` clean) and proposed, without applying, a line for the multi-agent policy.
+
+## P11. Session id in Bash tool commands — pass
+
+Needed by the multi-session notebooks ([proposal](proposals/multi-session-progress.md), section 2): `npx reins progress …` run by the agent must know its session.
+
+- **VS Code extension (2026-11-08) — pass.** `CLAUDE_CODE_SESSION_ID` is set in the environment of Bash tool commands and matches the session.
+- **Terminal CLI, print mode (2026-11-08) — pass**, Claude Code 2.1.318, haiku, [`cc-session-id.sh`](../scripts/verify/cc-session-id.sh). `claude -p` with the parent session's variables unset; the agent runs `printenv CLAUDE_CODE_SESSION_ID`:
+  - fresh session: the variable equals the `session_id` of the JSON result;
+  - `--resume <id>` and `--continue`: same id, in the result and in the variable;
+  - `--resume <id> --fork-session`: a new id, and the variable follows it.
+- Side finding: Bash permission rules reject `echo $CLAUDE_CODE_SESSION_ID` ("a variable in this command can't be checked before it runs"); `printenv` passes. reins reads the variable from `process.env`, so this does not affect it.
+- **Unverified:** the interactive terminal UI (no TTY in the test; same binary, so expected to match) and `/resume` picked from inside a running session.
 
 ## Still unverified
 

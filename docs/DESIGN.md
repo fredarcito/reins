@@ -119,8 +119,7 @@ CLAUDE.md                      una línea: @AGENTS.md
 │   └── optimizaciones.md
 └── progress/                  LOCAL (.gitignore)
     ├── triage.log             una línea por tarea
-    ├── <rama>.md              libreta caliente
-    └── <rama>/                libreta fría (decisiones, verificación, entrega, informes de agentes)
+    └── <rama>/<tarea>/        una carpeta por tarea: notebook.md (libreta caliente) y la fría (decisiones, verificación, entrega, informes de agentes)
 
 .claude/                       generado desde .harness/, sin lógica propia
 ├── settings.json              hooks → harness check / harness notes; permisos que deniegan git commit/push
@@ -239,7 +238,7 @@ El `doctor` está separado del `check` porque da otra garantía: el `check` aseg
 
 | Regla | Avisa si |
 | --- | --- |
-| `triage-mismatch` | El diff supera los umbrales del nivel declarado en `triage.log` |
+| `triage-mismatch` | El diff de la tarea actual supera los umbrales del nivel declarado en `triage.log` |
 | `triage-missing` | Hay diff sin línea en `triage.log` |
 | `agents-size` | `AGENTS.md` pasa del tope de líneas |
 | `progress-hot-size` | El archivo caliente de la libreta pasa del tope |
@@ -314,19 +313,19 @@ Una tarea es lo que requiere leer el repo, ejecutar un comando o cambiar un arch
 - **Cuando duda:** elige el nivel menor y lo dice ("media, pero podría ser grande si aparece otro dominio").
 - **Señales objetivas** (con `harness scope <rutas>`, comando previsto y aún no construido): 1 dominio y 3 archivos o menos = pequeña; 1 dominio y más de 3 = media; 2 dominios o más, o toca `architecture.yml` o una API pública = grande.
 - **Escalada a mitad de tarea:** una pequeña o media debe parar y proponer subir de nivel si aparece un segundo dominio, se superan los umbrales, hay que modificar una API pública, una regla o el baseline, o el `check` falla por algo imprevisto. No se sube de nivel "por precaución".
-- **Registro:** al anunciar, el agente añade una línea a `progress/triage.log` con `fecha | rama | nivel | motivo`. El `doctor` compara el diff de la rama con el nivel más alto declarado en ella (no con la última línea, para que una tarea pequeña o de solo lectura después de una grande no dé un `triage-mismatch` falso; con empate cita la línea más reciente) y sirve para medir el piloto sin anotar a mano.
+- **Registro:** al anunciar, el agente ejecuta `reins triage <nivel> "<motivo>"`, que añade a `progress/triage.log` la línea `fecha | rama | nivel | motivo | commit:<sha>` (y `| task:<nombre>` si la tarea tiene libreta). El commit es HEAD al empezar: el ancla de la tarea. El `doctor` compara el diff de la tarea (desde ese commit, más lo no commiteado) con el nivel más alto de las líneas ancladas en ese mismo commit (comparten el diff no commiteado; así una tarea pequeña o de solo lectura después de una grande no da un `triage-mismatch` falso; con empate cita la línea más reciente). Sin commit en la última línea (escrita a mano o por una versión vieja) o si el commit ya no es ancestro de HEAD (rebase), vuelve a lo anterior: el diff de la rama contra la base y el nivel más alto de la rama. `resume` borra en silencio las líneas de ramas que ya no existen (ni local ni remote-tracking) y las de tareas cuyo trabajo ya está en la base (hay commits desde el ancla y todos están en la base). Sirve también para medir el piloto sin anotar a mano.
 - **Punto más frágil:** que el agente clasifique bien. Mitigaciones: anuncio corregible, override, escalada y `triage-mismatch`.
 - **Descartado:** un agente delegador separado. Gasta tokens para decidir si gastar tokens, falla en ambos sentidos y es un orquestador encubierto.
 
 ### Libreta de progreso (`policies/progress.md`)
 
-Escala con el nivel de triaje. Es local, por rama y fuera de git.
+Escala con el nivel de triaje. Es local, fuera de git y **una por tarea** (`progress/<rama>/<tarea>/notebook.md`): en una rama puede haber varias tareas, seguidas o en sesiones paralelas. Diseño completo: [`proposals/multi-session-progress.md`](proposals/multi-session-progress.md) (fase 1 construida el 2026-11-08).
 
 | Nivel | Libreta |
 | --- | --- |
 | Pequeña | Ninguna. Se hace el cambio y se entrega. |
 | Media | Mini: una hoja corta (objetivo, criterios, subtareas, siguiente paso). |
-| Grande | Completa: archivo caliente (lo que se lee al retomar, tope de 40 líneas) y carpeta fría `progress/<rama>/` con `decisiones.md`, `verificacion.md`, `entrega.md` e informes de agentes. |
+| Grande | Completa: archivo caliente (lo que se lee al retomar, tope de 40 líneas) y, en la misma carpeta de la tarea, `decisions.md`, `verification.md`, `delivery.md` e informes de agentes. |
 
 **Reglas**
 
@@ -335,7 +334,10 @@ Escala con el nivel de triaje. Es local, por rama y fuera de git.
 - Se actualiza en silencio al terminar cada subtarea y antes de cambiar de tema, no "al final", porque el final a veces no llega.
 - Subtareas: `[ ]` pendiente, `[~]` en curso (solo una), `[x]` escrita pero no probada, `[-]` descartada con motivo. Las descartadas no se borran, para no volver a proponerlas.
 - Lo necesario para terminar se añade a la libreta. Una mejora que surge por el camino va al `backlog/`.
-- La cabecera lleva `estado: abierta|cerrada`. Solo se cierra cuando la persona confirma; lo duradero pasa a la nota del módulo y luego se borra la libreta.
+- La cabecera lleva `status: open|closed` y, escritos por reins, `task:` y `session:` (la última sesión que reclamó la tarea). Solo se cierra cuando la persona confirma, con `reins progress close`; lo duradero pasa antes a la nota del módulo.
+- **Qué tarea es de cada sesión:** la explícita (`--task` o `REINS_TASK`); si no, la abierta cuyo `session:` es esta sesión (el id viene del hook, de `CLAUDE_CODE_SESSION_ID` o de `REINS_SESSION`). Si no hay, ninguna: una sesión nueva nunca toma una tarea en silencio; `resume` le lista las abiertas y el agente continúa una (con `--task`, que la reclama), crea otra o pregunta. Excepciones: sin id de sesión y una sola abierta, se usa esa, como antes; la vieja `<rama>.md` funciona como tarea sin nombre hasta que se cierra (sin migración).
+- **Cada sesión escribe solo su libreta.** `resume` muestra la propia entera y las demás abiertas en una o dos líneas (máximo 5); las cerradas, en una sola línea y solo si hay otras abiertas. Los solapes entre sesiones no tienen código: la política le dice al agente que pregunte a la persona.
+- **Limpieza automática** en `resume`, con margen fijo de 7 días: una cerrada se borra a los 7 días de cerrarse o cuando su rama ya no existe; una abierta, solo si su rama ya no existe y no cambió en 7 días. Nunca se borra trabajo abierto de una rama viva.
 - Carga: una línea en `AGENTS.md` como respaldo. Un hook de inicio de sesión sería lo ideal, pero ese evento está sin verificar.
 
 Plantilla mini (nivel media):
@@ -378,7 +380,7 @@ El patrón líder–implementador–revisor es solo para tareas grandes, no el f
 - **Líder (agente principal):** planifica y coordina; no edita mientras haya subagentes activos.
 - **Implementadores:** uno por subtarea independiente, sin archivos ni dependencias en común.
 - **Revisor:** lee el diff y el resultado del `check`; no edita.
-- **Un archivo por agente:** cada subagente escribe su informe en `progress/<rama>/<agente>_<subtarea>.md` y devuelve solo una referencia (`done -> ruta`) por chat. El principal lee los informes y actualiza la libreta. Esto evita escrituras concurrentes y el "teléfono descompuesto". Idea tomada de un repo de ejemplo.
+- **Un archivo por agente:** cada subagente escribe su informe en la carpeta de la tarea, `progress/<rama>/<tarea>/<agente>_<subtarea>.md`, y devuelve solo una referencia (`done -> ruta`) por chat. El principal lee los informes y actualiza la libreta. Esto evita escrituras concurrentes y el "teléfono descompuesto". Idea tomada de un repo de ejemplo.
 - Si las subtareas comparten archivos o dependen unas de otras, se hacen en serie. Si la tarea resulta pequeña, se baja de nivel.
 - **Descartado como norma:** un agente por subtarea. Cada agente carga su propio contexto (varios arranques), las subtareas suelen depender unas de otras y complica la revisión. No hay datos de que ahorre tokens.
 

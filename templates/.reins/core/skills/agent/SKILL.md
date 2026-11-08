@@ -30,7 +30,7 @@ Agent definitions live in `.reins/agents/<name>.md` as plain Markdown. They are 
    **How:**
    1. <steps, using the repo's own sources: `.reins/notes/`, `npx reins scope`, `npx reins check`>
 
-   **Returns:** <format>. If you write a report file, write it to `.reins/progress/<branch>/<name>_<subtask>.md` and reply only `done -> <path>`.
+   **Returns:** <format>. If you write a report file, write it to `.reins/progress/<branch>/<task>/<name>_<subtask>.md` (the task's folder) and reply only `done -> <path>`.
    ```
 5. Keep it short (under 40 lines): it is read every time the agent runs. Rules that already live in `AGENTS.md` or the policies don't need repeating; point to them.
 6. Run `npx reins sync`, then `npx reins sync --check` (0 differences).

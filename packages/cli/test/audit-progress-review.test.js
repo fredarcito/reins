@@ -39,10 +39,12 @@ test('audit: add, list, recheck, set with reason; the backlog stays readable mar
 test('progress: new, show, add, start, done, drop, next — always valid', async () => {
   const dir = exampleRepo('vite-react');
   git(dir, 'checkout', '-q', '-b', 'feat/discounts');
-  const file = '.reins/progress/feat-discounts.md';
-  assert.match((await cli(dir, ['progress', 'show'])).stderr, /doesn't exist\. Create it with `reins progress new`/);
-  assert.match((await cli(dir, ['progress', 'new'])).stdout, /Created \.reins\/progress\/feat-discounts\.md \(mini\)/);
-  assert.equal((await cli(dir, ['progress', 'new'])).code, 2, 'never overwrites');
+  const file = '.reins/progress/feat-discounts/discount/notebook.md';
+  assert.match((await cli(dir, ['progress', 'show'])).stderr, /No notebook on feat\/discounts\. Create one with `reins progress new <task>`/);
+  assert.match((await cli(dir, ['progress', 'new'])).stderr, /Name the task: `reins progress new <task>`/);
+  assert.match((await cli(dir, ['progress', 'new', 'discount'])).stdout, /Created \.reins\/progress\/feat-discounts\/discount\/notebook\.md \(mini\)/);
+  assert.match(read(dir, file), /^# feat\/discounts · task: discount · status: open · updated: 2026-11-04\n/);
+  assert.equal((await cli(dir, ['progress', 'new', 'discount'])).code, 2, 'never overwrites');
 
   await cli(dir, ['progress', 'add', 'apply', 'the', 'discount']);
   await cli(dir, ['progress', 'add', '--criteria', 'total shows the discount']);
@@ -62,13 +64,14 @@ test('progress: new, show, add, start, done, drop, next — always valid', async
   assert.match((await cli(dir, ['doctor'])).stdout, /reins doctor: nothing to report/, 'the edited notebook passes the doctor (and local files are not part of the diff)');
 });
 
-test('progress: an invalid notebook is refused, --hot creates the cold folder, --branch picks another notebook', async () => {
+test('progress: an invalid notebook is refused, --hot puts the cold files in the task folder, --branch picks another branch', async () => {
   const dir = exampleRepo('vite-react');
-  await cli(dir, ['progress', 'new', '--hot', '--branch', 'feat/big']);
-  for (const f of ['feat-big.md', 'feat-big/decisions.md', 'feat-big/verification.md', 'feat-big/delivery.md']) {
-    assert.ok(existsSync(path.join(dir, '.reins/progress', f)), f);
+  await cli(dir, ['progress', 'new', 'big', '--hot', '--branch', 'feat/big']);
+  for (const f of ['notebook.md', 'decisions.md', 'verification.md', 'delivery.md']) {
+    assert.ok(existsSync(path.join(dir, '.reins/progress/feat-big/big', f)), f);
   }
-  write(dir, '.reins/progress/feat-big.md', '# feat/big · status: open · updated: 2026-11-04\n- [~] a\n- [~] b\n');
+  assert.match(read(dir, '.reins/progress/feat-big/big/notebook.md'), /\*\*Cold folder:\*\* this notebook's folder/);
+  write(dir, '.reins/progress/feat-big/big/notebook.md', '# feat/big · task: big · status: open · updated: 2026-11-04\n- [~] a\n- [~] b\n');
   const r = await cli(dir, ['progress', 'done', '1', '--branch', 'feat/big']);
   assert.equal(r.code, 2);
   assert.match(r.stderr, /not valid; fix it first:\n {2}- lines 2, 3: 2 items in progress/);
@@ -107,17 +110,17 @@ test('progress new uses the repo templates in .reins/templates/ first, and refus
   git(dir, 'checkout', '-q', '-b', 'feat/ticket');
   mkdirSync(path.join(dir, '.reins/templates/progress-cold'), { recursive: true });
   writeFileSync(path.join(dir, '.reins/templates/progress-mini.md'), '# <branch> · status: open · updated: YYYY-MM-DD\n**Ticket:** ...\n**Goal:** ...\n**Done criteria:**\n- [ ] ...\n**Subtasks:**\n- [ ] ...\n**Next step:** ...\n');
-  assert.equal((await cli(dir, ['progress', 'new'])).code, 0);
-  assert.match(readFileSync(path.join(dir, '.reins/progress/feat-ticket.md'), 'utf8'), /^# feat\/ticket · status: open · updated: 2026-11-04\n\*\*Ticket:\*\* \.\.\./);
+  assert.equal((await cli(dir, ['progress', 'new', 'ticket'])).code, 0);
+  assert.match(readFileSync(path.join(dir, '.reins/progress/feat-ticket/ticket/notebook.md'), 'utf8'), /^# feat\/ticket · task: ticket · status: open · updated: 2026-11-04\n\*\*Ticket:\*\* \.\.\./);
 
   writeFileSync(path.join(dir, '.reins/templates/progress-cold/decisions.md'), '# <branch> · our decisions\n');
-  await cli(dir, ['progress', 'new', '--hot', '--branch', 'feat/big']);
-  assert.equal(readFileSync(path.join(dir, '.reins/progress/feat-big/decisions.md'), 'utf8'), '# feat/big · our decisions\n');
-  assert.ok(existsSync(path.join(dir, '.reins/progress/feat-big/verification.md')), 'missing cold templates come from the package');
+  await cli(dir, ['progress', 'new', 'big', '--hot', '--branch', 'feat/big']);
+  assert.equal(readFileSync(path.join(dir, '.reins/progress/feat-big/big/decisions.md'), 'utf8'), '# feat/big · our decisions\n');
+  assert.ok(existsSync(path.join(dir, '.reins/progress/feat-big/big/verification.md')), 'missing cold templates come from the package');
 
   writeFileSync(path.join(dir, '.reins/templates/progress-mini.md'), 'just some text\n');
-  const bad = await cli(dir, ['progress', 'new', '--branch', 'feat/other']);
+  const bad = await cli(dir, ['progress', 'new', 'other', '--branch', 'feat/other']);
   assert.equal(bad.code, 2);
   assert.match(bad.stderr, /^\.reins\/templates\/progress-mini\.md doesn't produce a valid notebook:\n {2}- missing header/);
-  assert.equal(existsSync(path.join(dir, '.reins/progress/feat-other.md')), false);
+  assert.equal(existsSync(path.join(dir, '.reins/progress/feat-other/other/notebook.md')), false);
 });

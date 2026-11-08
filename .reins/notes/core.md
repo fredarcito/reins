@@ -15,7 +15,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 - `check/rules/*.js`: `layer-direction`, `domain-boundary`, `no-cycles`; each exports `id` and `run(edges, config)`.
 - `check/baseline.js`, `check/integrity.js`: baseline file format; integrity compares with the merge base via `git.js`.
 - `glob.js`: own glob matcher (`*`, `**`, `?`, `{a,b}`), shared with adapters.
-- `doctor/`: process rules (triage, notebook, notes, AGENTS.md size); `progress-edit.js` edits the notebook safely.
+- `doctor/`: process rules (triage, notebook, notes, AGENTS.md size); `progress-edit.js` edits the notebook safely. `triage.js`: `parseTriageLog` (optional trailing `commit:`/`task:` fields), `formatTriageLine`, `taskAnchor`, `checkTriage` (with an `anchor`, only the lines with that commit count). `progress.js`: `notebookFile(branch, task?)`, `taskFolder`, `HEADER_RE` with optional `task:`/`session:`, `summarizeNotebook`, pure `cleanupPlan` (7-day margin).
 - `notes/`, `backlog/`, `report/`: note parsing and drafting, audit backlog lines, text/JSON report format. `notesFor` returns the most general note first (shortest matching glob), so a module's note comes before its parts'. Parts live in `.reins/notes/<module>/<part>.md` (`parentNoteFile`, `pathsInside`); doctor's `note-layout` checks that layout. `notes/stale.js`: `rankStaleNotes` (commits to a note's paths since the note last changed, from history the CLI reads).
 
 ## How it works

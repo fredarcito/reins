@@ -28,7 +28,8 @@ test('resume: notebook, changed files and their notes', async () => {
   const r = await cli(dir, ['resume'], { env: { GITHUB_BASE_REF: 'main' } });
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /^Context to resume the work on branch feat\/filters/);
-  assert.match(r.stdout, /## Progress notebook \.reins\/progress\/feat-filters\.md\n.+\n\n# feat\/filters · status: open/);
+  assert.match(r.stdout, /## Your notebook: \.reins\/progress\/feat-filters\.md\n.+\n\n# feat\/filters · status: open/);
+  assert.match(r.stdout, /picked because it is the older one-per-branch notebook\. If the request is a different task, create a new one/);
   assert.match(r.stdout, /\*\*Next step:\*\* add the select to OrderList\./);
   assert.match(r.stdout, /## Files changed on this branch \(1\)\n- src\/features\/orders\/queries\.ts/);
   assert.match(r.stdout, /### \.reins\/notes\/orders\.md \(applies to src\/features\/orders\/\*\*\)\n## Purpose\nOrders list\./);

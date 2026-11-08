@@ -1,13 +1,15 @@
-// reins progress: mechanical edits of the current branch's notebook (.reins/progress/<branch>.md),
-// so the agent doesn't rewrite the file. Every edit validates the format before and after.
+// reins progress: mechanical edits of the current task's notebook (.reins/progress/<branch>/<task>/notebook.md),
+// so the agent doesn't rewrite the file. Every edit validates the format before and after. The task is resolved by
+// notebooks.js (explicit --task, or the one this session claimed); every command claims the task it acts on.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
-  NotebookError, notebookFile, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook,
-  parseNotebook, formatProblems,
+  NotebookError, notebookFile, taskFolder, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, setHeader,
+  parseNotebook, formatProblems, TASK_RE,
 } from '@agentreins/core';
 import { CliError } from '../context.js';
+import { branchTasks, explicitTask, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
 
@@ -28,23 +30,27 @@ function notebookTemplate(root, rel) {
 
 export const options = {
   branch: { type: 'string' },
+  task: { type: 'string' },
   criteria: { type: 'boolean' },
   hot: { type: 'boolean' },
   json: { type: 'boolean' },
 };
 
 export const help = `Usage:
-  reins progress new [--hot]            Create the notebook from .reins/templates/ (mini; --hot for large tasks)
+  reins progress new <task> [--hot]     Create the task's notebook from .reins/templates/ (mini; --hot for large tasks)
   reins progress show [--json]          Print the items, numbered
   reins progress add <text> [--criteria]  Add a pending item to Subtasks (or Done criteria)
   reins progress start <n>              Mark item n in progress [~] (only one at a time)
   reins progress done <n>               Mark item n done [x]
   reins progress drop <n> <reason>      Discard item n [-] with a reason (it stays in the list)
   reins progress next <text>            Set the "Next step" line
+  reins progress close                  Close the task (only after the person confirmed it is done)
 
-Edits .reins/progress/<branch>.md of the current branch (--branch to choose another). Every edit keeps the
-notebook valid and updates its date; a notebook that is already invalid is refused with the problems to fix.
-Closing (status: closed) is left to the person.`;
+One notebook per task: .reins/progress/<branch>/<task>/notebook.md, on the current branch (--branch to choose
+another). <task> is a short name for the person's request (css-refactor). The task is the one given with --task
+(or REINS_TASK), else the open one this session works on; every command claims the task it acts on for this
+session (session: in the header, from CLAUDE_CODE_SESSION_ID or REINS_SESSION). Never edit another session's
+task. Every edit keeps the notebook valid and updates its date; an invalid notebook is refused with its problems.`;
 
 const today = (ctx) => ctx.today ?? new Date().toISOString().slice(0, 10);
 
@@ -71,14 +77,19 @@ export async function progress(ctx) {
     return 0;
   }
   const branch = values.branch ?? currentBranch(root);
-  const file = notebookFile(branch);
-  const abs = path.join(root, file);
+  const env = ctx.env ?? process.env;
+  const session = sessionId(env);
   const date = today(ctx);
 
   if (action === 'new') {
-    if (existsSync(abs)) throw new CliError(`${file} already exists. Use \`reins progress show\`.`);
+    const task = args[0] ?? explicitTask(values, env);
+    if (!task) throw new CliError('Name the task: `reins progress new <task>`, a short name for the request (css-refactor).');
+    if (!TASK_RE.test(task)) throw new CliError(`Task names use letters, digits, ".", "_" and "-" and start with a letter or digit: got "${task}".`);
+    const file = notebookFile(branch, task);
+    const abs = path.join(root, file);
+    if (existsSync(abs)) throw new CliError(`${file} already exists. Continue it with \`reins progress show --task ${task}\`.`);
     const tpl = notebookTemplate(root, `.reins/templates/progress-${values.hot ? 'hot' : 'mini'}.md`);
-    const text = newNotebook(tpl.text, branch, date);
+    const text = newNotebook(tpl.text, branch, date, { task, session });
     const problems = formatProblems(parseNotebook(text));
     if (problems.length) {
       throw new CliError(`${tpl.source} doesn't produce a valid notebook:\n${problems.map((pr) => `  - ${pr}`).join('\n')}\nFix the template (keep the header \`# <branch> · status: open · updated: YYYY-MM-DD\`), or delete it to use the default one.`);
@@ -87,21 +98,31 @@ export async function progress(ctx) {
     writeFileSync(abs, text);
     out(`Created ${file}${values.hot ? '' : ' (mini)'}. Fill in the goal and the done criteria before editing code.`);
     if (values.hot) {
-      const cold = abs.replace(/\.md$/, '');
-      mkdirSync(cold, { recursive: true });
+      const cold = path.join(root, taskFolder(branch, task));
       for (const f of ['decisions', 'verification', 'delivery']) {
         const target = path.join(cold, `${f}.md`);
         if (!existsSync(target)) writeFileSync(target, newNotebook(notebookTemplate(root, `.reins/templates/progress-cold/${f}.md`).text, branch, date));
       }
-      out(`Created the cold folder ${file.replace(/\.md$/, '/')}.`);
+      out(`Cold files, agent reports included, go in ${taskFolder(branch, task)}/.`);
     }
     return 0;
   }
 
-  const text = readText(root, file);
-  if (text === null) throw new CliError(`${file} doesn't exist. Create it with \`reins progress new\` (medium) or \`reins progress new --hot\` (large).`);
+  const tasks = branchTasks(root, branch);
+  const { current, missing, others } = resolveTask(tasks, { task: explicitTask(values, env), session });
+  if (!current) {
+    if (missing) throw new CliError(`Task "${missing}" has no notebook on ${branch}. Create it with \`reins progress new ${missing}\`.`);
+    const open = others.map((t) => `  - ${taskName(t)}${t.summary.goal ? `: ${t.summary.goal}` : ''}`);
+    throw new CliError(open.length
+      ? `No task chosen for this session. Open tasks on ${branch}:\n${open.join('\n')}\nContinue one with --task <name> (that claims it), or create one with \`reins progress new <task>\`.`
+      : `No notebook on ${branch}. Create one with \`reins progress new <task>\` (medium) or \`reins progress new <task> --hot\` (large).`);
+  }
+  const file = current.file;
+  const abs = path.join(root, file);
+  const text = current.text;
+  /** Writes the edit and claims the task for this session. */
   const write = (t, msg) => {
-    writeFileSync(abs, t);
+    writeFileSync(abs, session ? claim(t, session, date) : t);
     out(msg);
     return 0;
   };
@@ -111,6 +132,7 @@ export async function progress(ctx) {
         const nb = parseNotebook(text);
         const problems = formatProblems(nb);
         const items = problems.length ? nb.items.map((it, i) => ({ n: i + 1, ...it })) : listItems(text);
+        if (session && !problems.length && nb.header?.session !== session) writeFileSync(abs, claim(text, session, date));
         if (values.json) {
           out(JSON.stringify({ file, header: nb.header, problems, items }, null, 2));
           return 0;
@@ -143,11 +165,22 @@ export async function progress(ctx) {
         return write(markDropped(text, num(args[0]), args.slice(1).join(' '), date), `Item ${args[0]} was discarded.`);
       case 'next':
         return write(setNext(text, args.join(' '), date), 'Next step updated.');
+      case 'close':
+        return write(setHeader(text, { status: 'closed' }, date), `Closed ${taskName(current)}. reins deletes its notebook 7 days from now.`);
       default:
         throw new CliError(`Unknown action "${action}".\n\n${help}`);
     }
   } catch (e) {
     if (e instanceof NotebookError) throw new CliError(e.message);
     throw e;
+  }
+}
+
+/** The text with `session:` set to this session, when the notebook is valid; unchanged otherwise. */
+function claim(text, session, date) {
+  try {
+    return setHeader(text, { session }, date);
+  } catch {
+    return text;
   }
 }

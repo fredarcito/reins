@@ -1,13 +1,16 @@
 // Triage: the agent declares a task level (small | medium | large) in .reins/progress/triage.log,
-// one line per task: `YYYY-MM-DD | branch | level | reason`. The doctor compares the highest level declared on
-// the branch with the branch diff.
+// one line per task: `YYYY-MM-DD | branch | level | reason`, optionally followed by `| commit:<sha>` (the commit the
+// task started from, written by `reins triage`) and `| task:<name>`. With a commit, the doctor compares the current
+// task's level with the diff since that commit; without one, the highest level declared on the branch with the
+// branch diff.
 import { matchesAny } from '../glob.js';
 
 export const LEVELS = Object.freeze(['small', 'medium', 'large']);
 const rank = (level) => LEVELS.indexOf(level);
+const FIELD_RE = /^(commit|task):([^\s|]+)$/;
 
 /**
- * @typedef {{ line: number, date: string, branch: string, level: string, reason: string }} TriageEntry
+ * @typedef {{ line: number, date: string, branch: string, level: string, reason: string, commit: string | null, task: string | null }} TriageEntry
  */
 
 /**
@@ -22,14 +25,39 @@ export function parseTriageLog(text) {
     if (!line || line.startsWith('#')) return;
     const parts = line.split('|').map((s) => s.trim());
     const [date, branch, level, ...rest] = parts;
+    /** @type {Record<string, string>} */
+    const fields = {};
+    while (rest.length > 1 && FIELD_RE.test(rest[rest.length - 1])) {
+      const [, key, value] = /** @type {RegExpExecArray} */ (FIELD_RE.exec(/** @type {string} */ (rest.pop())));
+      fields[key] ??= value;
+    }
     const reason = rest.join(' | ');
     if (parts.length < 4 || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !branch || !LEVELS.includes(level) || !reason) {
       malformed.push({ line: i + 1, text: line });
     } else {
-      entries.push({ line: i + 1, date, branch, level, reason });
+      entries.push({ line: i + 1, date, branch, level, reason, commit: fields.commit ?? null, task: fields.task ?? null });
     }
   });
   return { entries, malformed };
+}
+
+/**
+ * One triage.log line.
+ * @param {{ date: string, branch: string, level: string, reason: string, commit?: string | null, task?: string | null }} e
+ */
+export function formatTriageLine({ date, branch, level, reason, commit = null, task = null }) {
+  return [date, branch, level, reason.replace(/\s+/g, ' ').trim(), commit && `commit:${commit}`, task && `task:${task}`].filter(Boolean).join(' | ');
+}
+
+/**
+ * The commit the current task of a branch started from: the one on the branch's latest line, or null when that
+ * line has none (written by hand or by an older reins).
+ * @param {TriageEntry[]} entries
+ * @param {string} branch
+ */
+export function taskAnchor(entries, branch) {
+  const mine = entries.filter((e) => e.branch === branch);
+  return mine.length ? mine[mine.length - 1].commit : null;
 }
 
 /** Agent instructions and generated tool files: they change with the work but are not "files of the task". */
@@ -78,11 +106,13 @@ export function suggestLevel(s, t) {
 
 /**
  * triage-missing and triage-mismatch.
+ * With `anchor` (the current task's start commit, see `taskAnchor`), `changedFiles` is the task's diff and only the
+ * lines anchored at that commit count; without it, `changedFiles` is the branch diff and every line of the branch counts.
  * @param {{ branch: string, changedFiles: string[], log: ReturnType<typeof parseTriageLog> | null, logFile: string,
- *   signals: ReturnType<typeof scopeSignals>, thresholds: import('./config.js').DoctorConfig['triage'] }} input
+ *   signals: ReturnType<typeof scopeSignals>, thresholds: import('./config.js').DoctorConfig['triage'], anchor?: string | null }} input
  * @returns {import('../check/shared.js').Violation[]}
  */
-export function checkTriage({ branch, changedFiles, log, logFile, signals, thresholds }) {
+export function checkTriage({ branch, changedFiles, log, logFile, signals, thresholds, anchor = null }) {
   const out = [];
   const add = (rule, key, message, fix) => out.push({ rule, severity: 'warn', key: `${rule}|${key}`, from: logFile, message, fix });
   for (const m of log?.malformed ?? []) {
@@ -93,18 +123,23 @@ export function checkTriage({ branch, changedFiles, log, logFile, signals, thres
   const mine = (log?.entries ?? []).filter((e) => e.branch === branch);
   if (!mine.length) {
     add('triage-missing', branch, `Branch ${branch} has ${changedFiles.length} changed file(s) but no line in ${logFile}.`,
-      `When announcing the task level, append: \`${new Date().toISOString().slice(0, 10)} | ${branch} | <small|medium|large> | <reason>\`.`);
+      'When announcing the task level, run `npx reins triage <small|medium|large> "<reason>"`.');
     return out;
   }
-  // The diff covers the whole branch, so it is compared with the highest level declared on it, not the latest
-  // line: a small task (or a read-only one) after a large one must not make the large diff look undeclared.
-  // On ties the latest line wins, since its reason is the most current.
-  const declared = mine.reduce((best, e) => (rank(e.level) >= rank(best.level) ? e : best));
+  // Tasks anchored at the same commit share the uncommitted diff, so the diff is compared with the highest level
+  // among them, not the latest line: a small task (or a read-only one) after a large one must not make the large
+  // diff look undeclared. Without an anchor the same holds for the whole branch. On ties the latest line wins,
+  // since its reason is the most current.
+  const window = anchor ? mine.filter((e) => e.commit === anchor) : [];
+  const counted = window.length ? window : mine;
+  const declared = counted.reduce((best, e) => (rank(e.level) >= rank(best.level) ? e : best));
   const suggested = suggestLevel(signals, thresholds);
   if (rank(suggested.level) > rank(declared.level)) {
+    const what = window.length ? `Level declared for the current task on ${branch}` : `Highest level declared on ${branch}`;
+    const diff = window.length ? `its diff (since ${anchor.slice(0, 7)})` : 'the diff';
     add('triage-mismatch', branch,
-      `Highest level declared on ${branch} is ${declared.level} (line ${declared.line}: "${declared.reason}"), but the diff looks ${suggested.level}: ${suggested.reasons.join('; ')}.`,
-      `If the task grew, say so and append a new line with level ${suggested.level}. If the thresholds are wrong for this repo, tune .reins/doctor.yml.`);
+      `${what} is ${declared.level} (line ${declared.line}: "${declared.reason}"), but ${diff} looks ${suggested.level}: ${suggested.reasons.join('; ')}.`,
+      `If the task grew, say so and run \`npx reins triage ${suggested.level} "<reason>"\`. If the thresholds are wrong for this repo, tune .reins/doctor.yml.`);
   }
   return out;
 }

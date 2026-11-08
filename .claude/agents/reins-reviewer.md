@@ -15,4 +15,4 @@ tools: Read, Grep, Glob, Bash
 2. Go through `.reins/review/checklist.md` (or `.reins/core/review/checklist.md`), item by item.
 3. Read the notes in `.reins/notes/` for the paths the diff touches.
 
-**Returns:** a list of findings, most important first. Each: file and line, what is wrong, why it matters, suggested fix. Then the checklist items that pass. If you write a report file, write it to `.reins/progress/<branch>/reviewer_<subtask>.md` and reply only `done -> <path>`.
+**Returns:** a list of findings, most important first. Each: file and line, what is wrong, why it matters, suggested fix. Then the checklist items that pass. If you write a report file, write it to `.reins/progress/<branch>/<task>/reviewer_<subtask>.md` (the task's folder) and reply only `done -> <path>`.
