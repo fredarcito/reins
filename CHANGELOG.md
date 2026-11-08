@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0 · 2026-11-09
+
+Every pull request gets a map of how it changes your architecture.
+
+```bash
+npx reins update
+```
+
+- **Architecture map on pull requests** (experimental). On every PR, the reins job posts one comment and edits it on each push: which domains the PR touches, new and removed dependencies between them, dependencies that break a rule, two domains that now use each other, and folders that `architecture.yml` doesn't cover. It reads as a short list ("billing now uses notifications") with a map under it, so a reviewer sees the shape of the change before opening a file. A PR that changes no structure gets one line. Nothing to learn: it shows up by itself.
+- **Turning it on in a repo you already have:** `update` never rewrites your workflow, so ask your agent to add the "Architecture map comment" step from the reins workflow template to `.github/workflows/reins.yml` (the README shows it). New installs get it already.
+- **Turning it off:** add the label `reins:no-map` to one PR, or delete the step to turn it off for the repo.
+- You can see the same comment locally: ask your agent for the architecture map of the branch (`npx reins review --map`).
+- `install` adds `.reins/tmp/` to `.gitignore` (the map builds the base version of the code there and removes it when done).
+
 ## 0.9.0 · 2026-11-08
 
 Several tasks and sessions on one branch, each task checked against its own changes, and reins in Cursor.
