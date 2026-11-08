@@ -1,11 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 · 2026-11-08
+
+Several tasks and sessions on one branch, each task checked against its own changes, and reins in Cursor.
+
+```bash
+npx reins update
+```
+
+Then commit what it changed (`AGENTS.md`, `.reins/core/`, `.claude/`, and the new `.cursor/hooks.json`).
 
 - **Cursor works with reins' hooks.** Cursor runs the hooks `reins sync` writes for Claude Code, so module notes, the task notebook and the impact warning reach Cursor's agent too, and `reins progress` recognizes the Cursor session. `sync` also writes a small `.cursor/hooks.json` (commit it): without it Cursor never runs the session start hook.
 - **Agents no longer skip `reins impact` silently** (Claude Code). When the agent opens a file other code imports and the change would need a higher task level than the one it declared, reins tells it right then to stop, tell you and re-plan. The map behind it is built in the background when the session starts, so nothing gets slower.
-- **Several tasks on one branch.** Each task now has its own notebook, `.reins/progress/<branch>/<task>/notebook.md`, so you can run tasks one after another on `main`, or open several sessions on the same feature ("you do the CSS, you the JS"). A new session no longer receives the previous task's notebook as if it were its own: it sees one line per open task and continues one, or starts its own. Notebooks clean themselves up: a closed task goes a week after closing, and an open one only when its branch is gone. Your current `<branch>.md` notebook keeps working until you close it. Run `npx reins sync` to get the new policy and skills.
-- Agents record the task level with `npx reins triage <level> "<reason>"`, which also notes the commit the task starts from. `reins doctor` then checks **this task's** changes against its level, so on `main` or a long-lived branch an old `large` line no longer hides a bigger task, and an old line no longer makes new work look declared. `reins resume` lists the task's files and removes, by itself, the log lines of deleted branches and of tasks already merged. Old lines without a commit keep working as before. Run `npx reins sync` to get the new rule and policy.
+- **Several tasks on one branch.** Each task now has its own notebook, `.reins/progress/<branch>/<task>/notebook.md`, so you can run tasks one after another on `main`, or open several sessions on the same feature ("you do the CSS, you the JS"). A new session no longer receives the previous task's notebook as if it were its own: it sees one line per open task and continues one, or starts its own. Notebooks clean themselves up: a closed task goes a week after closing, and an open one only when its branch is gone. Your current `<branch>.md` notebook keeps working until you close it.
+- Agents record the task level with `npx reins triage <level> "<reason>"`, which also notes the commit the task starts from. `reins doctor` then checks **this task's** changes against its level, so on `main` or a long-lived branch an old `large` line no longer hides a bigger task, and an old line no longer makes new work look declared. `reins resume` lists the task's files and removes, by itself, the log lines of deleted branches and of tasks already merged. Old lines without a commit keep working as before.
 - `reins update` says which version it installed (`0.8.0 -> 0.8.1`), or that it is still on the same one and why: pnpm 11 waits a day before installing new releases (`minimumReleaseAge`) and reports nothing.
 - When `sync` overwrites a file you edited by hand, it tells you where your change belongs (for example `copy it to .reins/skills/audit/SKILL.md`) instead of pointing to a template inside the reins package.
 - Module notes are no longer delivered twice when the agent reads several files at once, and the record of which notes each session received no longer gets corrupted (which made every session receive its notes again).
