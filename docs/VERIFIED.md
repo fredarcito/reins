@@ -273,14 +273,18 @@ Phase 0b of the PR map ([proposal](proposals/pr-map.md), section 5). 2026-11-08,
 - **Timing, this repo only** (294 files, warm disk, one machine): worktree add ~100 ms, mirror ~7 ms, base analysis ~130 ms, worktree remove ~55 ms; the head graph took 520–860 ms because it is the first analysis of the process. **CI timing is unverified**: it depends on the repo size, a cold runner and a fresh process; measure it on the first real PR run.
 - **Not tested:** a Next fixture or a real repvue-next PR; npm, yarn classic and bun layouts (only pnpm-style and the real-folder case are covered by tests); Yarn PnP beyond the warning; a base commit whose dependencies differ from the head install (the mirror points at the head install by design).
 
-**PR map: unverified until the first real PR run on GitHub** (written, tested locally, never run in Actions):
-- Finding the comment by the marker `<!-- reins:pr-map -->` with `gh api … --paginate --jq`, and editing it in place with `gh api -X PATCH … -F body=@pr-map.md`.
-- That PRs from forks get a read-only token, the step fails and `continue-on-error` keeps the job green.
-- The label condition `!contains(github.event.pull_request.labels.*.name, 'reins:no-map')` and that applying the label skips the step from the next push.
-- Creating the label from the step with `issues: write`, and that `permissions:` at workflow level does not break the existing `check` step.
-- `concurrency` per PR (`cancel-in-progress` only on pull requests), `!cancelled()` as the step condition, the comment written to `$RUNNER_TEMP`, and `sed -n 1p` picking the first marker comment across paginated results.
-- That `fetch-depth: 0` plus `origin/${{ github.base_ref }}` gives a merge base on the runner, and that `git worktree add` works there.
-- Light theme (phase 0a), a real PR comment instead of a gist, and the 65,536-character limit (the renderer caps at 60,000 and is tested with a synthetic 300-domain PR).
+**PR map on GitHub Actions — pass on the first real PR** (2026-11-09, `fredarcito/reins` PR #1, branch from the same repo, two pushes, dark theme, seen by the person):
+- The step ran on `pull_request`, with `fetch-depth: 0`, `origin/main` as base and `git worktree add` on the runner, and `github-actions` posted the comment (short form, "No structural changes", `Compared with origin/main at ad71e46`). The workflow-level `permissions:` did not break the `check` step (3 checks green).
+- Second push: the same comment was **edited in place** ("edited", still one comment), so the marker search (`gh api … --paginate --jq … | sed -n 1p`), the PATCH and the file in `$RUNNER_TEMP` work.
+- Test files outside every layer showed as `6 files outside layers`, not as folders outside `architecture.yml`.
+- **Layout finding:** a map with no edges in `flowchart LR` stacked the boxes in one tall column; with `flowchart TB` (second push) they sit in one row.
+
+**PR map: still unverified on GitHub:**
+- PRs from forks: read-only token, the step fails and `continue-on-error` keeps the job green.
+- The label condition `!contains(github.event.pull_request.labels.*.name, 'reins:no-map')`, and the step creating the label with `issues: write`.
+- `concurrency` racing two quick pushes, and `!cancelled()` on a cancelled run.
+- CI timing of the base graph on a cold runner (not read from the run yet).
+- Light theme, a structural-change comment (new edges, violations, mutual) in a real PR, and the 65,536-character limit (the renderer caps at 60,000 and is tested with a synthetic 300-domain PR).
 - The map-skipped limit (20 structural edges) is an assumption until phase 0c.
 
 ## Still unverified

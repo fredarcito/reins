@@ -37,5 +37,5 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - Never import from `cli` or adapters. Anything adapters need must be exported from `contract/` (that is why `matchesAny` is re-exported there).
 - Integrity findings never go into the baseline and are never marked `baseline`.
 - With `rules:` present, unlisted rules are off except `integrity` (stays `warn` unless explicitly `off`). Unknown config keys are errors on purpose.
-- `renderPrMap` output is fixed byte for byte by the examples: change a template and update the example and the docs together. Node ids are `n1…` in render order, so `linkStyle` indexes are computed, never written by hand.
+- `renderPrMap` output is fixed byte for byte by the examples: change a template and update the example and the docs together. Node ids are `n1…` in render order, so `linkStyle` indexes are computed, never written by hand. A map with no edges is `flowchart TB` on purpose: in `LR` Mermaid stacks loose boxes in one tall column (seen on GitHub, 2026-11-09).
 - With `files` (pre-commit) no stale entries are computed; cycles still use the full graph.

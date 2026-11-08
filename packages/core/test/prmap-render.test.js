@@ -148,8 +148,8 @@ test('render: no analyzed code files means no map and "No code changes"', () => 
   const model = { ...SHORT, fileCount: 0, notAnalyzed: 3, outsideLayers: 1, nodes: [], edges: [], affectedFiles: 0 };
   const text = renderPrMap(model);
   assert.match(text, /\*\*No code changes\*\*/);
-  assert.doesNotMatch(text, /```mermaid|Boxes:|0 files/);
-  assert.match(text, /3 files not analyzed · 1 file outside layers/);
+  assert.doesNotMatch(text, /```mermaid|Boxes:|Files by domain/);
+  assert.match(text, /· 4 files \(4 not on the map: they don't change the architecture\)</);
 });
 
 test('render: a map without edges is drawn top to bottom, so the boxes sit in one row', () => {

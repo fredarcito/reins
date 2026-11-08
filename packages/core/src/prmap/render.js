@@ -263,9 +263,9 @@ function build(model, opts = {}) {
   const touchedText = touchedNames.length > 4 ? plural(touchedNames.length, 'domain') : list(touchedNames);
   const affectedText = affected.length > 4 ? plural(affected.length, 'domain') : list(affected.map((n) => n.name));
   const parts = [`Compared with ${code(model.base.label)} at ${code(model.base.sha)}`];
-  if (model.fileCount > 0 || !(model.notAnalyzed || model.outsideLayers)) parts.push(plural(model.fileCount, 'file'));
-  if (model.notAnalyzed) parts.push(`${plural(model.notAnalyzed, 'file')} not analyzed`);
-  if (model.outsideLayers) parts.push(`${plural(model.outsideLayers, 'file')} outside layers`);
+  // Every changed file, as GitHub counts them; the ones off the map get one short reason, not a list.
+  const offMap = (model.notAnalyzed ?? 0) + (model.outsideLayers ?? 0);
+  parts.push(plural(model.fileCount + offMap, 'file') + (offMap ? ` (${offMap} not on the map: they don't change the architecture)` : ''));
   if (touchedNames.length) parts.push(`touched: ${touchedText}${!full && undrawn > 0 ? ` (+ ${undrawn} more touched)` : ''}`);
   if (affected.length) parts.push(`affected: ${affectedText} (${model.affectedFiles === 1 ? '1 file imports' : `${model.affectedFiles} files import`} changed code)`);
   const context = [`<sub>${parts.join(' · ')}</sub>`];
