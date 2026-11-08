@@ -152,6 +152,14 @@ test('render: no analyzed code files means no map and "No code changes"', () => 
   assert.match(text, /3 files not analyzed · 1 file outside layers/);
 });
 
+test('render: a map without edges is drawn top to bottom, so the boxes sit in one row', () => {
+  const model = { ...SHORT, nodes: [node('cli', 'touched', 5, ['a.ts']), node('core', 'touched', 4, ['b.ts'])], edges: [], affectedFiles: 0, fileCount: 9 };
+  const text = renderPrMap(model);
+  assert.match(text, /\nflowchart TB\n/);
+  assert.doesNotMatch(text, /flowchart LR/);
+  assert.match(renderPrMap(SMALL), /\nflowchart LR\n/, 'with edges the map stays left to right');
+});
+
 test('render: the short form never draws more than 8 touched boxes', () => {
   const touched = Array.from({ length: 12 }, (_, i) => node(`t${String(i).padStart(2, '0')}`, 'touched', 20 - i, ['a.ts']));
   const model = { ...SHORT, nodes: [...touched, node('jobs', 'affected', 0, [], 3)], edges: [edge('jobs', 't11', 'affected'), edge('jobs', 't00', 'affected')], fileCount: 100 };

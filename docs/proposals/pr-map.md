@@ -56,7 +56,7 @@ Two variations remain, and neither is a different map:
 
 ### 3.3 Map
 
-- `flowchart LR`, **no subgraphs**: layer subgraphs made Mermaid stack nodes in tall, crossing columns (tested, rejected).
+- `flowchart LR`, **no subgraphs**: layer subgraphs made Mermaid stack nodes in tall, crossing columns (tested, rejected). A map with no edges uses `flowchart TB`: with `LR`, Mermaid stacked the loose boxes in one tall column (seen on the first real PR, 2026-11-09).
 - The `%%{init}%%` line exactly as in the examples (theme `base`, `curve: basis`, spacing, fonts, colors).
 - Node order: new domains, touched, affected, no-domain, unchanged; alphabetical inside each group. Ids are `n1`, `n2`, … in that order; names only go in labels. Domain names like `end`, `default`, `class`, or names with `-`, `/`, `(`, `[` would break Mermaid as ids.
 - Labels are Markdown strings: `` ("`**name**\nsecond line`") ``. Second line: `N files changed`, `new domain · N files`, `affected · N files`, `not in architecture.yml`, or nothing. Escape backticks and `"` in names; route folders like `app/(auth)/[id]` must render.

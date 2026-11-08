@@ -97,6 +97,8 @@ function mermaid(model, { drawn, edges, byName }) {
     styles.push(`linkStyle ${group.map((_, i) => emitted.length + i).join(',')} ${style}`);
     emitted.push(...group);
   }
+  // Without edges, Mermaid stacks LR boxes in one tall column; TB lays them out in a row.
+  if (!emitted.length) lines[2] = 'flowchart TB';
   if (emitted.length) {
     lines.push('');
     for (const e of emitted) {
