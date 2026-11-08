@@ -32,7 +32,13 @@ pnpm -r publish --dry-run --access public
 
 # 4. Publish (asks for the 2FA code)
 pnpm -r publish --access public
+
+# 5. Tag the release commit (annotated, like every previous release) and push it
+git tag -a v0.x.y -m "Release v0.x.y"
+git push origin main v0.x.y
 ```
+
+Tag after publishing, not before: if the publish fails and you fix something, the tag still points at what was published.
 
 `pnpm -r publish`:
 
