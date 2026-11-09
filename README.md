@@ -44,22 +44,38 @@ reins fixes both:
 
 In the root of your project (Node 22 or newer):
 
-Six steps. Steps 4 and 5 are done by your agent; don't skip them: the draft only describes what exists, and the notes start as templates.
-
-| Step | Run | What you get |
+| Step | You do | What you get |
 | --- | --- | --- |
 | 1 · Install | `npm install -D @agentreins/cli @agentreins/adapter-js` | The CLI and the JavaScript/TypeScript adapter |
-| 2 · Wire | `npx reins install` (`--skip-claude` for a provider-neutral setup) | Git hook, CI job, `AGENTS.md`, `.reins/` |
-| 3 · Draft | `npx reins init` | Architecture plan, baseline, a module note per domain, `init-report.md` |
-| 4 · Review the plan | In Claude Code: **`/reins-arch`**. Other agents: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"* | Your agent proposes layers and domains with evidence, you approve each change, and it drafts the notes of the domains it adds |
-| 5 · Fill in the notes | In Claude Code: **`/reins-notes`**. Other agents: *"fill in the TODO lines of the notes in .reins/notes/"* | Notes that explain each module to the next session |
-| 6 · Freeze and commit | `npx reins check --update-baseline`, then `npx reins check` | Today's violations frozen; from now on, only new ones fail. Commit everything |
+| 2 · Wire | `npx reins install` | Git hook, CI job, `AGENTS.md`, `.reins/` |
+| 3 · Draft | `npx reins init` | Architecture plan, baseline, one note per domain |
+| 4 · Review the plan | `/reins-arch` | Your agent proposes changes; you approve each one |
+| 5 · Fill in the notes | `/reins-notes` | Each module explained for the next session |
+| 6 · Freeze | `npx reins check --update-baseline`, then `npx reins check` | Today's violations frozen; only new ones fail |
+| 7 · Commit | `git commit` | Only now: the pre-commit hook needs the plan |
 
-Commit only after step 6: the pre-commit hook runs `reins check`, which needs the plan from step 3.
+- Steps 4 and 5 are done by your agent; don't skip them. The draft only describes what exists, and the notes start as templates.
+- `/reins-arch` and `/reins-notes` are Claude Code commands. With other agents, ask: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*, then *"fill in the TODO lines of the notes in .reins/notes/"*.
+- For a provider-neutral setup, use `npx reins install --skip-claude`.
 
-Later, after you add or edit a note, skill or agent in `.reins/` (by hand, with `reins notes new` or with `/reins-agent`), run `npx reins sync` so `AGENTS.md` and `.claude/` pick it up. `init` already does it for the notes it drafts.
+Nothing of yours is overwritten: `install` and `init` only add files or ask first. With pnpm, `pnpm add -D`. More: [Installation](#installation) · [Updating](#updating) · a full tour with real output in [`docs/walkthrough.md`](docs/walkthrough.md).
 
-User-owned files are not overwritten: `install` and `init` only add files or ask first; `sync` refreshes its marked/generated files. With pnpm, use `pnpm add -D` for the first line. More options: [Installation](#installation). Already installed? See [Updating](#updating). A full tour with real output: [`docs/walkthrough.md`](docs/walkthrough.md).
+## Common changes
+
+After setup, you ask your agent and it runs the commands. What to ask:
+
+| You want to | Ask your agent | What it does |
+| --- | --- | --- |
+| Add a domain | *"add a domain `auth` with src/routes/signIn and src/routes/resetPassword"*, or `/reins-arch` | Adds it to `architecture.yml`, freezes what it reveals (if you agree), drafts and fills in its note |
+| Change what a domain covers | *"move src/components/pages/x into the domain `y`"* | Edits its `paths`, freezes what it reveals, updates the notes of the domains involved |
+| Remove a domain | *"remove the domain `x` and its note"* | Removes it from `architecture.yml`, updates the baseline, deletes the note |
+| Add a note without a domain | *"create a note for the login flow, covering src/routes/signIn and src/api/auth.js"* | `reins notes new … --name login --paths …`, fills it in |
+| Remove a note | *"delete the note `x`"* | Deletes `.reins/notes/x.md` (and `.reins/notes/x/` with its parts), then `reins sync` |
+| Refresh notes behind their code | `/reins-notes review` | Finds the notes most behind their code and updates them |
+
+- A changed `architecture.yml` shows an `integrity` warning in the pull request. That is expected: explain the change in the PR description.
+- `reins doctor` warns about a domain without a note, so a new domain doesn't stay undocumented.
+- Edited a note, skill or agent by hand? `npx reins sync` puts it in `AGENTS.md` and `.claude/`.
 
 ## Updating
 
@@ -101,7 +117,7 @@ The workflow and skill sources are plain Markdown, independent of a model provid
 ## Contents
 
 - [Without and with reins](#without-and-with-reins) · [Why use it](#why-use-it) · [Quick start](#quick-start)
-- [Updating](#updating) · [Skills for your agent](#skills-for-your-agent)
+- [Common changes](#common-changes) · [Updating](#updating) · [Skills for your agent](#skills-for-your-agent)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works) · [Context between sessions](#context-between-sessions)
 - [Commands](#commands) · [Installation](#installation)

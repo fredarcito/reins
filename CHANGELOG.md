@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Common changes in the README.** A short table of what to ask your agent to add, change or remove a domain or a note, and a setup table you can read at a glance (also on npm).
+
 ## 0.13.0 · 2026-11-09
 
 `init` finds the modules of repos whose routes are thin, and new domains get their notes.

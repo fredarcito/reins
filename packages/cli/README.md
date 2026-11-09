@@ -35,15 +35,38 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 
 In the root of your project:
 
-In the root of your project, after installing the packages. Steps 3 and 4 are done by your agent; don't skip them: the draft only describes what exists, and the notes start as templates.
+| Step | You do | What you get |
+| --- | --- | --- |
+| 1 · Install | `npm install -D @agentreins/cli @agentreins/adapter-js` | The CLI and the JavaScript/TypeScript adapter |
+| 2 · Wire | `npx reins install` | Git hook, CI job, `AGENTS.md`, `.reins/` |
+| 3 · Draft | `npx reins init` | Architecture plan, baseline, one note per domain |
+| 4 · Review the plan | `/reins-arch` | Your agent proposes changes; you approve each one |
+| 5 · Fill in the notes | `/reins-notes` | Each module explained for the next session |
+| 6 · Freeze | `npx reins check --update-baseline`, then `npx reins check` | Today's violations frozen; only new ones fail |
+| 7 · Commit | `git commit` | Only now: the pre-commit hook needs the plan |
 
-1. **Wire it:** `npx reins install`. Git hook, CI job, `AGENTS.md`, `.reins/core/`, `.claude/` (`--skip-claude` to omit it).
-2. **Draft:** `npx reins init`. Architecture plan, baseline, a module note per domain and a review report.
-3. **Review the plan with your agent.** In Claude Code, type **`/reins-arch`**: your agent proposes changes with evidence, you approve each one, and it drafts the notes of the domains it adds. With other agents, ask *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*.
-4. **Fill in the notes with your agent.** In Claude Code, type **`/reins-notes`**; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
-5. **Freeze and commit:** `npx reins check --update-baseline` freezes today's violations, `npx reins check` must pass, then commit everything. Not before: the pre-commit hook runs `reins check`, which needs the plan.
+- Steps 4 and 5 are done by your agent; don't skip them. The draft only describes what exists, and the notes start as templates.
+- `/reins-arch` and `/reins-notes` are Claude Code commands. With other agents, ask: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*, then *"fill in the TODO lines of the notes in .reins/notes/"*.
+- For a provider-neutral setup, use `npx reins install --skip-claude`.
 
-From then on, only new violations fail. Nothing is overwritten: `install` and `init` only add files or ask first (`--dry-run` shows what they would do).
+Nothing is overwritten: `install` and `init` only add files or ask first (`--dry-run` shows what they would do).
+
+## Common changes
+
+After setup, you ask your agent and it runs the commands. What to ask:
+
+| You want to | Ask your agent | What it does |
+| --- | --- | --- |
+| Add a domain | *"add a domain `auth` with src/routes/signIn and src/routes/resetPassword"*, or `/reins-arch` | Adds it to `architecture.yml`, freezes what it reveals (if you agree), drafts and fills in its note |
+| Change what a domain covers | *"move src/components/pages/x into the domain `y`"* | Edits its `paths`, freezes what it reveals, updates the notes of the domains involved |
+| Remove a domain | *"remove the domain `x` and its note"* | Removes it from `architecture.yml`, updates the baseline, deletes the note |
+| Add a note without a domain | *"create a note for the login flow, covering src/routes/signIn and src/api/auth.js"* | `reins notes new … --name login --paths …`, fills it in |
+| Remove a note | *"delete the note `x`"* | Deletes `.reins/notes/x.md` (and `.reins/notes/x/` with its parts), then `reins sync` |
+| Refresh notes behind their code | `/reins-notes review` | Finds the notes most behind their code and updates them |
+
+- A changed `architecture.yml` shows an `integrity` warning in the pull request. That is expected: explain the change in the PR description.
+- `reins doctor` warns about a domain without a note, so a new domain doesn't stay undocumented.
+- Edited a note, skill or agent by hand? `npx reins sync` puts it in `AGENTS.md` and `.claude/`.
 
 ## What you get
 
