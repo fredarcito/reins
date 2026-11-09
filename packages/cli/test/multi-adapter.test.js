@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyze } from '../src/commands/check.js';
-import { cli, tempDir } from './helpers.js';
+import { cli, exampleRepo, tempDir } from './helpers.js';
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
 
 /** A fake adapter package `reins-adapter-<name>` whose module body is `body`. */
 const adapterPkg = (name, body) => ({
@@ -50,4 +52,23 @@ test('several adapters: a rule id declared by two adapters is refused', async ()
   const twin = adapterPkg('twin', `export default { name: 'twin', contract: 1, rules: ['native-rule'], detect: () => true, graph: () => [], evaluate: () => [] };`);
   const dir = tempDir({ ...native, ...twin, '.reins/architecture.yml': 'version: 1\nadapters: [native, twin]\n' });
   await assert.rejects(analyze(dir, {}), /reins-adapter-native and reins-adapter-twin both declare rule "native-rule"/);
+});
+
+test('several adapters: a preset no adapter lists is refused, with each adapter\'s presets', async () => {
+  const dir = tempDir({ ...web, ...native, '.reins/architecture.yml': yml.replace('preset: spa', 'preset: sap') });
+  await assert.rejects(analyze(dir, {}), /preset "sap" is not a preset of any adapter \(web: spa; native: none\)/);
+});
+
+test('several adapters: an adapter may not declare a core rule', async () => {
+  const bad = adapterPkg('bad', `export default { name: 'bad', contract: 1, rules: ['no-cycles'], detect: () => true, graph: () => [], evaluate: () => [] };`);
+  const dir = tempDir({ ...web, ...bad, '.reins/architecture.yml': 'version: 1\nadapters: [web, bad]\n' });
+  await assert.rejects(analyze(dir, {}), /reins-adapter-bad declares rule "no-cycles", which is a core rule/);
+});
+
+test('init refuses a plan that lists several adapters instead of redrafting it for one', async () => {
+  const dir = exampleRepo('vite-react');
+  writeFileSync(path.join(dir, '.reins/architecture.yml'), 'version: 1\nadapters: [js, rust]\n');
+  const r = await cli(dir, ['init', '--force']);
+  assert.equal(r.code, 2);
+  assert.match(r.stderr, /lists several adapters, and init drafts a plan for one/);
 });

@@ -39,7 +39,7 @@ allow:
 | --- | --- | --- |
 | `version` | yes | Format version. Must be `1` |
 | `adapters` | yes | List of adapter names, e.g. `[js]`, or `[js, rust]` for a repo with several languages (see [Several languages](#several-languages-in-one-repo)). For each name the CLI looks for `@agentreins/adapter-<name>`, then `reins-adapter-<name>`. Plans from reins 0.11.0 or older said `adapter: js`; `reins update` rewrites it |
-| `preset` | no | Preset of the adapter (with several adapters, only the one that has this preset receives it) |
+| `preset` | no | Preset of the adapter (with several adapters, only the one that has this preset receives it; a preset no adapter has is an error) |
 | `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |
 | `domains` | no | Map of name → `{ paths, public_api }` |

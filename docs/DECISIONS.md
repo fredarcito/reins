@@ -395,7 +395,7 @@ A team with a Tauri app (React in `src/`, Rust in `src-tauri/`) asked to cover b
 | One plan, one baseline, one merged graph | Layers and domains are paths, so they need no language. Two plans would split the baseline and make `impact` and `scope` merge results |
 | No `root:` per adapter: each adapter gets the repo root and finds its own files | Avoids rewriting paths between adapters. A `{ name, root }` form can come if two adapters ever claim the same files |
 | Each adapter's `evaluate` sees only its own graph; duplicate rule ids are refused | An adapter rule only understands its language; one id in `rules:` must mean one thing |
-| `preset` goes only to the adapter that lists it | `adapter-js` throws on an unknown preset, so a Rust preset would break the JS graph |
+| `preset` goes only to the adapter that lists it; a preset no adapter lists is an error | `adapter-js` throws on an unknown preset, so a Rust preset would break the JS graph. Without the error, a typo would be dropped silently and the graph built without the preset's entry points |
 | `init` still drafts for one adapter, and refuses a plan that lists several | Only `js` can be detected today; detecting several waits for a second real adapter |
 | The adapter contract did not change (still version 1) | Everything happens in the CLI |
 

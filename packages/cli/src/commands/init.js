@@ -33,11 +33,6 @@ Options:
   --dry-run        Print the draft and the report, write nothing
   --force          Overwrite existing files without asking`;
 
-/**
- * @param {{ root: string, values: Record<string, any>, out: (s: string) => void, err: (s: string) => void,
- *   adapterSearchPaths?: string[], confirm?: (question: string) => Promise<boolean>, today?: string }} ctx
- * @returns {Promise<number>}
- */
 /** Adapter names in an existing architecture.yml; none when it can't be read as YAML. */
 function declaredAdapters(text) {
   try {
@@ -47,6 +42,11 @@ function declaredAdapters(text) {
   }
 }
 
+/**
+ * @param {{ root: string, values: Record<string, any>, out: (s: string) => void, err: (s: string) => void,
+ *   adapterSearchPaths?: string[], confirm?: (question: string) => Promise<boolean>, today?: string }} ctx
+ * @returns {Promise<number>}
+ */
 export async function init(ctx) {
   const { root, values, out } = ctx;
   const date = ctx.today ?? new Date().toISOString().slice(0, 10);

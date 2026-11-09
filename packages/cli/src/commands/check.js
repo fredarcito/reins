@@ -77,6 +77,7 @@ export async function analyze(root, adapterOpts, over = {}) {
     if (!names.length) parseConfig(text, { file: ARCHITECTURE_FILE }); // reports the missing or invalid adapter key properly
     for (const name of names) loaded.push(await resolveAdapter(root, name, adapterOpts));
     config = parseConfig(text, { file: ARCHITECTURE_FILE, knownRules: knownRulesOf(loaded) });
+    checkPreset(config, loaded);
   } catch (e) {
     if (e instanceof ConfigError) throw new CliError(e.message);
     throw e;
@@ -107,6 +108,18 @@ export function knownRulesOf(loaded) {
     }
   }
   return [...CORE_RULES, ...owner.keys()];
+}
+
+/**
+ * With several adapters, `preset` reaches only the adapter that lists it, so a preset no adapter lists (a typo) would be
+ * dropped silently. With one adapter, the adapter itself reports an unknown preset, as before.
+ * @param {import('@agentreins/core').Config} config
+ * @param {LoadedAdapter[]} loaded
+ */
+function checkPreset(config, loaded) {
+  if (!config.preset || loaded.length < 2 || loaded.some(({ adapter }) => (adapter.presets ?? []).includes(config.preset))) return;
+  const known = loaded.map(({ adapter }) => `${adapter.name}: ${(adapter.presets ?? []).join(', ') || 'none'}`).join('; ');
+  throw new CliError(`${ARCHITECTURE_FILE}: preset "${config.preset}" is not a preset of any adapter (${known}).`);
 }
 
 /**
