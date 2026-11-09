@@ -55,7 +55,7 @@ Then commit everything. Nothing is overwritten: `install` and `init` only add fi
 
 ```yaml
 version: 1
-adapter: js
+adapters: [js]
 preset: next-app
 
 layers:               # top to bottom: a layer only imports from itself and the layers below

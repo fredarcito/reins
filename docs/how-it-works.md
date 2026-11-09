@@ -205,7 +205,7 @@ Example `architecture.yml`:
 
 ```yaml
 version: 1
-adapter: js
+adapters: [js]
 preset: next-app
 
 layers:                       # each layer may only import from the layers below it

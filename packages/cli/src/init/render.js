@@ -15,7 +15,7 @@ export function renderArchitecture(d) {
     '# The code shows what exists, not what should exist: review layers and domains before committing.',
     '# Reference: docs/architecture-yml.md in reins repo.',
     'version: 1',
-    `adapter: ${key(d.adapter)}`,
+    `adapters: [${key(d.adapter)}]`,
     `preset: ${key(d.preset)}`,
     '',
     '# Top to bottom: a layer may only import from itself and the layers below it.',

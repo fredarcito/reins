@@ -4,10 +4,10 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import {
-  parseConfig, ConfigError, CORE_RULES, runCheck, emptyBaseline, impactOf, prStructure, renderPrMap,
+  parseConfig, ConfigError, runCheck, emptyBaseline, impactOf, prStructure, renderPrMap,
 } from '@agentreins/core';
 import { ARCHITECTURE_FILE, REINS_DIR, CliError } from './context.js';
-import { analyze, pickBaseRef } from './commands/check.js';
+import { analyze, knownRulesOf, pickBaseRef } from './commands/check.js';
 
 export const TMP_DIR = `${REINS_DIR}/tmp`;
 const CHECKOUT_PREFIX = 'pr-map-base-';
@@ -133,7 +133,7 @@ export async function buildPrMap(ctx) {
 
   // domains of the base architecture.yml. Missing there: every head domain is new. Unreadable: say so, report none.
   const baseText = tryGit(root, ['show', `${mergeBase}:${ARCHITECTURE_FILE}`]);
-  const knownRules = [...CORE_RULES, ...(head.adapter.rules ?? [])];
+  const knownRules = knownRulesOf(head.loaded);
   let baseConfig = baseText === null ? null : parseAt(baseText, knownRules);
   let baseDomainNames = [];
   if (baseText !== null && !baseConfig) {
@@ -145,8 +145,8 @@ export async function buildPrMap(ctx) {
   // The base graph is built by the HEAD adapter and config, never by whatever the checkout resolves: a PR that changes
   // the adapter (or the config) must not look like a change in the code's structure.
   const base = await withCheckout(root, mergeBase, async (dir) => {
-    if (head.adapter.prepareCheckout) warnings.push(...(await head.adapter.prepareCheckout(dir, root)).warnings);
-    return analyze(dir, { searchPaths }, { loaded: { adapter: head.adapter, packageName: head.packageName }, config: head.config });
+    for (const { adapter } of head.loaded) if (adapter.prepareCheckout) warnings.push(...(await adapter.prepareCheckout(dir, root)).warnings);
+    return analyze(dir, { searchPaths }, { loaded: head.loaded, config: head.config });
   });
   warnings.push(...base.graph.warnings.map((w) => `base: ${w}`));
 

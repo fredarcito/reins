@@ -99,7 +99,7 @@ AGENTS.md                      comandos, reglas de oro, índice ruta → nota (g
 CLAUDE.md                      una línea: @AGENTS.md
 
 .harness/
-├── architecture.yml           adapter: js · preset · capas · dominios · reglas · excepciones
+├── architecture.yml           adapters: [js] · preset · capas · dominios · reglas · excepciones
 ├── baseline.json              violaciones existentes congeladas
 ├── doctor.yml                 umbrales del doctor (separados del plano)
 ├── notes/<módulo>.md          frontmatter: paths (en git)
@@ -151,7 +151,7 @@ Define capas (cada una solo importa de las inferiores), dominios con su API púb
 
 ```yaml
 version: 1
-adapter: js
+adapters: [js]
 preset: next-app
 
 layers:

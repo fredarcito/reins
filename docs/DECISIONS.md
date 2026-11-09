@@ -384,6 +384,21 @@ An agent told "close it" ran `reins progress close` straight away and skipped th
 | `--notes-ok "<why>"` closes anyway and writes the reason into the notebook | Some flagged notes need nothing (a version bump touches `package.json`); the reason makes the skip visible instead of a bare `--force` |
 | Not gated: tests, `reins check`, the reply to the person | reins can't tell whether the agent ran them; the skill still asks for them |
 
+## Several adapters in one repo (2026-11-09)
+
+A team with a Tauri app (React in `src/`, Rust in `src-tauri/`) asked to cover both halves. `architecture.yml` named a single adapter.
+
+| Decision | Why |
+| --- | --- |
+| `adapters:` is always a list, even with one adapter: `init` writes `adapters: [js]` | Adding a language is adding a name to a list that is already there, so neither the person nor the agent has to know a second form |
+| `sync` (so `reins update`) rewrites `adapter: js` as `adapters: [js]`, and `check` refuses the old key with that fix | One valid form instead of two to maintain. Upgrades that skip `sync` (Dependabot, `npm update`) get the exact fix, not a generic "unknown key". This is the first edit reins makes to `architecture.yml`: only the line, shown in the diff, and the README promise now says so. The first PR map after the migration warns once that the base plan could not be read |
+| One plan, one baseline, one merged graph | Layers and domains are paths, so they need no language. Two plans would split the baseline and make `impact` and `scope` merge results |
+| No `root:` per adapter: each adapter gets the repo root and finds its own files | Avoids rewriting paths between adapters. A `{ name, root }` form can come if two adapters ever claim the same files |
+| Each adapter's `evaluate` sees only its own graph; duplicate rule ids are refused | An adapter rule only understands its language; one id in `rules:` must mean one thing |
+| `preset` goes only to the adapter that lists it | `adapter-js` throws on an unknown preset, so a Rust preset would break the JS graph |
+| `init` still drafts for one adapter, and refuses a plan that lists several | Only `js` can be detected today; detecting several waits for a second real adapter |
+| The adapter contract did not change (still version 1) | Everything happens in the CLI |
+
 ## Open
 
 - **Agent adapters for Codex and Cursor (proposed 2026-11-08):** [`proposals/agent-adapters.md`](proposals/agent-adapters.md). All logic stays in the CLI; each agent gets a generated adapter that only translates hook config and payloads.

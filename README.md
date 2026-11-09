@@ -71,7 +71,7 @@ npx reins check
 npx reins notes stale     # notes that fell behind their code (no tokens); review the top ones with /reins-notes review
 ```
 
-`reins update` uses your package manager (pnpm, yarn, bun or npm). Your own files, `architecture.yml`, `baseline.json` and your notes are never touched. Read the [changelog](CHANGELOG.md) entry of each version you skipped, then commit what changed (`.reins/`, `.claude/`, `AGENTS.md`).
+`reins update` uses your package manager (pnpm, yarn, bun or npm). Your own files, `baseline.json` and your notes are never touched; `architecture.yml` only gets format migrations, which show up in the diff (the changelog says when). Read the [changelog](CHANGELOG.md) entry of each version you skipped, then commit what changed (`.reins/`, `.claude/`, `AGENTS.md`).
 
 ```mermaid
 flowchart LR
@@ -281,6 +281,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | `reins init`: draft plan, baseline and report | stable | ✅ |
 | `adapter-js`: Vite + React and Next, JS or TS, `@/` aliases | stable | ✅ tested on [`examples/`](examples/) |
 | `next-server-client` rule | stable (optional) | ✅ |
+| Several languages in one repo (`adapters: [js, rust]`) | experimental | ✅ one plan and one baseline for every language; the Rust adapter comes next |
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
 | `reins install`, `reins update` | experimental | ✅ install tested with npm and pnpm; update package-manager selection tested in dry-run; shared `AGENTS.md` workflow does not require Claude Code |
 | `reins sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |

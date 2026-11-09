@@ -61,7 +61,7 @@ test('checkIntegrity compares the working tree with the merge base of the base r
   assert.equal(found.length, 1);
   assert.equal(found[0].severity, 'error');
   assert.match(found[0].message, /gained 1 violation\(s\) compared to main: k9/);
-  writeFileSync(path.join(dir, files.architecture), 'version: 1\nadapter: js\n'); // uncommitted change counts too
+  writeFileSync(path.join(dir, files.architecture), 'version: 1\nadapters: [js]\n'); // uncommitted change counts too
   assert.equal(run().length, 2);
 });
 

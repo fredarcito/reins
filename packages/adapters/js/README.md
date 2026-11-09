@@ -15,7 +15,7 @@ npx reins install
 npx reins init
 ```
 
-You never import this package yourself: the `reins` command finds it from `adapter: js` in `.reins/architecture.yml`.
+You never import this package yourself: the `reins` command finds it from `adapters: [js]` in `.reins/architecture.yml`.
 
 ## Supported projects
 

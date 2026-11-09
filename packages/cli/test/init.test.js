@@ -29,6 +29,7 @@ test('next-app: the draft proposes TS settings and the Next rule; the report lis
   const dir = exampleRepo('next-app', { keepReins: false });
   await cli(dir, ['init']);
   const yml = read(dir, '.reins/architecture.yml');
+  assert.match(yml, /^adapters: \[js\]$/m);
   assert.match(yml, /- \{ id: layer-direction, severity: error, ignore_kinds: \[type\] \}/);
   assert.match(yml, /- \{ id: next-server-client, severity: warn \}/);
   assert.match(yml, /orders: \{ paths: \["src\/features\/orders\/\*\*"\], public_api: \["src\/features\/orders\/index\.ts"\] \}/);

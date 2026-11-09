@@ -3,8 +3,9 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { parseDocument } from 'yaml';
 import {
-  CORE_RULES, parseConfig, ConfigError, runCheck, normalizeGraph, validateEdges,
+  CORE_RULES, adapterNamesOf, parseConfig, ConfigError, runCheck, normalizeGraph, validateEdges,
   parseBaseline, emptyBaseline, createBaseline, serializeBaseline, checkIntegrity, formatText, formatJson,
 } from '@agentreins/core';
 import { resolveAdapter } from '../adapter.js';
@@ -50,12 +51,17 @@ export function pickBaseRef(root, explicit, env = process.env) {
 }
 
 /**
- * Loads config + adapter and computes every violation. Shared by `check` and `init`.
+ * @typedef {{ adapter: import('@agentreins/core/contract').Adapter, packageName: string }} LoadedAdapter
+ */
+
+/**
+ * Loads config + adapters and computes every violation. Shared by `check`, `init`, `impact`, `notes` and the PR map.
  * @param {string} root
  * @param {{ searchPaths?: string[] }} adapterOpts
- * @param {{ configText?: string, loaded?: { adapter: import('@agentreins/core/contract').Adapter, packageName: string }, config?: import('@agentreins/core').Config }} [over]
- *   `configText`: use this architecture.yml text instead of the file. `loaded` + `config`: analyze `root` with an adapter and
- *   config that are already loaded (the PR map's base checkout must use the head's adapter, never the one inside the checkout)
+ * @param {{ configText?: string, loaded?: LoadedAdapter[], config?: import('@agentreins/core').Config }} [over]
+ *   `configText`: use this architecture.yml text instead of the file. `loaded` + `config`: analyze `root` with adapters and
+ *   config that are already loaded (the PR map's base checkout must use the head's adapters, never the ones inside the checkout)
+ * @returns {Promise<{ config: import('@agentreins/core').Config, loaded: LoadedAdapter[], graph: ReturnType<typeof normalizeGraph>, extra: any[] }>}
  */
 export async function analyze(root, adapterOpts, over = {}) {
   if (over.loaded && over.config) return analyzeWith(root, over.loaded, over.config);
@@ -64,13 +70,13 @@ export async function analyze(root, adapterOpts, over = {}) {
     throw new CliError(`${ARCHITECTURE_FILE} not found. Run \`reins init\` to draft it.`);
   }
   const text = over.configText ?? readFileSync(file, 'utf8');
-  const adapterName = /^adapter:\s*["']?([\w-]+)/m.exec(text)?.[1];
   let config;
-  let loaded;
+  const loaded = [];
   try {
-    if (!adapterName) parseConfig(text, { file: ARCHITECTURE_FILE }); // reports the missing adapter key properly
-    loaded = await resolveAdapter(root, adapterName, adapterOpts);
-    config = parseConfig(text, { file: ARCHITECTURE_FILE, knownRules: [...CORE_RULES, ...(loaded.adapter.rules ?? [])] });
+    const names = adapterNamesOf(parseYaml(text));
+    if (!names.length) parseConfig(text, { file: ARCHITECTURE_FILE }); // reports the missing or invalid adapter key properly
+    for (const name of names) loaded.push(await resolveAdapter(root, name, adapterOpts));
+    config = parseConfig(text, { file: ARCHITECTURE_FILE, knownRules: knownRulesOf(loaded) });
   } catch (e) {
     if (e instanceof ConfigError) throw new CliError(e.message);
     throw e;
@@ -78,18 +84,66 @@ export async function analyze(root, adapterOpts, over = {}) {
   return analyzeWith(root, loaded, config);
 }
 
-async function analyzeWith(root, loaded, config) {
-  const { adapter } = loaded;
-  let graph;
+/** The architecture.yml text as plain data, or null when it is not valid YAML (parseConfig then reports why). */
+function parseYaml(text) {
   try {
-    graph = normalizeGraph(await adapter.graph(root, config));
-  } catch (e) {
-    throw new CliError(e.message);
+    return parseDocument(text).toJS();
+  } catch {
+    return null;
   }
-  const bad = validateEdges(graph.edges);
-  if (bad.length) throw new CliError(`${loaded.packageName} returned an invalid graph:\n${bad.map((p) => `  - ${p}`).join('\n')}`);
-  const extra = adapter.evaluate ? await adapter.evaluate(root, config, graph) : [];
-  return { config, adapter, packageName: loaded.packageName, graph, extra };
+}
+
+/**
+ * Core rules plus every adapter's rules. Two adapters declaring the same rule id would make `rules:` ambiguous.
+ * @param {LoadedAdapter[]} loaded
+ */
+export function knownRulesOf(loaded) {
+  const owner = new Map();
+  for (const { adapter, packageName } of loaded) {
+    for (const id of adapter.rules ?? []) {
+      if (CORE_RULES.includes(id)) throw new CliError(`${packageName} declares rule "${id}", which is a core rule.`);
+      if (owner.has(id)) throw new CliError(`${owner.get(id)} and ${packageName} both declare rule "${id}": a rule id must belong to one adapter.`);
+      owner.set(id, packageName);
+    }
+  }
+  return [...CORE_RULES, ...owner.keys()];
+}
+
+/**
+ * The config one adapter sees: `preset` names one adapter's preset, so the others don't get it.
+ * @param {import('@agentreins/core/contract').Adapter} adapter
+ * @param {import('@agentreins/core').Config} config
+ */
+function configFor(adapter, config) {
+  if (!config.preset || config.adapters.length < 2 || (adapter.presets ?? []).includes(config.preset)) return config;
+  const { preset, ...rest } = config;
+  return rest;
+}
+
+/**
+ * Builds each adapter's graph, runs its own rules on its own graph, and merges the results for the core.
+ * @param {string} root
+ * @param {LoadedAdapter[]} loaded
+ * @param {import('@agentreins/core').Config} config
+ */
+async function analyzeWith(root, loaded, config) {
+  const graph = { edges: [], files: [], entries: [], warnings: [], barrels: [], uses: [] };
+  const extra = [];
+  for (const { adapter, packageName } of loaded) {
+    const own = configFor(adapter, config);
+    let g;
+    try {
+      g = normalizeGraph(await adapter.graph(root, own));
+    } catch (e) {
+      throw new CliError(e.message);
+    }
+    const bad = validateEdges(g.edges);
+    if (bad.length) throw new CliError(`${packageName} returned an invalid graph:\n${bad.map((p) => `  - ${p}`).join('\n')}`);
+    for (const k of Object.keys(graph)) graph[k].push(...g[k]);
+    if (adapter.evaluate) extra.push(...(await adapter.evaluate(root, own, g)));
+  }
+  if (loaded.length > 1) for (const k of ['files', 'entries', 'barrels', 'warnings']) graph[k] = [...new Set(graph[k])];
+  return { config, loaded, graph, extra };
 }
 
 /**

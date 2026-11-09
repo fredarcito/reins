@@ -20,7 +20,7 @@ flowchart LR
 import { CONTRACT_VERSION } from '@agentreins/core/contract';
 
 export default {
-  name: 'js',                    // matches `adapter:` in architecture.yml
+  name: 'js',                    // matches an entry of `adapters:` in architecture.yml
   contract: CONTRACT_VERSION,    // 1
   detect(repoPath) {},           // boolean (or Promise): does this adapter apply?
   graph(repoPath, config) {},    // GraphResult (or Promise)
@@ -34,6 +34,8 @@ export default {
 ```
 
 Without `presets`/`loadPreset`, `reins init` can't draft a plan and asks the user to write `architecture.yml` by hand; `check` works the same.
+
+In a repo with several adapters (`adapters: [js, rust]`), every adapter gets the repo root and must return only the files of its language. Rule ids must not collide with another adapter's, and `config.preset` is left out unless the preset is in the adapter's `presets`.
 
 `validateAdapter()` from `@agentreins/core/contract` checks this shape; the CLI refuses an adapter that fails it.
 

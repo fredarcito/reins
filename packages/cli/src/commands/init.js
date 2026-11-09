@@ -3,7 +3,8 @@
 // Never overwrites existing files without confirmation (or --force).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, parentNoteFile, pathsInside, NOTES_DIR } from '@agentreins/core';
+import { parseDocument } from 'yaml';
+import { adapterNamesOf, normalizeGraph, runCheck, emptyBaseline, createBaseline, serializeBaseline, matchesAny, notesFor, parentNoteFile, pathsInside, NOTES_DIR } from '@agentreins/core';
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
@@ -37,14 +38,26 @@ Options:
  *   adapterSearchPaths?: string[], confirm?: (question: string) => Promise<boolean>, today?: string }} ctx
  * @returns {Promise<number>}
  */
+/** Adapter names in an existing architecture.yml; none when it can't be read as YAML. */
+function declaredAdapters(text) {
+  try {
+    return adapterNamesOf(parseDocument(text).toJS());
+  } catch {
+    return [];
+  }
+}
+
 export async function init(ctx) {
   const { root, values, out } = ctx;
   const date = ctx.today ?? new Date().toISOString().slice(0, 10);
 
   // 1. Adapter: from an existing architecture.yml, or guessed from marker files. Never installed here.
   const existing = path.join(root, ARCHITECTURE_FILE);
-  const adapterName =
-    (existsSync(existing) && /^adapter:\s*["']?([\w-]+)/m.exec(readFileSync(existing, 'utf8'))?.[1]) || guessAdapterName(root);
+  const declared = existsSync(existing) ? declaredAdapters(readFileSync(existing, 'utf8')) : [];
+  if (declared.length > 1) {
+    throw new CliError(`${ARCHITECTURE_FILE} lists several adapters, and init drafts a plan for one. Edit the plan by hand (in Claude Code: /reins-arch).`);
+  }
+  const adapterName = declared[0] || guessAdapterName(root);
   if (!adapterName) throw new CliError('Could not tell which adapter this repo needs (no package.json found). Only JavaScript/TypeScript repos are supported for now.');
   const { adapter, packageName } = await resolveAdapter(root, adapterName, { searchPaths: ctx.adapterSearchPaths });
   const detected = await adapter.detect(root);

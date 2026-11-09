@@ -17,6 +17,8 @@ npx reins notes stale
 
 The shared workflow is provider-neutral: reins stores its rules in Markdown, exposes them through `AGENTS.md`, and gives any coding agent the same CLI commands. `reins update` uses the project's package manager (pnpm, yarn, bun, or npm), updates the CLI and installed `@agentreins/adapter-*` packages, then runs the newly installed `reins sync`. Use `--skip-claude` to update only the shared core and leave Claude Code files untouched.
 
+`sync` never edits your `architecture.yml` except for format migrations, shown in the diff: so far one, `adapter: js` → `adapters: [js]` (after 0.11.0).
+
 Then read the [changelog](../CHANGELOG.md) entry of each version you skipped: it says when something else is worth doing, such as running `reins init --dry-run` again to compare its proposal with your `architecture.yml`.
 
 ```mermaid

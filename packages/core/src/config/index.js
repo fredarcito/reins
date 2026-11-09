@@ -14,7 +14,7 @@ const DEFAULT_SEVERITY_WHEN_NO_RULES = { 'layer-direction': 'error', 'domain-bou
 /** `integrity` is on unless turned off explicitly; the other rules must be listed. */
 const DEFAULT_SEVERITY_WHEN_UNLISTED = { integrity: 'warn' };
 
-const TOP_KEYS = ['version', 'adapter', 'preset', 'ignore', 'layers', 'domains', 'rules', 'allow'];
+const TOP_KEYS = ['version', 'adapters', 'preset', 'ignore', 'layers', 'domains', 'rules', 'allow'];
 const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'];
 
 /**
@@ -24,7 +24,7 @@ const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'
  * @typedef {{ from: string, to: string, reason: string, rule?: string }} Allow
  * @typedef {object} Config
  * @property {number} version
- * @property {string} adapter
+ * @property {string[]} adapters  e.g. ["js"] or ["js", "rust"]
  * @property {string} [preset]
  * @property {string[]} ignore  globs of files left out of the analysis (generated code, fixtures…)
  * @property {Layer[]} layers   ordered from top (may import anything below) to bottom
@@ -47,9 +47,20 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStrList = (v) => Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === 'string' && s.length > 0);
 
 /**
+ * Adapter names declared in an already parsed architecture.yml (`adapters: [js, rust]`), best effort:
+ * the CLI needs them before validating, because the adapters' own rules are part of what is valid.
+ * @param {unknown} raw
+ * @returns {string[]}
+ */
+export function adapterNamesOf(raw) {
+  if (!isObj(raw)) return [];
+  return Array.isArray(raw.adapters) ? raw.adapters.filter((s) => typeof s === 'string' && s.length > 0) : [];
+}
+
+/**
  * Validates an already parsed architecture.yml.
  * @param {unknown} raw
- * @param {{ knownRules?: readonly string[] }} [opts] knownRules: core rules plus the adapter's rules
+ * @param {{ knownRules?: readonly string[] }} [opts] knownRules: core rules plus the adapters' rules
  * @returns {{ config: Config | null, problems: string[] }}
  */
 export function validateConfig(raw, opts = {}) {
@@ -58,10 +69,17 @@ export function validateConfig(raw, opts = {}) {
   const p = (msg) => problems.push(msg);
   if (!isObj(raw)) return { config: null, problems: ['the file must be a YAML mapping (key: value)'] };
 
-  for (const k of Object.keys(raw)) if (!TOP_KEYS.includes(k)) p(`${k}: unknown key (expected one of: ${TOP_KEYS.join(', ')})`);
+  for (const k of Object.keys(raw)) {
+    if (k === 'adapter') p('adapter: this key is now a list, e.g. "adapters: [js]". Run `npx reins update` (it rewrites the line), or change it by hand');
+    else if (!TOP_KEYS.includes(k)) p(`${k}: unknown key (expected one of: ${TOP_KEYS.join(', ')})`);
+  }
 
   if (raw.version !== CONFIG_VERSION) p(`version: expected ${CONFIG_VERSION}, got ${JSON.stringify(raw.version)}`);
-  if (typeof raw.adapter !== 'string' || !raw.adapter) p('adapter: required, e.g. "adapter: js"');
+  const adapters = adapterNamesOf(raw);
+  if (raw.adapters === undefined) {
+    if (raw.adapter === undefined) p('adapters: required, e.g. "adapters: [js]"');
+  } else if (!isStrList(raw.adapters)) p('adapters: expected a non-empty list of adapter names, e.g. [js, rust]');
+  else if (new Set(raw.adapters).size !== raw.adapters.length) p('adapters: an adapter is listed twice');
   if (raw.preset !== undefined && (typeof raw.preset !== 'string' || !raw.preset)) p('preset: must be a string');
   if (raw.ignore !== undefined && !isStrList(raw.ignore)) p('ignore: expected a non-empty list of globs, e.g. ["src/generated/**"]');
 
@@ -153,7 +171,7 @@ export function validateConfig(raw, opts = {}) {
 
   if (problems.length) return { config: null, problems };
   return {
-    config: { version: raw.version, adapter: raw.adapter, ...(raw.preset ? { preset: raw.preset } : {}), ignore: isStrList(raw.ignore) ? raw.ignore : [], layers, domains, rules, allow },
+    config: { version: raw.version, adapters, ...(raw.preset ? { preset: raw.preset } : {}), ignore: isStrList(raw.ignore) ? raw.ignore : [], layers, domains, rules, allow },
     problems,
   };
 }

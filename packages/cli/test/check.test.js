@@ -87,7 +87,7 @@ test('exit 2 with a clear message: no architecture.yml, invalid config, bad opti
   assert.equal(none.code, 2);
   assert.match(none.stderr, /architecture\.yml not found\. Run `reins init`/);
 
-  const bad = tempDir({ 'package.json': '{}', '.reins/architecture.yml': 'version: 1\nadapter: js\nlayers: oops\n' });
+  const bad = tempDir({ 'package.json': '{}', '.reins/architecture.yml': 'version: 1\nadapters: [js]\nlayers: oops\n' });
   const invalid = await cli(bad, ['check']);
   assert.equal(invalid.code, 2);
   assert.match(invalid.stderr, /layers: must be a list/);

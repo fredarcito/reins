@@ -64,7 +64,7 @@ test('review --map: imports between workspace packages are not new when base = H
   write(dir, 'packages/a/package.json', '{"name":"@t/a","type":"module"}');
   write(dir, 'packages/a/src/index.js', "import { b } from '@t/b';\nexport const a = b + 1;\n");
   write(dir, '.reins/architecture.yml', [
-    'version: 1', 'adapter: js', 'layers:',
+    'version: 1', 'adapters: [js]', 'layers:',
     '  - { name: a, paths: ["packages/a/src/**"] }', '  - { name: b, paths: ["packages/b/src/**"] }',
     'rules:', '  - { id: layer-direction, severity: error }', '',
   ].join('\n'));
@@ -134,7 +134,7 @@ export default {
   write(dir, 'tools/adapter/package.json', '{"name":"reins-adapter-fake","type":"module","main":"index.js","reins":{"contract":1}}');
   write(dir, 'tools/adapter/index.js', adapter(''));
   for (const f of ['a/x.js', 'b/y.js', 'c/w.js']) write(dir, f, '// source\n');
-  write(dir, '.reins/architecture.yml', 'version: 1\nadapter: fake\nlayers:\n  - { name: a, paths: ["a/**"] }\n  - { name: b, paths: ["b/**"] }\n  - { name: c, paths: ["c/**"] }\n');
+  write(dir, '.reins/architecture.yml', 'version: 1\nadapters: [fake]\nlayers:\n  - { name: a, paths: ["a/**"] }\n  - { name: b, paths: ["b/**"] }\n  - { name: c, paths: ["c/**"] }\n');
   mkdirSync(path.join(dir, 'node_modules'), { recursive: true });
   symlinkSync('../tools/adapter', path.join(dir, 'node_modules/reins-adapter-fake')); // a workspace adapter, as pnpm links it
   git(dir, 'init', '-q', '-b', 'main');
@@ -171,7 +171,7 @@ test('review --map: no architecture.yml at the base means every head domain is n
 
 test('review --map: a failure outside reins\' own checks is an exit code 2 with git\'s message, not a stack trace', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'reins-nocommit-'));
-  write(dir, '.reins/architecture.yml', 'version: 1\nadapter: js\n');
+  write(dir, '.reins/architecture.yml', 'version: 1\nadapters: [js]\n');
   git(dir, 'init', '-q', '-b', 'main');
   const r = await cli(dir, ['review', '--map']);
   assert.equal(r.code, 2);

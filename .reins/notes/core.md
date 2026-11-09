@@ -10,7 +10,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 - Public API: `packages/core/src/index.js` (for the CLI), `packages/core/src/contract/index.js` (the only entry adapters may import; enforced by `exports`)
 - Used by: packages/cli (14), packages/core (9), packages/adapters (5). Depends on: nothing outside the module (Node, git, `yaml`)
 - `contract/index.js`: `CONTRACT_VERSION`, `Edge`/`Adapter`/`Preset` typedefs, `validateAdapter`, `validateEdges`, `normalizeGraph`; re-exports `matchesAny`.
-- `config/index.js`: parses and validates `architecture.yml`, collects every problem with its field path; rule defaults.
+- `config/index.js`: parses and validates `architecture.yml`, collects every problem with its field path; rule defaults. `adapters: [js, rust]` (written by `init` as `adapters: [js]`); the older `adapter: js` is refused with the fix (`sync` migrates it); `adapterNamesOf(raw)` lets the CLI load adapters before validating.
 - `check/index.js`: `evaluate` (core rules on merged edges) and `runCheck` (marks violations new/baseline, stale entries, `--files` filter).
 - `check/rules/*.js`: `layer-direction`, `domain-boundary`, `no-cycles`; each exports `id` and `run(edges, config)`.
 - `check/baseline.js`, `check/integrity.js`: baseline file format; integrity compares with the merge base via `git.js`.

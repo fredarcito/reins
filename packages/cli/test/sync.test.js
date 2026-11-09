@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo } from './helpers.js';
-import { CURSOR_HOOKS, fitNotesIndex, mergeCursorHooks, mergeSettings, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
+import { CURSOR_HOOKS, fitNotesIndex, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
 const HOW = '- Before changing a file, run `npx reins notes <path…>` to get its module notes (the hook delivers them only on Read/Edit/Write)';
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
@@ -44,6 +44,21 @@ test('first sync generates everything; a second sync does nothing; --check passe
   assert.match(second.stdout, /nothing to do/);
   assert.deepEqual(GENERATED.map((f) => read(dir, f)), snapshot, 'idempotent');
   assert.equal((await cli(dir, ['sync', '--check'])).code, 0);
+});
+
+test('sync migrates `adapter: js` (reins <= 0.11.0) to `adapters: [js]` and touches nothing else in the plan', async () => {
+  assert.equal(migrateAdapterKey('version: 1\nadapter: "js"   # the graph\nlayers: []\n'), 'version: 1\nadapters: [js]   # the graph\nlayers: []\n');
+  assert.equal(migrateAdapterKey('version: 1\nadapters: [js]\n'), null);
+  assert.equal(migrateAdapterKey('version: 1\nadapter:\n  - js\n'), null); // not a form sync rewrites; check explains
+  const dir = repo();
+  const file = path.join(dir, '.reins/architecture.yml');
+  const before = read(dir, '.reins/architecture.yml');
+  writeFileSync(file, before.replace(/^adapters: \[js\]$/m, 'adapter: js'));
+  assert.equal((await cli(dir, ['check'])).code, 2);
+  assert.equal((await cli(dir, ['sync', '--check'])).code, 1);
+  const r = await cli(dir, ['sync']);
+  assert.match(r.stdout, /migrated \.reins\/architecture\.yml/);
+  assert.equal(read(dir, '.reins/architecture.yml'), before);
 });
 
 test('--skip-claude syncs the provider-neutral core without creating Claude files', async () => {

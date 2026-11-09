@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES } from '@agentreins/core';
+import { parseConfig, loadConfig, validateConfig, ConfigError, CORE_RULES, adapterNamesOf } from '@agentreins/core';
 
-const minimal = 'version: 1\nadapter: js\n';
+const minimal = 'version: 1\nadapters: [js]\n';
 
 /** @returns {string[]} problems of an invalid config */
 function problemsOf(text, opts) {
@@ -54,9 +54,9 @@ allow:
   - { from: "a/**", to: "b/**" }
 `);
   assert.deepEqual(problems, [
-    'adaptor: unknown key (expected one of: version, adapter, preset, ignore, layers, domains, rules, allow)',
+    'adaptor: unknown key (expected one of: version, adapters, preset, ignore, layers, domains, rules, allow)',
     'version: expected 1, got 2',
-    'adapter: required, e.g. "adapter: js"',
+    'adapters: required, e.g. "adapters: [js]"',
     'layers[0].paths: expected a non-empty list of globs',
     'layers[1].name: duplicate layer "ui"',
     "domains.billing.public_api: expected a non-empty list of files or globs (e.g. the domain's index.js)",
@@ -68,7 +68,7 @@ allow:
 
 test('the error message lists the problems under the file name', () => {
   assert.throws(() => parseConfig('version: 1\n', { file: '.reins/architecture.yml' }), {
-    message: '.reins/architecture.yml is not valid:\n  - adapter: required, e.g. "adapter: js"',
+    message: '.reins/architecture.yml is not valid:\n  - adapters: required, e.g. "adapters: [js]"',
   });
 });
 
@@ -84,6 +84,15 @@ test('adapter rules are accepted when the caller passes them as known', () => {
   assert.deepEqual(c.rules['next-server-client'].options, { strict: true });
 });
 
+test('adapters: a list of names; the older "adapter: js" is refused with the fix', () => {
+  assert.deepEqual(parseConfig(minimal).adapters, ['js']);
+  assert.deepEqual(parseConfig('version: 1\nadapters: [js, rust]\n').adapters, ['js', 'rust']);
+  assert.deepEqual(problemsOf('version: 1\nadapter: js\n'), ['adapter: this key is now a list, e.g. "adapters: [js]". Run `npx reins update` (it rewrites the line), or change it by hand']);
+  assert.deepEqual(problemsOf('version: 1\nadapters: []\n'), ['adapters: expected a non-empty list of adapter names, e.g. [js, rust]']);
+  assert.deepEqual(problemsOf('version: 1\nadapters: [js, js]\n'), ['adapters: an adapter is listed twice']);
+  assert.deepEqual([adapterNamesOf({ adapter: 'js' }), adapterNamesOf({ adapters: ['js', 'rust'] }), adapterNamesOf(null)], [[], ['js', 'rust'], []]);
+});
+
 test('validateConfig rejects non-mappings', () => {
   assert.deepEqual(validateConfig([1, 2]).problems, ['the file must be a YAML mapping (key: value)']);
 });
@@ -91,6 +100,6 @@ test('validateConfig rejects non-mappings', () => {
 test('loadConfig reads the file and explains a missing one', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'reins-config-'));
   writeFileSync(path.join(dir, 'architecture.yml'), minimal);
-  assert.equal((await loadConfig(path.join(dir, 'architecture.yml'))).adapter, 'js');
+  assert.deepEqual((await loadConfig(path.join(dir, 'architecture.yml'))).adapters, ['js']);
   await assert.rejects(loadConfig(path.join(dir, 'missing.yml')), { name: 'ConfigError', message: /Run `reins init`/ });
 });

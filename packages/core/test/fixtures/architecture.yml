@@ -1,5 +1,5 @@
 version: 1
-adapter: js
+adapters: [js]
 preset: next-app
 
 layers:

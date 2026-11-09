@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { countLines, DOCTOR_DEFAULTS, parentNoteFile, parseFrontmatter } from '@agentreins/core';
-import { REINS_DIR, runScriptCommand } from '../context.js';
+import { ARCHITECTURE_FILE, REINS_DIR, runScriptCommand } from '../context.js';
 import { loadNotes, readDoctorConfig, readText } from '../project.js';
 import { readTemplate, renderAgentsMd, templatesDir } from '../templates.js';
 
@@ -103,6 +103,20 @@ export function migrateLegacyRules(agents) {
   const end = agents.indexOf('<!-- reins:notes:start');
   if (start < 0 || end <= start || !LEGACY.agentsRules.includes(sha(agents.slice(start + 1, end)))) return null;
   return `${agents.slice(0, start + 1)}${RULES_BLOCK_SECTION}\n${agents.slice(end)}`;
+}
+
+/** `adapter: js` (reins <= 0.11.0), alone on its line, with an optional comment. */
+const OLD_ADAPTER_KEY_RE = /^adapter:[ \t]*(["']?)([\w-]+)\1([ \t]*#.*)?$/m;
+
+/**
+ * architecture.yml with the older `adapter: js` rewritten as `adapters: [js]`; the rest of the text is kept byte for byte.
+ * Null when there is nothing to migrate (already a list, or a form this can't rewrite safely: check then explains).
+ * @param {string} text
+ * @returns {string | null}
+ */
+export function migrateAdapterKey(text) {
+  if (/^adapters:/m.test(text)) return null;
+  return OLD_ADAPTER_KEY_RE.test(text) ? text.replace(OLD_ADAPTER_KEY_RE, (_, _q, name, comment = '') => `adapters: [${name}]${comment}`) : null;
 }
 
 /**
@@ -502,6 +516,15 @@ export function sync(root, opts = {}) {
       unlinkSync(path.join(root, rel));
       pruneDirs(root, path.posix.dirname(rel), REINS_DIR);
     }
+  }
+
+  // architecture.yml from reins <= 0.11.0: the only edit sync makes to it, a format migration shown in the diff
+  const arch = readText(root, ARCHITECTURE_FILE);
+  const archMigrated = arch === null ? null : migrateAdapterKey(arch);
+  if (archMigrated !== null) {
+    changes.push(`migrated ${ARCHITECTURE_FILE}: \`adapter: <name>\` is now \`adapters: [<name>]\` (review it in the diff)`);
+    divergences.push(`${ARCHITECTURE_FILE}: uses the older \`adapter:\` key`);
+    write(ARCHITECTURE_FILE, archMigrated);
   }
 
   // 2. AGENTS.md: create if missing, keep rules block, then keep the notes index block

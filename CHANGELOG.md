@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **One plan for a repo with several languages.** `architecture.yml` now lists its adapters: `adapters: [js]`, and `adapters: [js, rust]` for a repo with JavaScript and Rust. Every adapter builds its part of the graph, and `check`, `impact`, `scope`, notes and the PR map see them together, with one baseline. `reins update` rewrites `adapter: js` as `adapters: [js]` for you: commit that one-line change with the rest. If you upgrade another way (Dependabot, `npm update`), `reins check` stops with the same fix. Only the JavaScript adapter exists today; this is what makes room for the next ones.
+
 ## 0.11.0 · 2026-11-09
 
 Closing a task now makes sure what the agent learned is kept.

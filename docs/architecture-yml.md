@@ -8,7 +8,7 @@ Location in a consumer repo: `.reins/architecture.yml`.
 
 ```yaml
 version: 1            # required, always 1 for now
-adapter: js           # required: which language adapter computes the graph
+adapters: [js]        # required: the language adapters that compute the graph (JS + Rust: [js, rust])
 preset: next-app      # optional: vite-react | next-app | next-pages (adapter presets)
 ignore: ["src/generated/**"]   # optional: files left out of the analysis
 
@@ -38,8 +38,8 @@ allow:
 | Key | Required | What it is |
 | --- | --- | --- |
 | `version` | yes | Format version. Must be `1` |
-| `adapter` | yes | Adapter name. The CLI looks for `@agentreins/adapter-<name>`, then `reins-adapter-<name>` |
-| `preset` | no | Preset of the adapter |
+| `adapters` | yes | List of adapter names, e.g. `[js]`, or `[js, rust]` for a repo with several languages (see [Several languages](#several-languages-in-one-repo)). For each name the CLI looks for `@agentreins/adapter-<name>`, then `reins-adapter-<name>`. Plans from reins 0.11.0 or older said `adapter: js`; `reins update` rewrites it |
+| `preset` | no | Preset of the adapter (with several adapters, only the one that has this preset receives it) |
 | `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |
 | `domains` | no | Map of name → `{ paths, public_api }` |
@@ -47,6 +47,26 @@ allow:
 | `allow` | no | List of `{ from, to, reason, rule? }` |
 
 Unknown keys are errors, so a typo (`adaptor:`) never passes silently. Every problem is reported at once, with the exact field (`layers[1].paths: …`).
+
+## Several languages in one repo
+
+A repo with a JavaScript frontend and a Rust backend (Tauri, say) lists both adapters in one plan. Adding a language later is adding its name to the list (and installing its adapter):
+
+```yaml
+version: 1
+adapters: [js, rust]
+layers:
+  - { name: ui,       paths: ["src/components/**"] }
+  - { name: utils,    paths: ["src/utils/**"] }
+  - { name: commands, paths: ["src-tauri/src/commands/**"] }
+  - { name: audio,    paths: ["src-tauri/src/audio/**"] }
+```
+
+- Each adapter receives the repo root and finds its own files. `check`, `impact`, `scope`, `notes` and the PR map work on the union of their graphs, with one baseline.
+- Layers, domains and `allow` are paths, so they apply to every language the same way.
+- Each adapter runs its own rules on its own graph. Two adapters may not declare the same rule id.
+- Languages usually talk through strings (a Tauri `invoke("name")`, an HTTP route), not imports, so no edge crosses from one language to the other: a rule between a JS layer and a Rust layer never fires.
+- `reins init` drafts a plan for one adapter (`adapters: [js]`); add the others to the list by hand.
 
 ## Paths and globs
 

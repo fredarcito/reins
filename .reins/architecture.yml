@@ -1,6 +1,6 @@
 # Architecture of this repo itself, checked by its own `reins check` (pnpm self-check and CI).
 version: 1
-adapter: js
+adapters: [js]
 
 # Example apps and test fixtures contain intentional violations and their own aliases.
 ignore: ["examples/**", "packages/*/test/fixtures/**", "packages/adapters/*/test/fixtures/**"]
