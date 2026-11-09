@@ -8,7 +8,7 @@ import { adapterNamesOf, normalizeGraph, runCheck, emptyBaseline, createBaseline
 import { guessAdapterName, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
-import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans, hasTypeScript, MAX_SUBMODULES } from '../init/infer.js';
+import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans, hasTypeScript, MAX_SUBMODULES, MIN_ROUTE_FILES, mergeSmallRoutes } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { loadNotes } from '../project.js';
@@ -87,9 +87,17 @@ export async function init(ctx) {
   const smallRoutes = [];
   let doubtfulOwned = [];
   if (fromRoutes) {
-    domains = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true, small: smallRoutes });
+    // every route folder competes for the folders it uses: a one-file route (a thin index.jsx) whose logic lives
+    // in components/pages/x is a real module; a lone page that owns nothing is left out afterwards
+    const candidates = inferDomains(p.route_domains_from, graph.files, { edges: graph.edges, entries: graph.entries, routes: true, minFiles: 1 });
     // a route's logic often lives outside its folder (components/pages/x, components/x…): the graph says where
-    doubtfulOwned = inferOwnedFolders(domains, graph.files, graph.edges, layerInfo.layers, graph).doubtful;
+    const owned = inferOwnedFolders(candidates, graph.files, graph.edges, layerInfo.layers, graph).doubtful;
+    domains = candidates.filter((d) => d.files >= MIN_ROUTE_FILES || d.owned.length);
+    // small routes built on one feature folder only they use are one module (notifications + its preferences page)
+    const { merged, rest } = mergeSmallRoutes(candidates.filter((d) => !domains.includes(d)), domains, graph.files, graph.edges, graph);
+    domains = [...domains, ...merged].sort((a, b) => (a.folder < b.folder ? -1 : 1));
+    smallRoutes.push(...rest.flatMap((d) => d.folders ?? [d.folder]));
+    doubtfulOwned = owned.filter((x) => domains.some((d) => d.name === x.domain));
   }
   const entrySet = new Set(graph.entries);
   const domainFacts = domains.map((d) => ({
@@ -164,11 +172,14 @@ export async function init(ctx) {
     [
       `Wrote ${ARCHITECTURE_FILE} (draft), ${BASELINE_FILE} (${s} existing violation${s === 1 ? '' : 's'} frozen) and ${INIT_REPORT_FILE}.`,
       `Layers: ${layerInfo.layers.map((l) => l.name).join(' > ') || 'none'} · Domains${fromRoutes ? ' (one per route folder)' : ''}: ${domains.map((x) => x.name).join(', ') || 'none'}`,
-      ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}. Ask your agent to fill in their TODO lines (in Claude Code: /reins-notes).`] : []),
+      ...(drafted.length ? [`Module notes drafted from the code: ${drafted.join(', ')}.`] : []),
       ...(leftOut.length ? [`More than ${MAX_SUBMODULES} sub-modules in a domain; no note drafted for: ${leftOut.join(', ')}. Draft the ones worth it with \`reins notes new <folder>\`.`] : []),
       ...(domains.length ? [] : ['No domains found, so no module notes were drafted. Draft one per module folder with `reins notes new <folder>`, or declare domains in architecture.yml.']),
       ...(graph.warnings.length ? [`Warnings: ${graph.warnings.length} (see the report)`] : []),
-      `Next: review ${INIT_REPORT_FILE} and adjust ${ARCHITECTURE_FILE} (in Claude Code: /reins-arch), run \`reins check --update-baseline\`, then \`reins check\`.`,
+      'Next:',
+      `  1. Review the plan with your agent (in Claude Code: /reins-arch), or read ${INIT_REPORT_FILE} and edit ${ARCHITECTURE_FILE}.`,
+      '  2. Have your agent fill in the module notes (in Claude Code: /reins-notes).',
+      '  3. `reins check --update-baseline`, then `reins check`, then commit (the pre-commit hook needs the plan).',
     ].join('\n'),
   );
   return 0;

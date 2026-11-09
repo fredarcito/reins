@@ -25,7 +25,7 @@ flowchart LR
 **Repos organized by routes.** With no `features/*` or `modules/*` folder, each route folder becomes a domain:
 
 - Next route groups `(main)` and parameters `[slug]` are looked through: they share a layout or a URL segment, they are not features. `(companies)/companies/[slug]` gives a domain `companies`, and a route split across groups (`(companies)/companies` and `(main)/companies`, both `/companies`) is one domain with several folders.
-- A route folder with a single source file (a lone `page.js`: about, terms…) is left out and listed in the report.
+- A route folder with a single source file (a lone `page.js`: about, terms…) is left out and listed in the report, unless the graph gives it a folder elsewhere: a thin `routes/dashboard/index.jsx` whose code lives in `components/pages/dashboard/` is a domain. One-file routes that share a feature folder only they use (`routes/notifications/` and `routes/notificationsPreferences/` over `components/pages/notifications/`) become one domain named after that folder.
 - A route's logic often lives outside its folder (`components/pages/companies/`, `components/JobBoard/`…). The import graph decides where it belongs, never folder names. Inside a folder organized by feature (`components/pages/`), each subfolder joins, whole, the domain that makes most of its imports; the few imports from elsewhere are frozen in the baseline and counted in the report. A folder that is not organized by feature (`components/shared/`) is shared code, and so is the lowest layer (`utils/`, `constants/`): nothing there is assigned.
 - Imports through a re-export file (`import { JobBoard } from '@/components'` with `components/index.js` re-exporting everything) count as imports of the file behind it, so a barrel doesn't make every page look like it uses every component.
 - A loose file only one route uses (`components/paginaContacto.js` next to shared ones) goes in that route's note, so the agent gets the context when it opens the file; it never goes into the rules.
@@ -84,7 +84,7 @@ The agent records each level with `npx reins triage <level> "<reason>"`, which a
 | `progress-hot-size` | The hot notebook is longer than 40 lines |
 | `progress-format` | Missing header, invalid marker, more than one `[~]`, or a `[-]` without a reason |
 | `progress-closed` | `status: closed` with done criteria not checked |
-| `note-missing` | A medium or large diff touched a domain that has no module note |
+| `note-missing` | A medium or large diff touched a domain that has no module note, or `architecture.yml` changed and a domain has no note |
 | `note-outdated` | A medium or large diff changed a module's files but not its note |
 | `note-draft` | A note of a touched module still has `TODO` lines from its draft; many drafts make a single warning |
 | `note-size` | A note of a touched module is longer than 60 lines |

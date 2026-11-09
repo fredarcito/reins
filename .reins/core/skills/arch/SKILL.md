@@ -15,6 +15,7 @@ description: Review the architecture plan in .reins/architecture.yml against the
    - **Folders outside every layer:** `layer-direction` doesn't check them. Which layer do they belong to?
    - **Layers that match no file**, and globs that overlap (the first match wins).
    - **Domains:** features without a domain, a public API that doesn't exist or exposes internals, domains reaching into each other's internals.
+   - **Route folders left out** (listed in `init-report.md`): `init` drops one-file routes that own no folder, but several of them can be one flow (`signIn`, `resetPassword`, `acceptInvite`… → `auth`). Group the ones that share what they import (the same API module, forms or components) into one domain with several paths; leave app shell (guards, layouts, maintenance pages) outside every domain.
    - **Generated code, fixtures, stories:** candidates for `ignore:`.
    - **`allow:` entries** whose reason no longer holds, and a baseline that isn't shrinking.
 3. What the file accepts: `version`, `adapter`, `preset`, `ignore` (globs left out of the analysis), `layers`, `domains`, `rules`, `allow` (with a `reason`). Unknown keys are errors. Full reference: https://github.com/fredarcito/reins/blob/main/docs/architecture-yml.md
@@ -23,5 +24,5 @@ description: Review the architecture plan in .reins/architecture.yml against the
    - Never reorder layers, widen globs or add exceptions just to make `reins check` pass.
    - When you can't tell whether something is a mistake or a decision, ask.
 5. Present the proposal as a numbered list. For each item: the change (as a YAML snippet), the evidence (files and imports), why, and its effect on the check (violations that appear or disappear). Then stop and wait for the person.
-6. After approval: apply only the approved items. Run `npx reins check --update-baseline` only if the person agreed to freeze the violations the change reveals; then `npx reins check`. Tell them the pull request will show an `integrity` warning for the changed `architecture.yml`: that is expected, and the PR description should explain the change.
+6. After approval: apply only the approved items. Run `npx reins check --update-baseline` only if the person agreed to freeze the violations the change reveals; then `npx reins check`. For every domain you added that has no note in `.reins/notes/`, draft one with `npx reins notes new <domain>` (one per call), then fill in its TODO lines following the `notes` skill, or tell the person they are drafts; `reins doctor` flags any domain left without a note. Tell them the pull request will show an `integrity` warning for the changed `architecture.yml`: that is expected, and the PR description should explain the change.
 7. Reasons that last go where people will see them: `allow:` reasons in the file, and decisions about a module in its note (`.reins/notes/`).

@@ -102,9 +102,9 @@ Folders with source files outside every layer (add them to a layer, or leave the
 ${bullet(capped(d.layerInfo.unclassified.map(unclassifiedLine)), 'none')}
 
 ## Domains
-${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Route groups `(x)` and parameters `[x]` are looked through, and a route folder with a single source file is left out. Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
+${d.fromRoutes ? '\nNo domain folders (e.g. `src/features/*`), so each route folder is proposed as a domain. Route groups `(x)` and parameters `[x]` are looked through, and a route folder with a single source file is left out unless it owns a folder elsewhere (e.g. `components/pages/x`). Merge or drop the ones that are not real modules (legal pages, redirects…).\n' : ''}
 ${bullet(d.domains.map((x) => domainLine(x, d.domainFacts?.find((f) => f.name === x.name))), 'none proposed (no folders matching the preset, e.g. `src/features/*`)')}
-${d.smallRoutes?.length ? `\nRoute folders left out (a single source file, e.g. a lone page, \`sitemap.xml\` or \`llms.txt\`): too small for a domain or a note; the layer rules still check them:\n\n${bullet(capped(d.smallRoutes.map((f) => `\`${f}/\``)), '')}\n` : ''}${d.doubtfulOwned?.length ? `\nFolders mostly used by one domain, but not only: not added to it, since the other imports would become violations. Add them by hand if they belong to it:\n\n${bullet(capped(d.doubtfulOwned.map((x) => `\`${x.folder}/\` → \`${x.domain}\` (${x.imports} of ${Math.round(x.imports / x.share)} imports into it come from that domain)`)), '')}\n` : ''}
+${d.smallRoutes?.length ? `\nRoute folders left out (a single source file that owns no folder elsewhere, e.g. a lone page, \`sitemap.xml\` or \`llms.txt\`): too small for a domain or a note; the layer rules still check them:\n\n${bullet(capped(d.smallRoutes.map((f) => `\`${f}/\``)), '')}\n` : ''}${d.doubtfulOwned?.length ? `\nFolders mostly used by one domain, but not only: not added to it, since the other imports would become violations. Add them by hand if they belong to it:\n\n${bullet(capped(d.doubtfulOwned.map((x) => `\`${x.folder}/\` → \`${x.domain}\` (${x.imports} of ${Math.round(x.imports / x.share)} imports into it come from that domain)`)), '')}\n` : ''}
 ## Cycles
 
 ${bullet(capped(cycles), 'none')}
@@ -128,9 +128,10 @@ ${bullet(d.warnings, 'none')}
 ## Next steps
 
 1. Edit \`.reins/architecture.yml\`: layer order, folders outside every layer, domains and their public API. In Claude Code, \`/reins-arch\` has your agent propose these changes with evidence; you approve each one.
-2. \`reins check --update-baseline\` to freeze the violations of the final plan.
-3. \`reins check\` must pass. Commit \`.reins/architecture.yml\` and \`.reins/baseline.json\`.
-4. This report is only for review; you don't need to commit it.
+2. Fill in the module notes in \`.reins/notes/\`: in Claude Code, \`/reins-notes\`; with other agents, ask them to fill in the TODO lines.
+3. \`reins check --update-baseline\` to freeze the violations of the final plan.
+4. \`reins check\` must pass. Commit \`.reins/\` (the pre-commit hook needs the plan, so not before).
+5. This report is only for review; you don't need to commit it.
 `;
 }
 

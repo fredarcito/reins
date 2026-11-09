@@ -24,6 +24,7 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 
 ## Decisions
 - 2026-11-04: the core never opens source files and knows no framework; it only sees `{ from, to, kind }` edges. Anything JS/Vite/Next lives in adapters.
+- 2026-11-09: doctor's `note-missing` also fires, at any level, for every domain without a note when `architecture.yml` changed (`planChanged`): domains added to the plan have no changed code, so they never got a note. Coverage uses `repoFiles` when given, else note globs overlapping the domain's.
 - 2026-11-04: own glob matcher instead of a dependency (`path.matchesGlob` is experimental in Node 22). First matching layer/domain wins.
 - 2026-11-04: baseline is sorted, has no timestamps, keys are `rule|from|to` (cycles: `no-cycles|<sorted files>`), so diffs in PRs are clean and a growing cycle counts as new.
 - 2026-11-04: integrity only makes changes visible (warn by default); it reports a changed `architecture.yml` and a growing baseline, never first adoption or shrinking.

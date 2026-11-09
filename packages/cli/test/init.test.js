@@ -112,7 +112,8 @@ test('init drafts one module note per domain without one, never touching existin
 
   const r = await cli(dir, ['init']);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /Module notes drafted from the code: \.reins\/notes\/catalog\.md\. Ask your agent to fill in their TODO lines \(in Claude Code: \/reins-notes\)\./);
+  assert.match(r.stdout, /Module notes drafted from the code: \.reins\/notes\/catalog\.md\.\n/);
+  assert.match(r.stdout, /Next:\n  1\. Review the plan with your agent \(in Claude Code: \/reins-arch\)[^\n]*\n  2\. Have your agent fill in the module notes \(in Claude Code: \/reins-notes\)\.\n  3\. `reins check --update-baseline`, then `reins check`, then commit/);
   assert.match(readFileSync(path.join(dir, '.reins/notes/catalog.md'), 'utf8'), /^---\npaths: \["src\/features\/catalog\/\*\*"\]\n---\n# catalog\n[\s\S]*## Map\n- Public API: `src\/features\/catalog\/index\.js`/);
   assert.equal(existsSync(path.join(dir, '.reins/notes/cart.md')), false, 'cart already has a note under another name');
   assert.equal(readFileSync(path.join(dir, '.reins/notes/shop-cart.md'), 'utf8'), '---\npaths: ["src/features/cart/**"]\n---\nmine\n');
@@ -274,6 +275,50 @@ test('vite-react by routes: a components folder only one route uses joins it; a 
   assert.match(read(dir, '.reins/architecture.yml'), /jobs: \{ paths: \["src\/routes\/jobs\/\*\*", "src\/components\/jobs\/\*\*"\], public_api: \["src\/routes\/jobs\/Jobs\.jsx"\] \}/);
   assert.match(read(dir, '.reins/init-report.md'), /Route folders left out[^\n]*\n\n- `src\/routes\/profile\/`/);
   assert.equal(existsSync(path.join(dir, '.reins/notes/profile.md')), false);
+  assert.equal((await cli(dir, ['check'])).code, 0);
+});
+
+test('vite-react by routes: a one-file route whose logic lives in components/pages/x is a domain', async () => {
+  const dir = routesRepo('vite-react', {
+    'src/App.jsx': "import { Dashboard } from './routes/dashboard/index';\nimport { About } from './routes/about/index';\nexport function App() { return [Dashboard, About]; }\n",
+    'src/routes/dashboard/index.jsx': "import { Widget } from '../../components/pages/dashboard/Widget';\nimport { Button } from '../../components/shared/Button';\nexport const Dashboard = [Widget, Button];\n",
+    'src/routes/about/index.jsx': "import { Button } from '../../components/shared/Button';\nexport const About = Button;\n",
+    'src/components/pages/dashboard/Widget.jsx': "import { Chart } from './Chart';\nexport const Widget = Chart;\n",
+    'src/components/pages/dashboard/Chart.jsx': 'export const Chart = 1;\n',
+    'src/components/shared/Button.jsx': 'export const Button = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): dashboard\n/);
+  assert.match(read(dir, '.reins/architecture.yml'), /dashboard: \{ paths: \["src\/routes\/dashboard\/\*\*", "src\/components\/pages\/dashboard\/\*\*"\]/);
+  assert.match(read(dir, '.reins/init-report.md'), /Route folders left out[^\n]*\n\n- `src\/routes\/about\/`\n/);
+  assert.ok(existsSync(path.join(dir, '.reins/notes/dashboard.md')));
+  assert.equal((await cli(dir, ['check'])).code, 0);
+});
+
+test('vite-react by routes: one-file routes sharing a feature folder only they use are one domain; shared code merges nothing', async () => {
+  const dir = routesRepo('vite-react', {
+    'src/App.jsx': "import { Dashboard } from './routes/dashboard/index';\nimport { Inbox } from './routes/inbox/index';\nimport { Prefs } from './routes/inboxPrefs/index';\nimport { SignIn } from './routes/signIn/index';\nimport { Reset } from './routes/reset/index';\nimport { Reports } from './routes/reports/index';\nexport function App() { return [Dashboard, Inbox, Prefs, SignIn, Reset, Reports]; }\n",
+    'src/routes/reports/index.jsx': "import { Table } from '../../components/pages/reports/Table';\nexport const Reports = Table;\n",
+    'src/components/pages/reports/Table.jsx': "import { Row } from './Row';\nexport const Table = Row;\n",
+    'src/components/pages/reports/Row.jsx': 'export const Row = 1;\n',
+    'src/routes/dashboard/index.jsx': "import { Widget } from '../../components/pages/dashboard/Widget';\nexport const Dashboard = Widget;\n",
+    'src/routes/inbox/index.jsx': "import { List } from '../../components/pages/inbox/List';\nexport const Inbox = List;\n",
+    'src/routes/inboxPrefs/index.jsx': "import { Item } from '../../components/pages/inbox/Item';\nexport const Prefs = Item;\n",
+    'src/routes/signIn/index.jsx': "import { Password } from '../../components/shared/Password/Password';\nexport const SignIn = Password;\n",
+    'src/routes/reset/index.jsx': "import { Password } from '../../components/shared/Password/Password';\nexport const Reset = Password;\n",
+    'src/components/pages/dashboard/Widget.jsx': "import { Chart } from './Chart';\nexport const Widget = Chart;\n",
+    'src/components/pages/dashboard/Chart.jsx': 'export const Chart = 1;\n',
+    'src/components/pages/inbox/List.jsx': "import { Item } from './Item';\nexport const List = Item;\n",
+    'src/components/pages/inbox/Item.jsx': 'export const Item = 1;\n',
+    'src/components/shared/Password/Password.jsx': "import { Eye } from './Eye';\nexport const Password = Eye;\n",
+    'src/components/shared/Password/Eye.jsx': 'export const Eye = 1;\n',
+  });
+  const r = await cli(dir, ['init']);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Domains \(one per route folder\): dashboard, inbox, reports\n/);
+  assert.match(read(dir, '.reins/architecture.yml'), /inbox: \{ paths: \["src\/routes\/inbox\/\*\*", "src\/routes\/inboxPrefs\/\*\*", "src\/components\/pages\/inbox\/\*\*"\]/);
+  assert.match(read(dir, '.reins/init-report.md'), /Route folders left out[^\n]*\n\n- `src\/routes\/reset\/`\n- `src\/routes\/signIn\/`\n/);
   assert.equal((await cli(dir, ['check'])).code, 0);
 });
 

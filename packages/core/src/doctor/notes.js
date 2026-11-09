@@ -18,8 +18,9 @@ const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {cons
  * @param {'small'|'medium'|'large'} input.level level suggested by the diff
  * @param {number} input.maxLines
  * @param {string[] | null} [input.repoFiles] every file of the repo, repo-relative; null skips the dead-* rules
+ * @param {boolean} [input.planChanged] architecture.yml changed: every domain without a note is flagged, at any level
  */
-export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null }) {
+export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null, planChanged = false }) {
   const code = changedFiles.filter((f) => !isReinsFile(f));
   const changed = new Set(changedFiles);
   const findings = [];
@@ -45,6 +46,26 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines, repo
           'note-missing', d.name,
           `Domain ${d.name} changed (${files.length} file(s)) and has no module note, so the next session will have to rediscover it from the code.`,
           `Create one: \`npx reins notes new ${d.name}\`, then fill in Purpose, How it works, Decisions and Traps.`,
+        ),
+      );
+    }
+  }
+  // a domain added to (or redrawn in) the plan has no changed code yet, but it is a module without a note all the same
+  if (planChanged) {
+    const flagged = new Set(findings.filter((f) => f.rule === 'note-missing').map((f) => f.from));
+    const prefix = (glob) => glob.replace(/\*\*$/, '');
+    for (const d of domains) {
+      if (flagged.has(d.name)) continue;
+      const own = repoFiles?.filter((f) => matchesAny(f, d.paths));
+      const covered = own?.length
+        ? own.some((f) => notes.some((n) => matchesAny(f, n.paths)))
+        : notes.some((n) => n.paths.some((p) => d.paths.some((dp) => p.startsWith(prefix(dp)) || dp.startsWith(prefix(p)))));
+      if (covered) continue;
+      findings.push(
+        finding(
+          'note-missing', d.name,
+          `Domain ${d.name} is in architecture.yml but has no module note, so the next session will have to rediscover it from the code.`,
+          `Draft one from the code: \`npx reins notes new ${d.name}\`, then fill in Purpose, How it works, Decisions and Traps (in Claude Code: /reins-notes).`,
         ),
       );
     }

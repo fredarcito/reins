@@ -38,13 +38,13 @@ Version 0.12.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins
 | Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
 | Stale notes: doctor `note-dead-paths`, `note-dead-refs`; `notes stale`; `/reins-notes review` | core + cli + skill | experimental | Rules and ranking tested; thresholds none; the review skill untested with an agent |
 | Notes for the parts of a module (`.reins/notes/<module>/<part>.md`), drafted by `init` for route domains; `note-layout` | core + cli | experimental | Tested; not yet tried on a real repo |
-| `init` on repos organized by routes: `(group)` look-through, lone pages left out, folders and loose files assigned to a route by imports, barrels resolved | cli + adapter-js | experimental | Tested on synthetic scenarios; not yet tried on real repos |
+| `init` on repos organized by routes: `(group)` look-through, lone pages left out (unless they own a folder elsewhere), folders and loose files assigned to a route by imports, barrels resolved | cli + adapter-js | experimental | Tested on synthetic scenarios; not yet tried on real repos |
 
 Known limits of `init` on repos organized by routes:
 
 - Inside a folder organized by feature, a subfolder joins the domain with 2/3 of its imports; the other imports are frozen in the baseline as violations (the report counts them).
 - Directly under a layer root (`src/components/`), a component used by a single route today is still assigned to it; when a second route imports it, `check` fails until someone moves it or edits `architecture.yml`.
-- Route folders are measured in files, not size: a route with one large `page.js` is left out.
+- Route folders are measured in files, not size: a route with one large `page.js` that owns no folder elsewhere is left out.
 - Only when there is no `features/*` or `modules/*` folder: mixed repos get nothing from this.
 - Barrels are read as text: named imports and `export … from` re-exports are resolved; default and namespace imports, `require` and dynamic `import()` of a barrel count as using everything behind it. Only `index.*` files are considered barrels.
 

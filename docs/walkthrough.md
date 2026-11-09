@@ -6,10 +6,11 @@ A full tour on `examples/vite-react` (Vite + React, plain JS/JSX), from an empty
 flowchart LR
     a["1 · Install<br/>packages"] --> b["2 · reins install"]
     b --> c["3 · reins init"]
-    c --> d["4 · Review<br/>and freeze"]
-    d --> e["5 · Commit"]
-    e --> f["6 · A bad commit<br/>is blocked"]
-    f --> g["7 · The agent side<br/>notes · scope · doctor · progress"]
+    c --> d["4 · /reins-arch<br/>/reins-notes"]
+    d --> d2["5 · Freeze"]
+    d2 --> e["6 · Commit"]
+    e --> f["7 · A bad commit<br/>is blocked"]
+    f --> g["8 · The agent side<br/>notes · scope · doctor · progress"]
 ```
 
 ## 1. Get the packages into the repo
@@ -37,7 +38,7 @@ reins install:
   - reins sync: 7 change(s)
 
 Next:
-  - No .reins/architecture.yml yet: run `npx reins init` to draft the architecture plan and the baseline.
+  - No .reins/architecture.yml yet: run `npx reins init`, then review the plan and fill in the notes with your agent (in Claude Code: /reins-arch, /reins-notes). Commit after `reins check` passes: the pre-commit hook needs the plan.
   - In GitHub, protect the main branch: require a PR with an approval and the "reins" check to pass. That is the real guarantee.
 ```
 
@@ -47,8 +48,11 @@ Next:
 $ npx reins init
 Wrote .reins/architecture.yml (draft), .reins/baseline.json (3 existing violations frozen) and .reins/init-report.md.
 Layers: app > features > components > shared · Domains: cart, catalog
-Module notes drafted from the code: .reins/notes/cart.md, .reins/notes/catalog.md. Ask your agent to fill in their TODO lines (in Claude Code: /reins-notes).
-Next: review .reins/init-report.md and adjust .reins/architecture.yml (in Claude Code: /reins-arch), run `reins check --update-baseline`, then `reins check`.
+Module notes drafted from the code: .reins/notes/cart.md, .reins/notes/catalog.md.
+Next:
+  1. Review the plan with your agent (in Claude Code: /reins-arch), or read .reins/init-report.md and edit .reins/architecture.yml.
+  2. Have your agent fill in the module notes (in Claude Code: /reins-notes).
+  3. `reins check --update-baseline`, then `reins check`, then commit (the pre-commit hook needs the plan).
 ```
 
 From `.reins/init-report.md`:
@@ -74,9 +78,16 @@ Evidence (imports going down / going up; "up" ones are layer violations):
 
 That "mixed" pair is the example's intentional violation (`Button.jsx` imports from `features/cart`). Here the order is right and the import is wrong, so it stays in the baseline as debt.
 
-## 4. Review and freeze
+## 4. Review the plan and fill in the notes, with your agent
 
-Adjust `.reins/architecture.yml` if needed (layers, domains, `allow:` with reasons), then:
+The draft describes what exists; you decide what should. In Claude Code:
+
+- **`/reins-arch`**: your agent reads the report and the code and proposes changes to `.reins/architecture.yml` (layers, domains, `allow:` with reasons), with evidence. You approve each one; it drafts a note for every domain it adds.
+- **`/reins-notes`**: your agent fills in the TODO lines of each note in `.reins/notes/` (purpose, how it works, decisions, traps).
+
+With other agents, ask for the same in words: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*, then *"fill in the TODO lines of the notes in .reins/notes/"*.
+
+## 5. Freeze
 
 ```console
 $ npx reins check --update-baseline
@@ -87,13 +98,13 @@ reins check: no new violations · 3 in baseline · 0 fixed
 Result: pass
 ```
 
-## 5. Commit
+## 6. Commit
 
 ```bash
 git add -A && git commit -m "adopt reins"     # the hook runs `reins check` on the staged files: green
 ```
 
-## 6. A bad commit is blocked
+## 7. A bad commit is blocked
 
 A shared helper that imports from a feature (shared is the lowest layer):
 
@@ -114,7 +125,7 @@ husky - pre-commit script failed (code 1)
 
 The message is written for the agent too: it says the rule, the reason and the fix. If someone commits without hooks, the CI job (`.github/workflows/reins.yml`) fails the PR with the same message.
 
-## 7. The agent side
+## 8. The agent side
 
 **A module note** that reaches Claude Code before it edits (through the hook `reins sync` installed) and any agent through the index in `AGENTS.md`:
 

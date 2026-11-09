@@ -236,7 +236,7 @@ export function installInto(root, opts = {}) {
     notes.push(...r.warnings);
   }
 
-  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx reins init\` to draft the architecture plan and the baseline.`);
+  if (!existsSync(path.join(root, ARCHITECTURE_FILE))) notes.push(`No ${ARCHITECTURE_FILE} yet: run \`npx reins init\`, then review the plan and fill in the notes with your agent (in Claude Code: /reins-arch, /reins-notes). Commit after \`reins check\` passes: the pre-commit hook needs the plan.`);
   if (!deps(pkg)[cliPkg.name]) notes.push(`${cliPkg.name} is not in package.json: install it as a dev dependency so the hook and CI can run it.`);
   notes.push('In GitHub, protect the main branch: require a PR with an approval and the "reins" check to pass. That is the real guarantee.');
   return { actions, notes };

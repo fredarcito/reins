@@ -11,7 +11,8 @@ layers:
 
 domains_from: ["features/*", "src/features/*", "modules/*", "src/modules/*"]
 # With no domain folder above, each route folder becomes a domain: `[lang]` parameters and `(group)` folders are looked
-# through, one-file routes are left out, and folders only that route imports join it.
+# through, folders mostly that route imports join it, one-file routes that own no folder are left out, and one-file
+# routes sharing a feature folder only they use become one domain.
 route_domains_from: ["app/*", "src/app/*"]
 
 # adapter rules `reins init` proposes for this preset

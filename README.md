@@ -44,19 +44,18 @@ reins fixes both:
 
 In the root of your project (Node 22 or newer):
 
-```bash
-npm install -D @agentreins/cli @agentreins/adapter-js
-npx reins install                  # git hook, CI job, AGENTS.md
-# For a provider-neutral setup, use: npx reins install --skip-claude
-npx reins init                     # architecture plan, baseline, module notes
-npx reins check --update-baseline  # freeze today's violations
-npx reins check                    # from now on, only new violations fail
-```
+Six steps. Steps 4 and 5 are done by your agent; don't skip them: the draft only describes what exists, and the notes start as templates.
 
-Between `init` and `check --update-baseline`:
+| Step | Run | What you get |
+| --- | --- | --- |
+| 1 · Install | `npm install -D @agentreins/cli @agentreins/adapter-js` | The CLI and the JavaScript/TypeScript adapter |
+| 2 · Wire | `npx reins install` (`--skip-claude` for a provider-neutral setup) | Git hook, CI job, `AGENTS.md`, `.reins/` |
+| 3 · Draft | `npx reins init` | Architecture plan, baseline, a module note per domain, `init-report.md` |
+| 4 · Review the plan | In Claude Code: **`/reins-arch`**. Other agents: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"* | Your agent proposes layers and domains with evidence, you approve each change, and it drafts the notes of the domains it adds |
+| 5 · Fill in the notes | In Claude Code: **`/reins-notes`**. Other agents: *"fill in the TODO lines of the notes in .reins/notes/"* | Notes that explain each module to the next session |
+| 6 · Freeze and commit | `npx reins check --update-baseline`, then `npx reins check` | Today's violations frozen; from now on, only new ones fail. Commit everything |
 
-1. Review the architecture plan: in Claude Code, type `/reins-arch` (your agent proposes changes with evidence, you approve each one); otherwise read `.reins/init-report.md` and edit `.reins/architecture.yml`.
-2. Have your agent fill in the module notes: in Claude Code, type `/reins-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
+Commit only after step 6: the pre-commit hook runs `reins check`, which needs the plan from step 3.
 
 Later, after you add or edit a note, skill or agent in `.reins/` (by hand, with `reins notes new` or with `/reins-agent`), run `npx reins sync` so `AGENTS.md` and `.claude/` pick it up. `init` already does it for the notes it drafts.
 
@@ -258,12 +257,15 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 # 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md
 npx reins install --skip-claude    # omit optional Claude Code files for a provider-neutral setup
 
-# 3. Draft the architecture and the module notes, review init-report.md, adjust architecture.yml,
-#    ask your agent to fill in the notes' TODO lines, then freeze today's violations
+# 3. Draft the architecture plan, the baseline and the module notes
 npx reins init
-npx reins check --update-baseline
 
-# 4. Check, commit everything, and protect the main branch in GitHub (PR + approval + "reins" job required)
+# 4. Review the plan with your agent: /reins-arch in Claude Code (it drafts the notes of the domains it adds)
+# 5. Fill in the notes with your agent: /reins-notes in Claude Code
+
+# 6. Freeze today's violations, check, commit everything (not before: the hook needs the plan),
+#    and protect the main branch in GitHub (PR + approval + "reins" job required)
+npx reins check --update-baseline
 npx reins check
 ```
 

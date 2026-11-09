@@ -138,16 +138,17 @@ export const MIN_ROUTE_FILES = 2;
  * Proposes one domain per folder matching `domains_from` (e.g. every child of src/features/).
  * With `routes`, a matching folder that is a route parameter (`[lang]`) or a route group (`(main)`) is looked
  * through to its children; route folders with the same route path in different groups are one domain; and a
- * route with fewer than MIN_ROUTE_FILES source files is left out (its folders listed in `opts.small` when given).
+ * route with fewer than `opts.minFiles` (default MIN_ROUTE_FILES) source files is left out (its folders listed in
+ * `opts.small` when given).
  * Public API: the folder's `index.*`; for routes without one, the files imported from outside the folder plus
  * the entry points inside it (e.g. Next's page.tsx); otherwise an `index.js` placeholder flagged as missing.
  * @param {string[]} domainsFrom globs of domain folders
  * @param {string[]} files
- * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean, small?: string[] }} [opts]
+ * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean, small?: string[], minFiles?: number }} [opts]
  * @returns {Domain[]}
  */
 export function inferDomains(domainsFrom, files, opts = {}) {
-  const { edges = [], entries = [], routes = false, small = [] } = opts;
+  const { edges = [], entries = [], routes = false, small = [], minFiles = MIN_ROUTE_FILES } = opts;
   const folders = new Map();
   for (const f of files) {
     if (!SOURCE.test(f) || (routes && TEST.test(f))) continue;
@@ -178,8 +179,8 @@ export function inferDomains(domainsFrom, files, opts = {}) {
   const used = new Set();
   const entrySet = new Set(entries);
   const sorted = [...byRoute.values()].map((g) => ({ ...g, folders: g.folders.sort() })).sort((a, b) => (a.folders[0] < b.folders[0] ? -1 : 1));
-  if (routes) small.push(...sorted.filter((g) => g.count < MIN_ROUTE_FILES).flatMap((g) => g.folders));
-  return sorted.filter((g) => !routes || g.count >= MIN_ROUTE_FILES).map((g) => {
+  if (routes) small.push(...sorted.filter((g) => g.count < minFiles).flatMap((g) => g.folders));
+  return sorted.filter((g) => !routes || g.count >= minFiles).map((g) => {
     const folder = g.folders[0];
     const name = uniqueName(segmentName(folder.split('/').pop()), used);
     const apis = g.folders.map((f) => publicApiOf(f, files, edges, entrySet, routes));
@@ -460,3 +461,76 @@ export function inferOwnedFolders(domains, files, edges, layers, through = {}) {
 
 /** Imports into a domain's files from outside it. */
 export const importsFromOutside = (domain, edges) => edges.filter((e) => matchesAny(e.to, domain.paths) && !matchesAny(e.from, domain.paths)).length;
+
+/**
+ * Merges small route domains (left out for having too few files) that share a feature folder only they use:
+ * `routes/notifications/` and `routes/notificationsPreferences/` both built on `components/pages/notifications/`
+ * are one module. Only folders right inside a container organized by feature count (one where some domain already
+ * owns a folder, e.g. `components/pages/`); shared code (`components/shared/`) never merges routes. Every import
+ * into the folder must come from those small routes, and at least two of them. Graph only, never names.
+ * @param {Domain[]} small route domains below MIN_ROUTE_FILES that own nothing
+ * @param {Domain[]} kept the domains already proposed (their names are taken)
+ * @param {string[]} files
+ * @param {{ from: string, to: string }[]} edges
+ * @param {{ barrels?: string[], uses?: { from: string, to: string }[] }} [through] from the adapter
+ * @returns {{ merged: Domain[], rest: Domain[] }}
+ */
+export function mergeSmallRoutes(small, kept, files, edges, through = {}) {
+  const barrels = new Set(through.barrels ?? []);
+  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !TEST.test(e.from));
+  const containers = new Set(kept.flatMap((d) => d.owned.map((o) => o.folder.split('/').slice(0, -1).join('/'))));
+  const sources = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && !barrels.has(f) && !kept.some((d) => matchesAny(f, d.paths)));
+  const folders = new Map(); // folder -> source files inside it
+  for (const f of sources) {
+    const c = [...containers].find((x) => f.startsWith(`${x}/`));
+    if (!c) continue;
+    const rest = f.slice(c.length + 1).split('/');
+    if (rest.length < 2) continue;
+    const dir = `${c}/${rest[0]}`;
+    folders.set(dir, (folders.get(dir) ?? 0) + 1);
+  }
+  /** @type {Map<string, string>} union-find over small route names */
+  const parent = new Map(small.map((d) => [d.name, d.name]));
+  const find = (x) => (parent.get(x) === x ? x : find(/** @type {string} */ (parent.get(x))));
+  /** @type {Map<string, { folder: string, files: number, imports: number, total: number }[]>} */
+  const ownedBy = new Map();
+  for (const [dir, n] of [...folders].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (n < 2) continue;
+    const into = runtime.filter((e) => e.to.startsWith(`${dir}/`) && !e.from.startsWith(`${dir}/`));
+    const owners = into.map((e) => small.find((d) => matchesAny(e.from, d.paths))?.name);
+    const names = [...new Set(owners)];
+    if (!into.length || owners.some((x) => !x) || names.length < 2) continue;
+    for (const x of names.slice(1)) parent.set(find(/** @type {string} */ (x)), find(/** @type {string} */ (names[0])));
+    const list = ownedBy.get(dir) ?? [];
+    list.push({ folder: dir, files: n, imports: into.length, total: into.length });
+    ownedBy.set(dir, list);
+  }
+  const groups = new Map(); // root -> { routes, owned }
+  for (const [dir, owned] of ownedBy) {
+    const first = runtime.find((e) => e.to.startsWith(`${dir}/`) && !e.from.startsWith(`${dir}/`));
+    const root = find(/** @type {string} */ (small.find((d) => matchesAny(/** @type {any} */ (first).from, d.paths))?.name));
+    const g = groups.get(root) ?? { owned: [] };
+    g.owned.push(...owned);
+    groups.set(root, g);
+  }
+  const used = new Set(kept.map((d) => d.name));
+  const merged = [];
+  const taken = new Set();
+  for (const [root, g] of groups) {
+    const routes = small.filter((d) => find(d.name) === root);
+    routes.forEach((d) => taken.add(d.name));
+    g.owned.sort((a, b) => (a.folder < b.folder ? -1 : 1));
+    const routeFolders = routes.flatMap((d) => d.folders ?? [d.folder]).sort();
+    merged.push({
+      name: uniqueName(segmentName(g.owned[0].folder.split('/').pop()), used),
+      folder: routeFolders[0],
+      folders: routeFolders,
+      paths: [...routes.flatMap((d) => d.paths), ...g.owned.map((o) => `${o.folder}/**`)],
+      publicApi: routes.flatMap((d) => d.publicApi),
+      missingIndex: routes.every((d) => d.missingIndex),
+      files: routes.reduce((s, d) => s + d.files, 0),
+      owned: g.owned,
+    });
+  }
+  return { merged, rest: small.filter((d) => !taken.has(d.name)) };
+}

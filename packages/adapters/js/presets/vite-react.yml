@@ -10,8 +10,8 @@ layers:
   - { name: shared,     paths: ["src/hooks/**", "src/lib/**", "src/utils/**", "src/services/**", "src/api/**", "src/store/**", "src/types/**", "src/constants/**", "src/context/**", "src/config/**"] }
 
 domains_from: ["src/features/*", "src/modules/*"]
-# With no domain folder above, each route folder becomes a domain: one-file routes are left out, and folders only
-# that route imports join it.
+# With no domain folder above, each route folder becomes a domain: folders mostly that route imports join it, one-file
+# routes that own no folder are left out, and one-file routes sharing a feature folder only they use become one domain.
 route_domains_from: ["src/routes/*", "src/pages/*", "src/views/*", "src/screens/*"]
 
 entries:

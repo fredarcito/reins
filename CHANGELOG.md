@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **`init` finds the modules of repos with thin routes.** A route folder with a single file (`routes/dashboard/index.jsx`) is now a domain when its code lives elsewhere, such as `components/pages/dashboard/`. Before, those routes were left out and their modules got no domain and no note. Several one-file routes built on one feature folder only they use (`notifications` and `notificationsPreferences` over `components/pages/notifications/`) become one domain. Re-run `reins init` in a copy, or ask `/reins-arch` to add the missing domains.
+- **Setup names the agent steps.** The README, the `init` output, the report and the `install` hint now list reviewing the plan (`/reins-arch`) and filling in the notes (`/reins-notes`) as numbered steps between `init` and the first commit, and say to commit only once `reins check` passes.
+- **New domains get their notes.** `reins doctor` now warns about every domain without a note when `architecture.yml` changed, not only when its code changed. `/reins-arch` drafts the notes of the domains it adds, and proposes grouping the one-file routes `init` left out when they are one flow (sign in, reset password… → `auth`).
+
 ## 0.12.0 · 2026-11-09
 
 One plan can now cover a repo with several languages.

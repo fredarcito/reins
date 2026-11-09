@@ -103,6 +103,18 @@ test('triage-mismatch: the highest level declared on the branch is compared with
   assert.deepEqual(rules(large), [], 'declaring more than needed is not flagged');
 });
 
+test('note-missing when architecture.yml changed: every domain without a note, even with no code changed', () => {
+  const log = { file: LOG, text: '2026-11-04 | feat/x | large | new domains\n' };
+  const notes = [{ file: '.reins/notes/billing.md', paths: ['src/features/billing/**'], body: '# billing\n' }];
+  const r = doctor({ changedFiles: [ARCH], triageLog: log, notes });
+  assert.deepEqual(rules(r), ['note-missing']);
+  assert.match(r.violations[0].message, /Domain search is in architecture\.yml but has no module note/);
+  assert.match(r.violations[0].fix, /npx reins notes new search/);
+  const withFiles = doctor({ changedFiles: [ARCH], triageLog: log, notes, repoFiles: ['src/features/billing/a.js', 'src/features/search/a.js'] });
+  assert.deepEqual(withFiles.violations.map((v) => v.from), ['search']);
+  assert.deepEqual(rules(doctor({ changedFiles: ['README.md'], triageLog: log, notes })), [], 'an unchanged plan does not flag notes');
+});
+
 test('triage-mismatch with an anchor: only the lines of the current task count, against its own diff', () => {
   const files = ['src/features/billing/a.js', 'src/features/billing/b.js', 'src/features/billing/c.js', 'src/features/billing/d.js'];
   const text = ['feat/x | large | old refactor | commit:aaa1111', 'feat/x | small | tweak | commit:bbb2222', 'feat/x | small | question | commit:bbb2222']
@@ -126,7 +138,7 @@ test('reins and agent files do not count as task files; architecture.yml still d
   const r = doctor({ changedFiles: [...reinsOnly, 'src/a.js'], triageLog: { file: LOG, text: '2026-11-04 | feat/x | small | one file\n' } });
   assert.deepEqual(rules(r), [], '1 code file is small, whatever else changed');
   assert.equal(scopeSignals([...reinsOnly, ARCH], domains, ARCH).architecture, true);
-  assert.deepEqual(rules(doctor({ changedFiles: [ARCH] })), ['triage-missing']);
+  assert.deepEqual(rules(doctor({ changedFiles: [ARCH] })), ['triage-missing', 'note-missing', 'note-missing'], 'its domains have no notes either');
 });
 
 test('agents-size', () => {

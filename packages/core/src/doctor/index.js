@@ -53,7 +53,7 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
   }
 
   findings.push(
-    ...checkNotes({ changedFiles, notes, domains, level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines, repoFiles }),
+    ...checkNotes({ changedFiles, notes, domains, planChanged: changedFiles.includes(architectureFile), level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines, repoFiles }),
   );
 
   for (const nb of notebooks) findings.push(...checkNotebook({ file: nb.file, text: nb.text, maxLines: config.progress.hot_max_lines }));
