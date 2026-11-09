@@ -22,7 +22,7 @@ Run all three before opening a PR; CI runs them on Node 22 and 24.
 - **Error messages say the rule, why, and how to fix it**: agents read them.
 - **Anything assumed about external tools** (Claude Code hooks, permissions, package managers) that you haven't tested goes in [`docs/VERIFIED.md`](docs/VERIFIED.md) as unverified. Add a script to `scripts/verify/` when you test it.
 - **Stable vs. experimental:** a piece is stable when a tool enforces it and it has tests; otherwise experimental. Keep [`docs/STATUS.md`](docs/STATUS.md) and the README table in sync.
-- **The README is the team's documentation**: update it (with diagrams) when you change what exists. Mermaid labels can't contain HTML entities, quotes, `<`, `>` or `|` (GitHub fails to render them; `pnpm lint` checks).
+- **The README is the team's short documentation**: update it when you change what exists, and keep the detail and diagrams in `docs/` (commands, how-it-works, context-between-sessions, updating); the README links to them. Mermaid labels can't contain HTML entities, quotes, `<`, `>` or `|` (GitHub fails to render them; `pnpm lint` checks).
 
 ## Agents working on this repo
 

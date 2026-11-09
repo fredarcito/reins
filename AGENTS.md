@@ -32,7 +32,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - New dependency -> justify it in `docs/DECISIONS.md`.
 - Assumption about Claude Code, hooks, permissions or skills you haven't tested -> record it in `docs/VERIFIED.md` as unverified.
 - Stable vs experimental status of each piece -> `docs/STATUS.md`.
-- `README.md` is the team's documentation: update it (with diagrams) whenever a phase changes what exists.
+- `README.md` is the team's short documentation (~350 lines): update it whenever a phase changes what exists, and put the detail and diagrams in `docs/` (commands, how-it-works, context-between-sessions, updating).
 - Renaming the npm scope -> `pnpm rename-scope <@scope>`; never edit package names by hand.
 
 ## Module notes
