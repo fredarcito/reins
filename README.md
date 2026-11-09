@@ -1,6 +1,8 @@
 # reins
 
-**Hold the reins of your coding agents: they respect your architecture and remember your project.**
+**reins is an engineering harness for AI coding agents.** It makes project knowledge persistent, architecture enforceable, and development workflows consistent across models, agents, and sessions.
+
+Hold the reins of your coding agents: they respect your architecture and remember your project. reins is not a framework for building agents: it shapes how the agents you already use (Claude Code, Codex, Cursor or any other) work on your codebase.
 
 Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js)
 
@@ -205,7 +207,7 @@ The hook can be skipped with `--no-verify`, so **CI plus branch protection is th
 
 ### The architecture map on every pull request
 
-A text diff hides the shape of the change: one new import between two domains is a single line among hundreds. So the CI job also posts **one comment per PR** that shows, before anyone opens a file, how the PR changes the structure: new and removed dependencies between domains, new domains, folders no rule covers, violations, and which domains import the changed code. It is plain templates filled with data (no AI, no API besides posting the comment), and it is edited in place on every push.
+A text diff hides the shape of the change: one new import between two domains is a single line among hundreds. So the CI job also posts **one comment per PR** that shows, before anyone opens a file, how the PR changes the structure: new and removed dependencies between domains, new domains, folders no rule covers, violations, and which domains import the changed code. It is plain templates filled with data (no AI, no API besides posting the comment), and it is edited in place on every push. A PR that changes no structure gets a short version with one line, so the full comment stands out when it matters.
 
 ```mermaid
 flowchart LR
@@ -434,7 +436,19 @@ Each session writes only its own notebook and reads the others. Coming back tomo
 
 **Filling them in.** `/reins-notes` (a Claude Code skill installed by `reins sync`) has the agent read each module and replace the `TODO` lines. It writes only decisions it can back up (code, comments, git history) and leaves the rest as `- ? question` lines for you to answer.
 
-**Notes stay current.** The `reins-done` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note.
+**Notes stay current.** The `reins-done` skill updates the notes of the modules a task touched, and `reins doctor` warns when a medium or large task changed a module without touching its note, or touched a domain that has no note. Closing makes sure of it: when you say "done", the agent closes the task with `reins progress close`, and reins only closes it once nothing in the notebook is left pending and those notes are updated. Otherwise it answers with what is missing, so what the agent learned is never lost when the notebook is cleaned up.
+
+```mermaid
+flowchart LR
+    you["You: it's done"] --> skill["Agent runs the done skill:<br/>checks, notebook, module notes"]
+    skill --> close["reins progress close"]
+    close --> ok{"Every item done or dropped?<br/>Notes of the touched<br/>modules updated?"}
+    ok -- yes --> closed["Closed<br/>(notebook cleaned up in a week)"]
+    ok -- no --> back["Not closed: here is what is missing"]
+    back --> skill
+```
+
+When a flagged note really needs nothing (a version bump, say), the agent closes with `--notes-ok "<why>"` and the reason stays in the notebook.
 
 **Catching notes that fell behind.** Code moves on in small fixes too, which never trigger the warnings above. Three checks cover that, from free to paid:
 
@@ -613,7 +627,7 @@ flowchart LR
     diff["git diff since the task's commit<br/>files · domains · public API"] --> cmp
     cmp -- "diff needs more" --> mismatch["triage-mismatch"]
     cmp -- "no line for the branch" --> missing["triage-missing"]
-    nb["progress/BRANCH.md"] --> fmt["progress-format<br/>progress-hot-size<br/>progress-closed"]
+    nb["progress/BRANCH/TASK/notebook.md"] --> fmt["progress-format<br/>progress-hot-size<br/>progress-closed"]
     agents["AGENTS.md"] --> size["agents-size"]
 ```
 

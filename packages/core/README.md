@@ -22,6 +22,7 @@ See [@agentreins/cli](https://www.npmjs.com/package/@agentreins/cli) for the qui
 - **Impact analysis** (`impactOf`): the reverse of `scope`. It joins the adapter's import edges with the domains: who consumes a file (grouped by domain), which imports bypass a public API, which files a breaking change would touch. Powers `reins impact`.
 - **Triage signals** (`scopeSignals`, `suggestLevel`): turn a list of files into the minimum task level (`small` / `medium` / `large`). The same thresholds power `reins scope` and the doctor's `triage-mismatch`, so what the agent announces is what the diff is measured against.
 - **Reports**: text and JSON (stable `schema` number), each finding with its rule, reason and fix.
+- **Pull request map** (`prStructure`, `renderPrMap`): compares the import graph of a branch with its merge base, domain by domain (new, removed and mutual dependencies, rules broken, folders no domain covers, who imports the changed code), and renders the comment CI posts: a short list with a Mermaid map. Pure data in, Markdown out.
 - **Doctor**: the workflow rules behind `reins doctor` (triage vs diff, notebook, module notes, `AGENTS.md` size) and the progress notebook parser and one-line-at-a-time editor behind `reins progress`.
 - **Module notes**: parsing, the path → note lookup (`notesFor`), drafting from the import graph (`draftNote`), and stale ranking from git history (`rankStaleNotes`).
 - **Audit backlog**: the local findings file behind `reins audit` — parsing, rendering, status changes.

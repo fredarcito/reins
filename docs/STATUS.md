@@ -33,6 +33,7 @@ Version 0.3.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/
 | Skills `notes`, `arch`, `agent` and `check --coverage` | templates + cli | experimental | Yes, tested; each skill run once with Claude Code (haiku) |
 | `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
 | One notebook per task (several tasks and sessions on a branch): `progress new <task>`/`close`/`--task`, claim by session, read view and cleanup in `resume` | core + cli + policy | experimental | Phase 1 (2026-11-08), tested on temporary repos; session id verified (P11); not yet tried with real parallel Claude Code sessions |
+| `progress close` enforces the done steps: every item done or dropped, flagged module notes updated (`--notes-ok "<why>"` to override, reason recorded) | cli + done skill + policy | experimental | Yes (2026-11-09, 0.11.0), tested on a temp repo: open items, a flagged note, `--notes-ok` |
 | Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
 | Stale notes: doctor `note-dead-paths`, `note-dead-refs`; `notes stale`; `/reins-notes review` | core + cli + skill | experimental | Rules and ranking tested; thresholds none; the review skill untested with an agent |
 | Notes for the parts of a module (`.reins/notes/<module>/<part>.md`), drafted by `init` for route domains; `note-layout` | core + cli | experimental | Tested; not yet tried on a real repo |

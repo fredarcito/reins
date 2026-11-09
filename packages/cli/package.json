@@ -7,7 +7,7 @@
     "templates",
     "LICENSE"
   ],
-  "description": "Command line for reins: init, check, doctor, sync and friends.",
+  "description": "An engineering harness for AI coding agents: persistent project knowledge, enforceable architecture and consistent workflows across models, agents and sessions.",
   "type": "module",
   "bin": {
     "reins": "./src/bin.js"

@@ -4,7 +4,7 @@
   "version": "0.11.0",
   "license": "MIT",
   "type": "module",
-  "description": "reins: architecture checks and memory for coding agents (deterministic check + portable markdown content).",
+  "description": "reins: an engineering harness for AI coding agents: persistent project knowledge, enforceable architecture and consistent workflows across models, agents and sessions.",
   "engines": {
     "node": ">=22"
   },

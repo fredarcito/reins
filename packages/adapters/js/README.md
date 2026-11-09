@@ -35,6 +35,7 @@ Plain JS/JSX or TypeScript, with or without `src/`, single package or monorepo w
 - **Warns about local imports it can't resolve**, so a broken alias never turns into a silently green check.
 - **Knows framework entry points** (Next's `page`, `layout`, `route`..., Vite's `main`), so they are never reported as orphans.
 - **Monorepos**: workspace packages resolve, including packages that only declare `exports` and symlinked workspaces.
+- **Base version for the pull request map** (`prepareCheckout`): links `node_modules` into a temporary checkout of the merge base entry by entry, so workspace packages resolve to their base code and nothing is installed (pnpm, npm and yarn `node_modules` layouts; Yarn PnP gets a warning).
 - **Scans the whole repo** except `node_modules`, `.git`, `.next`, `.reins` and build output (`dist`, `build`, `out`, `coverage`, `.turbo`, `.vercel`, `.cache`, `storybook-static`); layers decide what matters.
 - **Presets** give `reins init` a starting plan: layers (`app` > `features` > `components` > `shared`) and domains from `features/*` or `modules/*`, or from route folders when there are none. Route groups (`(main)`) are looked through; a folder needs more than one source file to become a domain.
 - **Optional rule `next-server-client`**: a `'use client'` file must not reach, directly or through its imports, a module that imports `server-only` or `next/headers`.

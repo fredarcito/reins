@@ -1,6 +1,8 @@
 # reins
 
-**Hold the reins of your coding agents: they respect your architecture and remember your project.**
+**reins is an engineering harness for AI coding agents.** It makes project knowledge persistent, architecture enforceable, and development workflows consistent across models, agents, and sessions.
+
+Hold the reins of your coding agents: they respect your architecture and remember your project. reins is not a framework for building agents: it shapes how the agents you already use (Claude Code, Codex, Cursor or any other) work on your codebase.
 
 Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)**
 
@@ -8,7 +10,7 @@ Coding agents write code fast, but they forget your architecture (a shared compo
 
 reins fixes both:
 
-- **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. A broken rule blocks the commit with the reason and the fix, so the agent corrects it before you review. And before the edit, `reins impact` tells the agent which domains consume a shared file, so a "small fix" that is really a large refactor says so before the work starts.
+- **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. A broken rule blocks the commit with the reason and the fix, so the agent corrects it before you review. On every pull request it also posts one comment that shows how the change moves your architecture: new dependencies between domains, new domains, rules broken. And before the edit, `reins impact` tells the agent which domains consume a shared file, so a "small fix" that is really a large refactor says so before the work starts.
 - **Each module gets a short note**: what it does, how it works, the decisions taken and why, its traps. The note reaches the agent as soon as it opens a file of that module, and after a compaction the task's notebook comes back on its own.
 
 Made for frontend teams on **Vite + React** or **Next** (app and pages router, plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent. A Node CLI and plain markdown: no service, no API keys, no telemetry.
@@ -103,7 +105,7 @@ What `install` sets up, in the order the agent hits it:
 1. **Announce.** Every task gets a level — `small`, `medium`, `large` — from the triage policy in `.reins/core/policies/`. `reins scope <paths>` gives the objective signals: domains touched, notes to read, minimum level.
 2. **Plan.** Before changing a file other domains may import (a util, a type, a barrel, a public API), the agent runs `reins impact` on it. "Medium, but could be large if another domain shows up" stops being a guess.
 3. **Edit.** The module note arrives the moment the agent opens a file — a Claude Code hook, or the notes index in `AGENTS.md` for any other agent.
-4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes.
+4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes. `reins progress close` only closes the task once nothing in its notebook is pending and those notes are updated, so what the agent learned stays.
 
 ## Commands
 
@@ -119,7 +121,7 @@ What `install` sets up, in the order the agent hits it:
 | `reins sync` | Refreshes `.reins/core/` (rules, policies, skills, agents), the rules and notes blocks in `AGENTS.md`, and the optional Claude Code files. `--check`, `--skip-claude`, `--claude` |
 | `reins update` | Updates the CLI and installed adapters with your package manager, then runs the new `reins sync`. `--dry-run`, `--skip-claude`, `--claude` |
 | `reins doctor` | Local workflow checks: declared task level vs the branch diff, the notebook, the notes, `AGENTS.md` size. Warns, never blocks, never in CI |
-| `reins audit`, `reins progress`, `reins review` | Local backlog of findings, branch notebook, review prompt |
+| `reins audit`, `reins progress`, `reins review` | Local backlog of findings; one notebook per task (`close` refuses while something is pending or a touched module's note is behind); review prompt, and `review --map` prints the pull request architecture map |
 
 `reins <command> --help` explains each one. Every command except `check` and `init` is still experimental.
 
