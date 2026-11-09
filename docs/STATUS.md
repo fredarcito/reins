@@ -5,7 +5,7 @@ Each piece is either:
 - **stable**: enforced by a tool and covered by tests.
 - **experimental**: depends on the agent reading or writing files, or on tool behavior that is not verified (see [`VERIFIED.md`](VERIFIED.md)).
 
-Version 0.12.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/adapter-js`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
+Version 0.13.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins/adapter-js`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
 
 | Piece | Package | Planned status | Built |
 | --- | --- | --- | --- |
@@ -35,10 +35,10 @@ Version 0.12.0, on npm as `@agentreins/cli`, `@agentreins/core` and `@agentreins
 | `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
 | One notebook per task (several tasks and sessions on a branch): `progress new <task>`/`close`/`--task`, claim by session, read view and cleanup in `resume` | core + cli + policy | experimental | Phase 1 (2026-11-08), tested on temporary repos; session id verified (P11); not yet tried with real parallel Claude Code sessions |
 | `progress close` enforces the done steps: every item done or dropped, flagged module notes updated (`--notes-ok "<why>"` to override, reason recorded) | cli + done skill + policy | experimental | Yes (2026-11-09, 0.11.0), tested on a temp repo: open items, a flagged note, `--notes-ok` |
-| Doctor note rules: `note-missing`, `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
+| Doctor note rules: `note-missing` (also every domain without a note when `architecture.yml` changed, 0.13.0), `note-outdated`, `note-draft`, `note-size` | core + cli | experimental | Yes (phase 10), tested |
 | Stale notes: doctor `note-dead-paths`, `note-dead-refs`; `notes stale`; `/reins-notes review` | core + cli + skill | experimental | Rules and ranking tested; thresholds none; the review skill untested with an agent |
 | Notes for the parts of a module (`.reins/notes/<module>/<part>.md`), drafted by `init` for route domains; `note-layout` | core + cli | experimental | Tested; not yet tried on a real repo |
-| `init` on repos organized by routes: `(group)` look-through, lone pages left out (unless they own a folder elsewhere), folders and loose files assigned to a route by imports, barrels resolved | cli + adapter-js | experimental | Tested on synthetic scenarios; not yet tried on real repos |
+| `init` on repos organized by routes: `(group)` look-through, lone pages left out (unless they own a folder elsewhere; one-file routes sharing a feature folder merged, 0.13.0), folders and loose files assigned to a route by imports, barrels resolved | cli + adapter-js | experimental | Tested on synthetic scenarios; not yet tried on real repos |
 
 Known limits of `init` on repos organized by routes:
 

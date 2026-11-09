@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.13.0 · 2026-11-09
+
+`init` finds the modules of repos whose routes are thin, and new domains get their notes.
+
+```bash
+npx reins update
+```
+
+Already ran `init` on a repo with thin routes (`routes/x/index.jsx` and the code in `components/pages/x`)? Ask your agent to run `/reins-arch`: it proposes the missing domains and drafts their notes. `reins doctor` lists the domains still without a note.
 
 - **`init` finds the modules of repos with thin routes.** A route folder with a single file (`routes/dashboard/index.jsx`) is now a domain when its code lives elsewhere, such as `components/pages/dashboard/`. Before, those routes were left out and their modules got no domain and no note. Several one-file routes built on one feature folder only they use (`notifications` and `notificationsPreferences` over `components/pages/notifications/`) become one domain. Re-run `reins init` in a copy, or ask `/reins-arch` to add the missing domains.
 - **Setup names the agent steps.** The README, the `init` output, the report and the `install` hint now list reviewing the plan (`/reins-arch`) and filling in the notes (`/reins-notes`) as numbered steps between `init` and the first commit, and say to commit only once `reins check` passes.

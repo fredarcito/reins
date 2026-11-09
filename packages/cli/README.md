@@ -35,19 +35,15 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 
 In the root of your project:
 
-```bash
-npx reins install                  # git hook, CI job, AGENTS.md, .reins/core/, .claude/ (--skip-claude to omit it)
-npx reins init                     # architecture plan, baseline, module notes
-npx reins check --update-baseline  # freeze today's violations
-npx reins check                    # from now on, only new violations fail
-```
+In the root of your project, after installing the packages. Steps 3 and 4 are done by your agent; don't skip them: the draft only describes what exists, and the notes start as templates.
 
-Between `init` and `check --update-baseline`:
+1. **Wire it:** `npx reins install`. Git hook, CI job, `AGENTS.md`, `.reins/core/`, `.claude/` (`--skip-claude` to omit it).
+2. **Draft:** `npx reins init`. Architecture plan, baseline, a module note per domain and a review report.
+3. **Review the plan with your agent.** In Claude Code, type **`/reins-arch`**: your agent proposes changes with evidence, you approve each one, and it drafts the notes of the domains it adds. With other agents, ask *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*.
+4. **Fill in the notes with your agent.** In Claude Code, type **`/reins-notes`**; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
+5. **Freeze and commit:** `npx reins check --update-baseline` freezes today's violations, `npx reins check` must pass, then commit everything. Not before: the pre-commit hook runs `reins check`, which needs the plan.
 
-1. **Review the architecture plan.** In Claude Code, type `/reins-arch`: your agent proposes changes with evidence and you approve each one. Otherwise read `.reins/init-report.md` and edit `.reins/architecture.yml`.
-2. **Fill in the module notes.** In Claude Code, type `/reins-notes`; with other agents, ask *"fill in the TODO lines of the notes in .reins/notes/"*.
-
-Then commit everything. Nothing is overwritten: `install` and `init` only add files or ask first (`--dry-run` shows what they would do).
+From then on, only new violations fail. Nothing is overwritten: `install` and `init` only add files or ask first (`--dry-run` shows what they would do).
 
 ## What you get
 
