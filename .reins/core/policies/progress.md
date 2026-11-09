@@ -35,7 +35,7 @@ The person routes work between sessions; reins does not deliver messages.
 - Update it silently after each subtask and before switching topic, not "at the end".
 - Markers: `[ ]` pending, `[~]` in progress (only one), `[x]` written but not tested, `[-]` discarded with a reason (`- [-] task — reason`). Never delete discarded items: they stop the idea from coming back.
 - What is needed to finish goes in the notebook. An improvement found on the way goes to the backlog (`npx reins audit add`), not into this task.
-- The header says `status: open|closed`. Only the person decides a task is done: ask, then close it with `npx reins progress close`, never by editing the header. What lasts beyond the task (decisions with their why, traps, how the module works) goes to the module note in `.reins/notes/` before closing.
+- The header says `status: open|closed`. Only the person decides a task is done: ask, then close it with `npx reins progress close`, never by editing the header. What lasts beyond the task (decisions with their why, traps, how the module works) goes to the module note in `.reins/notes/` before closing. `close` refuses until every item is done or dropped and the module notes the doctor flags are updated (`--notes-ok "<why>"` when nothing durable changed).
 - Create it with `npx reins progress new <task>` (`--hot` for large tasks): it uses the templates in `.reins/templates/`. Prefer `npx reins progress done|add|next` to rewriting the file (keeps the format valid).
 - Cleanup is automatic (`reins resume`): a closed task is deleted 7 days after closing or when its branch is gone; an open task only when its branch is gone and it has not changed for 7 days. An open task of a live branch is never deleted.
 

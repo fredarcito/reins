@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0 · 2026-11-09
+
+Closing a task now makes sure what the agent learned is kept.
+
+```bash
+npx reins update
+```
+
+`update` also runs `sync`, which brings the new `done` skill and progress policy: commit what it changed (`.reins/core/`, `.claude/`).
+
+- **Closing a task can't skip the wrap-up anymore.** When you say a task is done, the agent closes it with `reins progress close`, and reins now refuses until the notebook has nothing pending (each item done, or dropped with a reason) and the notes of the modules the task touched are updated. Before, an agent could close straight away and what it learned was lost when the notebook was cleaned up a week later. If a note really needs nothing (a version bump, say), the agent says why with `--notes-ok "<why>"`, and the reason stays in the notebook.
+
 ## 0.10.0 · 2026-11-09
 
 Every pull request gets a map of how it changes your architecture.

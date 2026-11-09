@@ -65,15 +65,45 @@ test('the same task from a new session, after a compaction, and without a sessio
   assert.match((await cli(dir, ['progress', 'show'], as(null))).stderr, /No task chosen/, 'with two open tasks, none is guessed');
 });
 
+/** Marks every item of a notebook done, as an agent does at the end of the done skill. */
+const finish = (dir, f) => write(dir, f, read(dir, f).replace(/- \[[ ~]\]/g, '- [x]'));
+
 test('closing: the agent closes with a command; closed tasks take one line, only while others are open', async () => {
   const dir = await branchWithTask();
   await cli(dir, ['progress', 'new', 'login'], as('s2'));
+  finish(dir, CSS);
+  finish(dir, LOGIN);
   assert.match((await cli(dir, ['progress', 'close'], as('s1'))).stdout, /Closed css\. reins deletes its notebook 7 days from now\./);
   assert.match(read(dir, CSS), /status: closed/);
   const r = (await cli(dir, ['resume'], as('s4'))).stdout;
   assert.match(r, /- login [^]*?\nDone: css\.\n/);
   await cli(dir, ['progress', 'close'], as('s2'));
   assert.match((await cli(dir, ['resume'], as('s4'))).stdout, /^Nothing to resume on feat\/checkout/, 'closed notebooks are never current work');
+});
+
+test('close refuses while the done steps are not finished: open items, then flagged notes unless --notes-ok says why', async () => {
+  const dir = await branchWithTask();
+  const refused = await cli(dir, ['progress', 'close'], as('s1'));
+  assert.equal(refused.code, 2);
+  assert.match(refused.stderr, /Not closed: the done steps are not finished \(the done skill/);
+  assert.match(refused.stderr, /Items still open\. Mark each one done[^]*\n {2}\d+\. \[~\] checkout buttons/);
+  assert.match(read(dir, CSS), /status: open/);
+
+  finish(dir, CSS);
+  const note = '.reins/notes/ui.md';
+  write(dir, note, '---\npaths: ["src/ui/**"]\n---\n# ui\n\n## Purpose\nShared UI.\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'ui note');
+  await cli(dir, ['triage', 'small', 'css'], as('s1'));
+  for (const c of ['Button', 'Card', 'Modal', 'Tabs']) write(dir, `src/ui/${c}.jsx`, `export const ${c} = () => null;\n`); // medium: doctor checks notes
+  const notes = await cli(dir, ['progress', 'close'], as('s1'));
+  assert.equal(notes.code, 2);
+  assert.match(notes.stderr, /Module notes the doctor flags[^]*note-outdated \.reins\/notes\/ui\.md/);
+  assert.doesNotMatch(notes.stderr, /Items still open/);
+
+  assert.match((await cli(dir, ['progress', 'close', '--notes-ok', ' '], as('s1'))).stderr, /--notes-ok needs the reason/);
+  assert.match((await cli(dir, ['progress', 'close', '--notes-ok', 'only a placeholder component'], as('s1'))).stdout, /Closed css\./);
+  assert.match(read(dir, CSS), /status: closed[^]*\*\*Next step:\*\* Closed with module notes unchanged: only a placeholder component/);
 });
 
 test('doctor checks every notebook of the branch', async () => {

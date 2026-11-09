@@ -22,4 +22,4 @@ description: Close a coding task. Use it when the person says the task is done, 
    - how many done criteria are met, and which are not;
    - the module notes you created or updated, and what you added;
    - what you did **not** verify.
-6. Only the person decides the task is done. Ask; when they confirm, close it with `npx reins progress close`, never by editing the header. Closing lets reins delete the notebook a week later, so steps 2–3 must already be done.
+6. Only the person decides the task is done. Ask; when they confirm, close it with `npx reins progress close`, never by editing the header. Closing lets reins delete the notebook a week later, so steps 2–3 must already be done: `close` refuses while an item is neither done nor dropped, or the doctor flags a module note of the task's files. If a flagged note really needs nothing (only a version number changed, say), close with `--notes-ok "<why>"`; never use it to skip step 3.

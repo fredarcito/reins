@@ -40,6 +40,19 @@ export async function doctor(ctx) {
     return 0;
   }
 
+  const { result, notes } = doctorResult(root, values, env);
+  if (values.json) out(formatJson(result, { warnings: notes }));
+  else out(formatText(result, { title: 'reins doctor', warnings: notes, baseline: false }));
+  return values.strict && result.violations.length ? 1 : 0;
+}
+
+/**
+ * The doctor's findings for the current branch and task, without printing. Shared with `progress close`.
+ * @param {string} root
+ * @param {Record<string, any>} values
+ * @param {NodeJS.ProcessEnv} env
+ */
+export function doctorResult(root, values, env) {
   const config = readDoctorConfig(root);
 
   const notes = [];
@@ -77,7 +90,5 @@ export async function doctor(ctx) {
     repoFiles: listRepoFiles(root),
   });
 
-  if (values.json) out(formatJson(result, { warnings: notes }));
-  else out(formatText(result, { title: 'reins doctor', warnings: notes, baseline: false }));
-  return values.strict && result.violations.length ? 1 : 0;
+  return { result, notes };
 }

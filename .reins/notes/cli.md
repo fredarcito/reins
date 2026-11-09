@@ -27,8 +27,7 @@ The `reins` command line: wires the provider-neutral core and language adapter t
 `bin.js` calls `run`, which picks the command and passes a context (`root`, `cwd`, `values`, `out`, `err`, `env`, `confirm`, `today`). Commands do the I/O (files, git) and call pure core functions. `check` loads the config, resolves the adapter, builds the graph, adds integrity (git merge base) and generated-file divergences (`sync --check`), then runs `runCheck` and prints the report. `update` runs `sync` through the package manager after dependency updates so it uses the newly installed CLI rather than the already-loaded process. Exit codes: 0 ok, 1 new errors, 2 could not run.
 
 ## Decisions
-- 2026-11-04: no CLI framework, `node:util` `parseArgs`. The npm scope is derived from the package's own name (`scope.js`), never hardcoded.
-- 2026-11-04: the CLI never installs packages; a missing adapter prints the install command for the repo's package manager.
+- 2026-11-04: no CLI framework, `node:util` `parseArgs`. The npm scope is derived from the package's own name (`scope.js`), never hardcoded. The CLI never installs packages; a missing adapter prints the install command for the repo's package manager.
 - 2026-11-04: `sync` only touches what its manifest records; third-party skills, agents and settings are never overwritten or deleted. Hand-edited generated files are overwritten with a message.
 - 2026-11-04: Claude Code hooks (`notes --hook`, `resume --hook`) must never fail: any error means no output and exit 0.
 - 2026-11-04: on `compact`/`clear`, `resume --hook` forgets the session's seen-notes record so notes are delivered again.
@@ -48,6 +47,7 @@ The `reins` command line: wires the provider-neutral core and language adapter t
 - 2026-11-08: the notes hook carries the impact warning, from a map built detached at session start (graph per edit is too slow). Its once-per-session record reuses `.notes-seen.json` with `impact:` keys, so a compaction resets it too.
 - 2026-11-08: `.notes-seen.json` is updated under `withFileLock` and replaced with `writeFileAtomic`: parallel tool calls run their hooks at the same time, and plain read-modify-write delivered a note twice and left invalid JSON (which reads as empty, so every session got its notes again). The lock gives up after 200 ms and runs anyway (hooks never block or fail); a lock older than 5 s is stale.
 - 2026-11-08: `review --map` builds the base graph in a git worktree and calls the adapter's optional `prepareCheckout` first (a bare worktree reports every pnpm workspace import as new; VERIFIED P14). Exit 0 even with violations, 2 when it could not run.
+- 2026-11-09: `progress close` refuses until the done steps are met: every item done or dropped, and no module note of the task flagged by the doctor (`doctorResult` in `commands/doctor.js`, shared). `--notes-ok "<why>"` overrides only the notes and records the reason as the Next step. An agent had closed a task without updating notes. See `docs/DECISIONS.md`.
 
 ## Traps
 - Commands read the session from `ctx.env`, never `process.env`: tests run inside Claude Code sessions that set `CLAUDE_CODE_SESSION_ID`.

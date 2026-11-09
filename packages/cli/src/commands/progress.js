@@ -12,6 +12,7 @@ import { CliError } from '../context.js';
 import { branchTasks, explicitTask, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
+import { doctorResult } from './doctor.js';
 
 /**
  * A notebook template: the repo's own copy in .reins/templates/ (so a team can adapt it), or the packaged one.
@@ -34,6 +35,7 @@ export const options = {
   criteria: { type: 'boolean' },
   hot: { type: 'boolean' },
   json: { type: 'boolean' },
+  'notes-ok': { type: 'string' },
 };
 
 export const help = `Usage:
@@ -44,13 +46,18 @@ export const help = `Usage:
   reins progress done <n>               Mark item n done [x]
   reins progress drop <n> <reason>      Discard item n [-] with a reason (it stays in the list)
   reins progress next <text>            Set the "Next step" line
-  reins progress close                  Close the task (only after the person confirmed it is done)
+  reins progress close [--notes-ok <why>]  Close the task (only after the person confirmed it is done)
 
 One notebook per task: .reins/progress/<branch>/<task>/notebook.md, on the current branch (--branch to choose
 another). <task> is a short name for the person's request (css-refactor). The task is the one given with --task
 (or REINS_TASK), else the open one this session works on; every command claims the task it acts on for this
 session (session: in the header, from CLAUDE_CODE_SESSION_ID or REINS_SESSION). Never edit another session's
-task. Every edit keeps the notebook valid and updates its date; an invalid notebook is refused with its problems.`;
+task. Every edit keeps the notebook valid and updates its date; an invalid notebook is refused with its problems.
+
+close runs the end of the done skill for you and refuses while it is not finished: every item must be done [x] or
+dropped [-] with a reason, and the doctor must not flag the module notes of the task's files (missing, not updated,
+draft, dead paths). When nothing durable changed in a flagged note, close with --notes-ok "<why>": the reason is
+kept in the notebook.`;
 
 const today = (ctx) => ctx.today ?? new Date().toISOString().slice(0, 10);
 
@@ -165,8 +172,13 @@ export async function progress(ctx) {
         return write(markDropped(text, num(args[0]), args.slice(1).join(' '), date), `Item ${args[0]} was discarded.`);
       case 'next':
         return write(setNext(text, args.join(' '), date), 'Next step updated.');
-      case 'close':
-        return write(setHeader(text, { status: 'closed' }, date), `Closed ${taskName(current)}. reins deletes its notebook 7 days from now.`);
+      case 'close': {
+        const blockers = closeBlockers(root, text, values, env);
+        if (blockers.length) throw new CliError(`Not closed: the done steps are not finished (the done skill, .reins/core/skills/done/SKILL.md).\n\n${blockers.join('\n\n')}`);
+        const reason = values['notes-ok']?.trim();
+        const closed = reason ? setNext(text, `Closed with module notes unchanged: ${reason}`, date) : text;
+        return write(setHeader(closed, { status: 'closed' }, date), `Closed ${taskName(current)}. reins deletes its notebook 7 days from now.`);
+      }
       default:
         throw new CliError(`Unknown action "${action}".\n\n${help}`);
     }
@@ -174,6 +186,36 @@ export async function progress(ctx) {
     if (e instanceof NotebookError) throw new CliError(e.message);
     throw e;
   }
+}
+
+const NOTE_RULES = new Set(['note-missing', 'note-outdated', 'note-draft', 'note-dead-paths', 'note-dead-refs']);
+
+/**
+ * What still stops a task from closing: items not done or dropped, and module notes the doctor flags (unless
+ * --notes-ok says why they need nothing). Each entry is a paragraph for the error message.
+ * @returns {string[]}
+ */
+function closeBlockers(root, text, values, env) {
+  const blockers = [];
+  const open = listItems(text).filter((it) => it.marker === ' ' || it.marker === '~');
+  if (open.length) {
+    blockers.push(['Items still open. Mark each one done (`reins progress done <n>`) or drop it with a reason (`reins progress drop <n> <reason>`):',
+      ...open.map((it) => `  ${it.n}. [${it.marker}] ${it.text}`)].join('\n'));
+  }
+  if (values['notes-ok'] !== undefined && !values['notes-ok'].trim()) throw new CliError('--notes-ok needs the reason: --notes-ok "only the version number changed".');
+  if (!values['notes-ok'] && !env.CI) {
+    let flagged = [];
+    try {
+      flagged = doctorResult(root, {}, env).result.violations.filter((v) => NOTE_RULES.has(v.rule));
+    } catch {
+      flagged = []; // the doctor could not run (no git…): don't block the close on it
+    }
+    if (flagged.length) {
+      blockers.push(['Module notes the doctor flags. Update them (decisions with their why, traps, Map), or, when nothing durable changed, close with `--notes-ok "<why>"`:',
+        ...flagged.map((v) => `  - ${v.rule} ${v.from}: ${v.message}`)].join('\n'));
+    }
+  }
+  return blockers;
 }
 
 /** The text with `session:` set to this session, when the notebook is valid; unchanged otherwise. */

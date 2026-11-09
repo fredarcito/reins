@@ -30,6 +30,7 @@ The CLI reads files, git state and the adapter's graph, and passes them in. `eva
 - 2026-11-04: contract grew with optional fields (`files`, `entries`, `warnings`, `rules`/`evaluate`, presets) while staying at version 1. 2026-11-05: `barrels` and `uses`, read by `init`; `impact` reads `uses` too (importers behind a barrel).
 - 2026-11-07: default `agents_md.max_lines` is 45 (was 30): the managed reins rules block (~19 lines) must fit next to a repo's own rules and the notes index.
 - 2026-11-08: the PR map model is pure data and the renderer pure templates, so the CLI does all I/O and tests build models by hand. Only files the adapter analyzes become nodes; new violations are head's minus the merge base's. See `docs/DECISIONS.md`.
+- 2026-11-09 (first real PR): the context line counts every changed file, like GitHub, with one short note for the ones off the map (`34 files (21 not on the map: they don't change the architecture)`); a reviewer could not reconcile `13 files` with GitHub's 34, and listing extensions and folders was rejected as noise. `touched:`/`affected:` appear only when there is no map: with one they are its boxes. See `docs/DECISIONS.md`.
 
 ## Traps
 - `note-dead-refs` only checks backticked paths whose first folder exists at the repo root: paths relative to a module (`src/main.js` in a package's note) are skipped, not checked.
