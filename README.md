@@ -18,6 +18,8 @@ reins fixes both:
 
 **Made for** frontend teams on Vite + React or Next (plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent.
 
+**Your repo already uses reins?** Read the **[team guide](docs/team-guide.md)**: the plan, notes, how a task goes from start to PR, the reviewer, closing a task, the backlog, and what to ask your agent. This README is for adopting reins and understanding how it works.
+
 ## Without and with reins
 
 | Without | With reins |
@@ -60,22 +62,9 @@ In the root of your project (Node 22 or newer):
 
 Nothing of yours is overwritten: `install` and `init` only add files or ask first. With pnpm, `pnpm add -D`. More: [Installation](#installation) · [Updating](#updating) · a full tour with real output in [`docs/walkthrough.md`](docs/walkthrough.md).
 
-## Common changes
+## Day to day
 
-After setup, you ask your agent and it runs the commands. What to ask:
-
-| You want to | Ask your agent | What it does |
-| --- | --- | --- |
-| Add a domain | *"add a domain `auth` with src/routes/signIn and src/routes/resetPassword"*, or `/reins-arch` | Adds it to `architecture.yml`, freezes what it reveals (if you agree), drafts and fills in its note |
-| Change what a domain covers | *"move src/components/pages/x into the domain `y`"* | Edits its `paths`, freezes what it reveals, updates the notes of the domains involved |
-| Remove a domain | *"remove the domain `x` and its note"* | Removes it from `architecture.yml`, updates the baseline, deletes the note |
-| Add a note without a domain | *"create a note for the login flow, covering src/routes/signIn and src/api/auth.js"* | `reins notes new … --name login --paths …`, fills it in |
-| Remove a note | *"delete the note `x`"* | Deletes `.reins/notes/x.md` (and `.reins/notes/x/` with its parts), then `reins sync` |
-| Refresh notes behind their code | `/reins-notes review` | Finds the notes most behind their code and updates them |
-
-- A changed `architecture.yml` shows an `integrity` warning in the pull request. That is expected: explain the change in the PR description.
-- `reins doctor` warns about a domain without a note, so a new domain doesn't stay undocumented.
-- Edited a note, skill or agent by hand? `npx reins sync` puts it in `AGENTS.md` and `.claude/`.
+After setup, people talk to their agent and the agent runs reins: it sizes each task, reads the notes, keeps a notebook, reviews and closes. What a task looks like, the reviewer, the backlog, and what to ask for common changes (add or remove a domain or a note, change the plan): **[docs/team-guide.md](docs/team-guide.md)**. Paste it as the description of your adoption PR, with your repo's layers and areas.
 
 ## Updating
 
@@ -117,7 +106,7 @@ The workflow and skill sources are plain Markdown, independent of a model provid
 ## Contents
 
 - [Without and with reins](#without-and-with-reins) · [Why use it](#why-use-it) · [Quick start](#quick-start)
-- [Common changes](#common-changes) · [Updating](#updating) · [Skills for your agent](#skills-for-your-agent)
+- [Day to day](#day-to-day) · [Updating](#updating) · [Skills for your agent](#skills-for-your-agent)
 - [The core idea: enforced vs. instructed](#the-core-idea-enforced-vs-instructed)
 - [How it works](#how-it-works) · [Context between sessions](#context-between-sessions)
 - [Commands](#commands) · [Installation](#installation)
@@ -342,6 +331,7 @@ Packages: `packages/core` (framework-agnostic checks), `packages/cli` (the `rein
 | Document | What's in it |
 | --- | --- |
 | [Project site](https://fredarcito.github.io/reins/) | The landing page, served by GitHub Pages; source in [`site/`](site/) |
+| [`docs/team-guide.md`](docs/team-guide.md) | For the whole team: the plan, notes, a task from start to PR, reviewer, backlog, what to ask your agent |
 | [`docs/walkthrough.md`](docs/walkthrough.md) | Full tour on an example app, with real output: install, init, a blocked commit, notes, doctor |
 | [`docs/how-it-works.md`](docs/how-it-works.md) | Rules, reports, baseline, the PR architecture map, the JS adapter, packages, what lands in your repo |
 | [`docs/context-between-sessions.md`](docs/context-between-sessions.md) | Module notes and task notebooks in detail |

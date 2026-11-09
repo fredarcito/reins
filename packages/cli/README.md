@@ -68,6 +68,8 @@ After setup, you ask your agent and it runs the commands. What to ask:
 - `reins doctor` warns about a domain without a note, so a new domain doesn't stay undocumented.
 - Edited a note, skill or agent by hand? `npx reins sync` puts it in `AGENTS.md` and `.claude/`.
 
+For the whole team (the plan, a task from start to PR, the reviewer, closing a task, the backlog): the **[team guide](https://github.com/fredarcito/reins/blob/main/docs/team-guide.md)**. Paste it as the description of your adoption PR.
+
 ## What you get
 
 **A plan in `.reins/architecture.yml`**, drafted by `init` from your code and checked on every commit:
@@ -171,6 +173,7 @@ Read the [changelog](https://github.com/fredarcito/reins/blob/main/CHANGELOG.md)
 
 - [Project site](https://fredarcito.github.io/reins/)
 - [Full documentation](https://github.com/fredarcito/reins#readme): how it works, diagrams, every option
+- [Team guide](https://github.com/fredarcito/reins/blob/main/docs/team-guide.md): for everyone working in a repo that uses reins
 - [Walkthrough with real output](https://github.com/fredarcito/reins/blob/main/docs/walkthrough.md)
 - [Try it on a branch first](https://github.com/fredarcito/reins/blob/main/docs/try-it.md)
 - [Adopting it as a team](https://github.com/fredarcito/reins/blob/main/docs/team-adoption.md)

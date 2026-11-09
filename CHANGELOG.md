@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- **Common changes in the README.** A short table of what to ask your agent to add, change or remove a domain or a note, and a setup table you can read at a glance (also on npm).
+- **Team guide** ([docs/team-guide.md](docs/team-guide.md)). For everyone working in a repo that uses reins: the plan, notes, a task from start to PR, the reviewer, closing a task, the backlog and what to ask your agent. Paste it as the description of your adoption PR. The README points to it, and its common changes moved there.
+- **A setup table you can read at a glance** in the README and on npm, plus the common changes on npm.
 
 ## 0.13.0 · 2026-11-09
 
