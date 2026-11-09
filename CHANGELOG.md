@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.12.0 · 2026-11-09
+
+One plan can now cover a repo with several languages.
+
+```bash
+npx reins update
+```
+
+`update` also runs `sync`, which changes one line of your `.reins/architecture.yml`: commit it with the rest.
 
 - **One plan for a repo with several languages.** `architecture.yml` now lists its adapters: `adapters: [js]`, and `adapters: [js, rust]` for a repo with JavaScript and Rust. Every adapter builds its part of the graph, and `check`, `impact`, `scope`, notes and the PR map see them together, with one baseline. `reins update` rewrites `adapter: js` as `adapters: [js]` for you: commit that one-line change with the rest. If you upgrade another way (Dependabot, `npm update`), `reins check` stops with the same fix. Only the JavaScript adapter exists today; this is what makes room for the next ones.
 

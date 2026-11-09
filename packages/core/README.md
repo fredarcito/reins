@@ -18,7 +18,7 @@ See [@agentreins/cli](https://www.npmjs.com/package/@agentreins/cli) for the qui
 
 - **Rules**: `layer-direction` (a layer only imports from itself and the layers below), `domain-boundary` (code outside a domain only imports its public API), `no-cycles`, and `integrity` (changes to the plan and a growing baseline are made visible). Messages name the rule, the reason and the fix, and can be overridden per rule in `architecture.yml`.
 - **Baseline**: today's violations are frozen so only new ones fail; sorted, no timestamps, clean diffs in pull requests.
-- **`architecture.yml` loader**: validates the plan and reports every problem with its field path, all at once. Unknown keys are errors: a typo must not pass silently.
+- **`architecture.yml` loader**: validates the plan (`adapters: [js]`, or `[js, rust]` for a repo with several languages) and reports every problem with its field path, all at once. Unknown keys are errors: a typo must not pass silently.
 - **Impact analysis** (`impactOf`): the reverse of `scope`. It joins the adapter's import edges with the domains: who consumes a file (grouped by domain), which imports bypass a public API, which files a breaking change would touch. Powers `reins impact`.
 - **Triage signals** (`scopeSignals`, `suggestLevel`): turn a list of files into the minimum task level (`small` / `medium` / `large`). The same thresholds power `reins scope` and the doctor's `triage-mismatch`, so what the agent announces is what the diff is measured against.
 - **Reports**: text and JSON (stable `schema` number), each finding with its rule, reason and fix.
