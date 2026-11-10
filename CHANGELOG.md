@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.15.0 · 2026-11-10
+
+The pull request map tells back end from front end, and a fix for the task level.
+
+```bash
+npx reins update
+```
+
+- **The pull request map shows each language in its own frame.** In a plan with several adapters (`adapters: [rails, js]`), the map draws one frame per language, and an arrow from one frame to the other is a dependency that crosses languages: a Rails controller that renders a React page. A domain with code on both sides is one box in each frame, and the text names the side: `accounts (rails) now uses billing (js)`. Repos with one adapter get the same map as before.
+- **Fix: `reins triage` measured only the first file when the files were separated by spaces.** With `reins triage "<reason>" --files a b c`, only `a` was measured and `b c` ended up in the reason, so the level came out too low (0.14.0). Now every file after a quoted reason is measured; commas already worked.
+
 ## 0.14.0 · 2026-11-10
 
 Ruby on Rails, and a task level that reins measures instead of the agent guessing it.

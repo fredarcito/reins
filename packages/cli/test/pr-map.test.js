@@ -178,3 +178,40 @@ test('review --map: a failure outside reins\' own checks is an exit code 2 with 
   assert.match(r.stderr, /git .* failed|could not run|not a git|ambiguous|unknown revision|bad revision/i);
   assert.doesNotMatch(r.stderr, /\n\s+at /);
 });
+
+test('review --map: a plan with several adapters draws one frame per adapter, and the arrow between them', async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-zones-'));
+  // the backend adapter reads its file: a line `renders <file>` is a dependency on that file
+  const adapter = (name, file) => `import { readFileSync } from 'node:fs';
+export default {
+  name: '${name}', contract: 1, detect: () => true,
+  graph: (root) => ({ files: ['${file}'], edges: [...readFileSync(root + '/${file}', 'utf8').matchAll(/renders (\\S+)/g)].map((m) => ({ from: '${file}', to: m[1], kind: 'static' })) }),
+};\n`;
+  write(dir, '.gitignore', 'node_modules/\n');
+  write(dir, 'package.json', '{"name":"root","private":true,"type":"module"}');
+  for (const name of ['back', 'front']) {
+    write(dir, `tools/${name}/package.json`, `{"name":"reins-adapter-${name}","type":"module","main":"index.js","reins":{"contract":1}}`);
+    mkdirSync(path.join(dir, 'node_modules'), { recursive: true });
+    symlinkSync(`../tools/${name}`, path.join(dir, `node_modules/reins-adapter-${name}`));
+  }
+  write(dir, 'tools/back/index.js', adapter('back', 'api/users.rb'));
+  write(dir, 'tools/front/index.js', adapter('front', 'web/users.tsx'));
+  write(dir, 'api/users.rb', '# source\n');
+  write(dir, 'web/users.tsx', '// source\n');
+  write(dir, '.reins/architecture.yml', 'version: 1\nadapters: [back, front]\nlayers:\n  - { name: api, paths: ["api/**"] }\n  - { name: web, paths: ["web/**"] }\n');
+  git(dir, 'init', '-q', '-b', 'main');
+  git(dir, 'config', 'user.email', 't@t');
+  git(dir, 'config', 'user.name', 't');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'init');
+  git(dir, 'checkout', '-q', '-b', 'feature');
+  // the PR makes the backend file use the frontend one (a controller that renders a page)
+  write(dir, 'api/users.rb', '# renders web/users.tsx\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'render the page');
+  const r = await cli(dir, ['review', '--map', '--base', 'main'], { adapterSearchPaths: [] });
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /subgraph z1\["back"\]\n {4}n1\("`\*\*api\*\*/);
+  assert.match(r.stdout, /subgraph z2\["front"\]\n {4}n2\("`\*\*web\*\*/);
+  assert.match(r.stdout, /Frames:\*\* &nbsp; one per language \(back, front\)/);
+});

@@ -5,7 +5,7 @@ Each piece is either:
 - **stable**: enforced by a tool and covered by tests.
 - **experimental**: depends on the agent reading or writing files, or on tool behavior that is not verified (see [`VERIFIED.md`](VERIFIED.md)).
 
-Version 0.14.0, on npm as `@agentreins/cli`, `@agentreins/core`, `@agentreins/adapter-js` and `@agentreins/adapter-rails`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
+Version 0.15.0, on npm as `@agentreins/cli`, `@agentreins/core`, `@agentreins/adapter-js` and `@agentreins/adapter-rails`. Nothing is measured yet: the [pilot](team-adoption.md) is how we find out what pays off.
 
 | Piece | Package | Planned status | Built |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ Version 0.14.0, on npm as `@agentreins/cli`, `@agentreins/core`, `@agentreins/ad
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Yes (phase 8), tested; end-to-end with Husky |
 | `notes new`: note drafted from the import graph | core + cli | experimental | Yes (phase 10), tested on both examples |
-| `review --map`: architecture map comment on pull requests (model and Markdown in core, base graph through a git worktree and adapter `prepareCheckout`, CI step in both workflows) | core + cli + adapter-js + templates | experimental | Yes (2026-11-08), tested: snapshots equal the three examples, temp-repo CLI tests, base = HEAD gives no edges on pnpm-style workspaces; Mermaid checked on GitHub in the dark theme only (P13); the CI step ran on a real PR (2026-11-09: comment posted, edited in place on the next push; P14); forks, the `reins:no-map` label, the light theme and a structural-change comment are still unverified; the map-skipped limit is an assumption |
+| `review --map`: architecture map comment on pull requests (model and Markdown in core, base graph through a git worktree and adapter `prepareCheckout`, CI step in both workflows) | core + cli + adapter-js + templates | experimental | Yes (2026-11-08), tested: snapshots equal the three examples, temp-repo CLI tests, base = HEAD gives no edges on pnpm-style workspaces; Mermaid checked on GitHub in the dark theme only (P13); the CI step ran on a real PR (2026-11-09: comment posted, edited in place on the next push; P14); one frame per adapter in a plan with several (2026-11-10): tested, and run locally on a Rails + Inertia fixture, not yet seen rendered on GitHub; forks, the `reins:no-map` label, the light theme and a structural-change comment are still unverified; the map-skipped limit is an assumption |
 | Skills `notes`, `arch`, `agent` and `check --coverage` | templates + cli | experimental | Yes, tested; each skill run once with Claude Code (haiku) |
 | `resume` + `SessionStart` hook (notebook and notes back after a compaction) | cli | experimental | Yes (phase 10), tested; verified with Claude Code (P9) |
 | One notebook per task (several tasks and sessions on a branch): `progress new <task>`/`close`/`--task`, claim by session, read view and cleanup in `resume` | core + cli + policy | experimental | Phase 1 (2026-11-08), tested on temporary repos; session id verified (P11); not yet tried with real parallel Claude Code sessions |

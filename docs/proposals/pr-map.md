@@ -259,6 +259,10 @@ Phase 0b first: its result can change section 5. Phases 1–4 can be one impleme
 - An image fallback if Mermaid proves unreadable on real PRs.
 - `reins review --map` locally for the agent's own task (anchor commit from `triage.log`).
 
+### Several adapters: zones (built 2026-11-10)
+
+When the plan lists several adapters, the CLI passes `zones` to `prStructure`: one per adapter, with the files that adapter read. A node is then a domain **in a zone**: its `name` is `billing (rails)`, its `label` `billing`, its `zone` `rails`. A domain with files in two zones is two nodes, and an import between them is an edge like any other (a controller of `billing` that renders a page of `billing`). The map draws one Mermaid `subgraph` per zone that has a node, in adapter order, and the legend names them. Without zones (one adapter) nothing changes. The notes below are the earlier thinking.
+
 ### When a second adapter arrives (Ruby/Packwerk, or a full-stack framework)
 
 Not for v1 (only the JS adapter exists, and `architecture.yml` takes one adapter). Keep the model ready for it:

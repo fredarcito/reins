@@ -39,6 +39,9 @@ const code = (s) => (s.includes('`') ? `\`\` ${s} \`\`` : `\`${s}\``);
 const list = (names) => names.map(code).join(', ');
 const label = (s) => s.replace(/`/g, '#96;').replace(/"/g, '#quot;');
 const cell = (s) => s.replace(/\|/g, '\\|');
+/** A node's name without its zone: inside a zone's frame, and wherever the name is a folder. */
+const plain = (n) => n.label ?? n.name;
+const ZONE_STYLE = 'fill:#f6f8fa,stroke:#d0d7de,stroke-width:1px,color:#57606a';
 
 /**
  * @param {import('./index.js').MapNode[]} nodes
@@ -83,11 +86,19 @@ function mermaid(model, { drawn, edges, byName }) {
     return null;
   };
   const lines = ['```mermaid', INIT, 'flowchart LR'];
-  for (const n of nodes) {
+  const box = (n, indent) => {
     const second = plan(n);
     const cls = classOf(n);
-    lines.push(`  ${ids.get(n.name)}("\`**${label(n.name)}**${second ? `\n  ${second}` : ''}\`")${cls ? `:::${cls}` : ''}`);
-  }
+    return `${indent}${ids.get(n.name)}("\`**${label(plain(n))}**${second ? `\n${indent}${second}` : ''}\`")${cls ? `:::${cls}` : ''}`;
+  };
+  // one frame per zone (a language adapter, when the plan has several); arrows between frames cross languages
+  const zones = (model.zones ?? []).filter((z) => nodes.some((n) => n.zone === z));
+  zones.forEach((z, i) => {
+    lines.push(`  subgraph z${i + 1}["${label(z)}"]`);
+    for (const n of nodes.filter((x) => x.zone === z)) lines.push(box(n, '    '));
+    lines.push('  end');
+  });
+  for (const n of nodes.filter((x) => !zones.includes(x.zone))) lines.push(box(n, '  '));
   const used = new Set(nodes.map(classOf).filter(Boolean));
   const emitted = [];
   const styles = [];
@@ -109,6 +120,7 @@ function mermaid(model, { drawn, edges, byName }) {
   lines.push('', `  classDef default ${CLASS_DEFS.default}`);
   for (const c of ['touched', 'added', 'affected', 'nodomain']) if (used.has(c)) lines.push(`  classDef ${c} ${CLASS_DEFS[c]}`);
   for (const s of styles) lines.push(`  ${s}`);
+  zones.forEach((_, i) => lines.push(`  style z${i + 1} ${ZONE_STYLE}`));
   lines.push('```');
 
   // legend: only what appears on this map
@@ -129,10 +141,10 @@ function mermaid(model, { drawn, edges, byName }) {
     if (emitted.some((e) => e.status === 'removed')) kinds.push('┈┈ Removed');
     if (emitted.some((e) => e.status === 'affected')) kinds.push('── Unchanged');
     const head = `the arrow points to the code being used (${ex.from} → ${ex.to}: ${ex.from} uses ${ex.to})`;
-    legend[0] += '<br>';
     legend.push(`<sub>**Lines:** &nbsp; ${[head, ...kinds].join(' &nbsp; ')}</sub>`);
   }
-  return { block: lines.join('\n'), legend: legend.join('\n'), drawnNodes: nodes };
+  if (zones.length) legend.push(`<sub>**Frames:** &nbsp; one per language (${zones.join(', ')})${zones.length > 1 ? '; an arrow between two frames crosses languages' : ''}</sub>`);
+  return { block: lines.join('\n'), legend: legend.join('<br>\n'), drawnNodes: nodes };
 }
 
 function diffBlock(model, cap, detailCap) {
@@ -166,7 +178,7 @@ function detailRows(model) {
   for (const d of model.newDomains) rows.push(['New domain', `${code(d.name)} added to architecture.yml (${list(d.paths)})`]);
   for (const d of model.removedDomains) rows.push(['Removed domain', `${code(d)} removed from architecture.yml`]);
   for (const n of model.nodes.filter((x) => x.status === 'nodomain')) {
-    rows.push(['Not in architecture.yml', `${code(`${n.name}/`)} (${plural(n.changed, 'file')}): no domain covers it, so no rule checks it`]);
+    rows.push(['Not in architecture.yml', `${code(`${plain(n)}/`)} (${plural(n.changed, 'file')}): no domain covers it, so no rule checks it`]);
   }
   for (const e of model.edges.filter((x) => x.status === 'new')) {
     const p = first(e);
@@ -218,7 +230,7 @@ function filesBlock(model, drawn, cap) {
     collapsed = { more: (collapsed?.more ?? 0) + rest.length, count: (collapsed?.count ?? 0) + rest.reduce((s, n) => s + n.changed, 0) };
   }
   const rows = shown.map((n) => {
-    if (n.status === 'nodomain') return `| no domain | ${code(`${n.name}/*`)} | ${n.changed} |`;
+    if (n.status === 'nodomain') return `| no domain | ${code(`${plain(n)}/*`)} | ${n.changed} |`;
     const names = n.sample.slice(0, 3).map(code).join(', ') + (n.sample.length > 3 ? ', …' : '');
     return `| ${code(n.name)}${n.status === 'new' ? ' · new' : ''} | ${cell(names)} | ${n.changed} |`;
   });

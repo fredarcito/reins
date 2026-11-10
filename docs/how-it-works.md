@@ -63,6 +63,8 @@ flowchart LR
     md --> post["One comment,<br/>edited in place"]
 ```
 
+In a repo with several languages (`adapters: [rails, js]`), the map draws **one frame per language**. An arrow between two frames is a dependency that crosses languages, such as a Rails controller that renders a React page. A domain with code on both sides appears once in each frame, and the text says which side: `accounts (rails) now uses billing (js)`.
+
 You can see the same comment locally with `npx reins review --map`. To skip it on one PR, add the label `reins:no-map`; to turn it off for the repo, delete the "Architecture map comment" step from `.github/workflows/reins.yml` (ask your agent). Repos installed before this feature keep their old workflow: paste the step from [`templates/.github/workflows/reins.yml`](../templates/.github/workflows/reins.yml), because `install` never rewrites it. It is experimental: see [`docs/STATUS.md`](STATUS.md) and [`docs/VERIFIED.md`](VERIFIED.md#p14-base-graph-through-a-git-worktree--pass-with-a-mirrored-node_modules).
 
 ## How `check` sees your code

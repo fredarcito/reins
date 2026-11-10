@@ -206,3 +206,48 @@ test('an untouched no-domain endpoint keeps its kind', () => {
   assert.equal(loose.status, 'unchanged');
   assert.equal(loose.kind, 'nodomain');
 });
+
+test('zones: a domain with files in two zones is one node per zone, and an import between them is an edge', () => {
+  const cfg = {
+    layers: [{ name: 'app', paths: ['app/**'] }],
+    domains: [
+      { name: 'billing', paths: ['app/models/billing/**', 'app/frontend/pages/billing/**'], publicApi: [] },
+      { name: 'accounts', paths: ['app/controllers/accounts/**'], publicApi: [] },
+    ],
+  };
+  const rb = ['app/controllers/accounts/users_controller.rb', 'app/models/billing/invoice.rb'];
+  const tsx = ['app/frontend/pages/billing/invoices.tsx'];
+  const model = run({
+    config: cfg, baseDomainNames: ['billing', 'accounts'],
+    headEdges: [e(rb[0], rb[1]), e(rb[1], tsx[0], 'inertia')],
+    changed: [m(rb[0]), m(tsx[0], 'A')],
+    zones: [{ name: 'rails', files: rb }, { name: 'js', files: tsx }],
+  });
+  assert.deepEqual(model.zones, ['rails', 'js']);
+  assert.deepEqual(model.nodes.map((n) => [n.name, n.zone, n.label, n.status]), [
+    ['accounts (rails)', 'rails', 'accounts', 'touched'],
+    ['billing (js)', 'js', 'billing', 'touched'],
+    ['billing (rails)', 'rails', 'billing', 'unchanged'],
+  ]);
+  assert.equal(statusOf(model, 'accounts (rails)', 'billing (rails)'), 'new');
+  // the same domain on both sides of the language border: the edge a single node would hide
+  assert.equal(statusOf(model, 'billing (rails)', 'billing (js)'), 'new');
+
+  const text = renderPrMap(model);
+  assert.match(text, /subgraph z1\["rails"\]\n {4}n\d\("`\*\*accounts\*\*/);
+  assert.match(text, /subgraph z2\["js"\]\n {4}n\d\("`\*\*billing\*\*/);
+  assert.match(text, /style z1 fill:/);
+  assert.match(text, /\*\*Frames:\*\* &nbsp; one per language \(rails, js\)/);
+  assert.match(text, /\+ billing \(rails\) +now uses +billing \(js\)/);
+  assert.match(text, /\| `billing \(js\)` \| `invoices.tsx` \| 1 \|/);
+});
+
+test('zones: only the zones with a node are drawn; without zones the model has none and names stay plain', () => {
+  const one = run({ headEdges: [e(`${B}a.ts`, `${P}index.ts`)], changed: [m(`${B}a.ts`)], zones: [{ name: 'js', files: [`${B}a.ts`, `${P}index.ts`] }, { name: 'rails', files: [] }] });
+  assert.deepEqual(one.zones, ['js']);
+  assert.doesNotMatch(renderPrMap(one), /subgraph z2/);
+  const none = run({ headEdges: [e(`${B}a.ts`, `${P}index.ts`)], changed: [m(`${B}a.ts`)] });
+  assert.deepEqual(none.zones, []);
+  assert.deepEqual(none.nodes.map((n) => n.name), ['billing', 'profile']);
+  assert.doesNotMatch(renderPrMap(none), /subgraph|Frames/);
+});

@@ -29,7 +29,7 @@ Without --files only large is accepted: a new feature, a migration, "review ever
 already looks bigger than the level recorded, it says so.
 
 Options:
-  --files <a,b>  Files or folders the task will touch (repeatable). Same measure as reins scope
+  --files <a,b>  Files or folders the task will touch: a,b or a b after a quoted reason (repeatable). Same measure as reins scope
   --override     Record the level as given, without measuring: the person chose it
   --task <name>  The task's name (default: the task this session claimed, when it has a notebook)`;
 
@@ -45,9 +45,13 @@ const tryGit = (root, args) => {
 /** @param {{ root: string, cwd?: string, values: Record<string, any>, positionals: string[], out: (s: string) => void, env?: NodeJS.ProcessEnv, today?: string }} ctx */
 export async function triage(ctx) {
   const { root, values, out } = ctx;
-  const paths = (values.files ?? []).flatMap((f) => f.split(',')).map((f) => f.trim()).filter(Boolean);
   const declared = LEVELS.includes(ctx.positionals[0]) ? ctx.positionals[0] : null;
-  const words = declared ? ctx.positionals.slice(1) : ctx.positionals;
+  let words = declared ? ctx.positionals.slice(1) : ctx.positionals;
+  // `--files a b c`: the shell gives b and c as loose words. After a quoted reason they can only be more files;
+  // read as part of the reason, the level would be measured from the first file alone
+  const loose = values.files && words[0]?.includes(' ') ? words.slice(1) : [];
+  if (loose.length) words = words.slice(0, 1);
+  const paths = [...(values.files ?? []), ...loose].flatMap((f) => f.split(',')).map((f) => f.trim()).filter(Boolean);
   const reason = words.join(' ').replace(/\s+/g, ' ').trim();
   if (values.override && !declared) throw new CliError('--override records the level the person chose: pass that level.');
   if (!reason || (!declared && !paths.length)) throw new CliError(`Expected a reason and --files (the files or folders you expect to touch).\n\n${help}`);

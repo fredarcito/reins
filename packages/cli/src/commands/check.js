@@ -143,6 +143,8 @@ function configFor(adapter, config) {
 async function analyzeWith(root, loaded, config) {
   const graph = { edges: [], files: [], entries: [], warnings: [], barrels: [], uses: [] };
   const extra = [];
+  /** @type {{ name: string, files: string[] }[]} which adapter read which files (the PR map keeps languages apart) */
+  const byAdapter = [];
   for (const { adapter, packageName } of loaded) {
     const own = configFor(adapter, config);
     let g;
@@ -154,10 +156,11 @@ async function analyzeWith(root, loaded, config) {
     const bad = validateEdges(g.edges);
     if (bad.length) throw new CliError(`${packageName} returned an invalid graph:\n${bad.map((p) => `  - ${p}`).join('\n')}`);
     for (const k of Object.keys(graph)) graph[k].push(...g[k]);
+    byAdapter.push({ name: adapter.name, files: g.files });
     if (adapter.evaluate) extra.push(...(await adapter.evaluate(root, own, g)));
   }
   if (loaded.length > 1) for (const k of ['files', 'entries', 'barrels', 'warnings']) graph[k] = [...new Set(graph[k])];
-  return { config, loaded, graph, extra };
+  return { config, loaded, graph, extra, byAdapter };
 }
 
 /**

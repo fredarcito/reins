@@ -1,7 +1,7 @@
 {
   "name": "reins-monorepo",
   "private": true,
-  "version": "0.14.0",
+  "version": "0.15.0",
   "license": "MIT",
   "type": "module",
   "description": "reins: an engineering harness for AI coding agents: persistent project knowledge, enforceable architecture and consistent workflows across models, agents and sessions.",

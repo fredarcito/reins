@@ -140,3 +140,13 @@ test('resume: drops the lines of gone branches and of tasks already in the base;
   await cli(dir, ['resume']);
   assert.deepEqual(readFileSync(path.join(dir, LOG), 'utf8').split('\n'), [lines[0], lines[4], lines[5], lines[6], lines[7], '']);
 });
+
+test('triage: files after a quoted reason, separated by spaces, are all measured', async () => {
+  const dir = exampleRepo('vite-react');
+  cart(dir, ['a', 'b', 'c', 'd']);
+  const files = ['a', 'b', 'c', 'd'].map((n) => `src/features/cart/${n}.js`);
+  const r = await cli(dir, ['triage', 'split the cart', '--files', ...files]);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Measured level: medium \(4 files/);
+  assert.match(readFileSync(path.join(dir, LOG), 'utf8'), /\| medium \| split the cart \|/, 'the files are not part of the reason');
+});

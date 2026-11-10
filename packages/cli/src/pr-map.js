@@ -163,6 +163,10 @@ export async function buildPrMap(ctx) {
     baseEdges: base.graph.edges, headEdges: head.graph.edges, changed, config: head.config, baseConfig, baseDomainNames, newViolations, impacts,
     base: { label: baseRef ?? 'HEAD', sha: mergeBase.slice(0, 7) },
     analyzed: [...head.graph.files, ...base.graph.files],
+    // several languages in one plan: the map draws one frame per adapter
+    zones: head.loaded.length > 1
+      ? head.byAdapter.map((z, i) => ({ name: z.name, files: [...z.files, ...(base.byAdapter[i]?.files ?? [])] }))
+      : undefined,
   });
   return { markdown: renderPrMap(model), warnings };
 }

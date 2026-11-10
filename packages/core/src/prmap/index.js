@@ -13,6 +13,8 @@ import { matchesAny } from '../glob.js';
  * @property {number} importers files of the node importing changed code (affected)
  * @property {string[]} sample  changed files, names relative to the node's folder, in the order given
  * @property {'domain'|'layer'|'nodomain'} [kind] an untouched `nodomain` endpoint keeps its dashed look on the map
+ * @property {string} [zone]  with zones: the zone the node's files belong to. Then `name` is `billing (rails)`
+ * @property {string} [label] with zones: the name without the zone (`billing`)
  */
 /**
  * @typedef {object} MapEdge
@@ -81,8 +83,8 @@ function nodeEdges(edges, nodeOf, kinds) {
     const a = nodeOf(e.from);
     const b = nodeOf(e.to);
     if (!a || !b || a.name === b.name) continue;
-    kinds.set(a.name, a.kind);
-    kinds.set(b.name, b.kind);
+    kinds.set(a.name, a);
+    kinds.set(b.name, b);
     const k = `${a.name}\0${b.name}`;
     let m = map.get(k);
     if (!m) map.set(k, (m = { from: a.name, to: b.name, status: 'new', pairs: [] }));
@@ -105,16 +107,28 @@ function nodeEdges(edges, nodeOf, kinds) {
  * @param {import('../config/index.js').Config} [input.baseConfig] base `architecture.yml`: deleted files and the old path of a rename are placed with it, so a removed domain is not "not in architecture.yml". Omitted: head config.
  * @param {Iterable<string>} [input.analyzed] files the adapter analyzes (both commits). Other changed files (docs, JSON, other
  *   languages) are not nodes: they are counted as `notAnalyzed`. Omitted: every file is analyzed.
+ * @param {{ name: string, files: Iterable<string> }[]} [input.zones] groups of files the map keeps apart, in the order to draw
+ *   them (the CLI passes one per language adapter when the plan has several). A domain with files in two zones is one
+ *   node per zone, and an import between them is an edge. Omitted: no zones, one node per domain.
  */
-export function prStructure({ baseEdges, headEdges, changed, config, baseDomainNames, newViolations, impacts, base, analyzed, baseConfig }) {
+export function prStructure({ baseEdges, headEdges, changed, config, baseDomainNames, newViolations, impacts, base, analyzed, baseConfig, zones }) {
   const analyzedSet = analyzed ? new Set(analyzed) : null;
+  /** @type {Map<string, string>} file -> zone; a file listed in two zones stays in the first */
+  const zoneOfFile = new Map();
+  for (const z of zones ?? []) for (const f of z.files) if (!zoneOfFile.has(f)) zoneOfFile.set(f, z.name);
+  const zoned = (resolveFn) => (f) => {
+    if (analyzedSet && !analyzedSet.has(f)) return null;
+    const n = resolveFn(f);
+    const zone = n ? zoneOfFile.get(f) : undefined;
+    return n && zone ? { ...n, name: `${n.name} (${zone})`, label: n.name, zone } : n;
+  };
   const known = new Set();
   for (const e of [...baseEdges, ...headEdges]) (known.add(e.from), known.add(e.to));
   for (const c of changed) (known.add(c.path), c.oldPath && known.add(c.oldPath));
   const resolve = nodeResolver(config, [...known]);
-  const nodeOf = (f) => (analyzedSet && !analyzedSet.has(f) ? null : resolve(f));
+  const nodeOf = zoned(resolve);
   const resolveBase = baseConfig ? nodeResolver(baseConfig, [...known]) : resolve;
-  const baseNodeOf = (f) => (analyzedSet && !analyzedSet.has(f) ? null : resolveBase(f));
+  const baseNodeOf = zoned(resolveBase);
   const ignored = (f) => matchesAny(f, config.ignore ?? []);
 
   // 4.4 touched nodes: a changed file on either side. A rename touches both paths.
@@ -209,7 +223,7 @@ export function prStructure({ baseEdges, headEdges, changed, config, baseDomainN
     for (const imp of importers) {
       const n = nodeOf(imp);
       if (!n || touched.has(n.name) || n.kind === 'nodomain') continue;
-      kinds.set(n.name, n.kind);
+      kinds.set(n.name, n);
       if (!seen.has(imp)) {
         seen.add(imp);
         importersByNode.set(n.name, (importersByNode.get(n.name) ?? 0) + 1);
@@ -230,17 +244,21 @@ export function prStructure({ baseEdges, headEdges, changed, config, baseDomainN
   /** @type {Map<string, MapNode>} */
   const nodes = new Map();
   const rel = (t, f) => (t.node.prefix && f.startsWith(`${t.node.prefix}/`) ? f.slice(t.node.prefix.length + 1) : f);
+  // with zones, a node carries its zone and its name without it
+  const where = (n) => (n?.zone ? { zone: n.zone, label: n.label } : {});
   for (const [name, t] of touched) {
-    const status = newDomains.includes(name) ? 'new' : t.node.kind === 'nodomain' ? 'nodomain' : 'touched';
-    nodes.set(name, { name, status, kind: t.node.kind, changed: t.files.length, importers: 0, sample: t.files.map((f) => rel(t, f)) });
+    const isNew = t.node.kind === 'domain' && newDomains.includes(t.node.label ?? name);
+    const status = isNew ? 'new' : t.node.kind === 'nodomain' ? 'nodomain' : 'touched';
+    nodes.set(name, { name, status, kind: t.node.kind, ...where(t.node), changed: t.files.length, importers: 0, sample: t.files.map((f) => rel(t, f)) });
   }
-  for (const [name, n] of importersByNode) nodes.set(name, { name, status: 'affected', kind: kinds.get(name), changed: 0, importers: n, sample: [] });
+  for (const [name, n] of importersByNode) nodes.set(name, { name, status: 'affected', kind: kinds.get(name)?.kind, ...where(kinds.get(name)), changed: 0, importers: n, sample: [] });
   // endpoints of drawn edges that are not otherwise interesting
   for (const e of edges.values()) {
-    for (const name of [e.from, e.to]) if (!nodes.has(name)) nodes.set(name, { name, status: 'unchanged', kind: kinds.get(name), changed: 0, importers: 0, sample: [] });
+    for (const name of [e.from, e.to]) if (!nodes.has(name)) nodes.set(name, { name, status: 'unchanged', kind: kinds.get(name)?.kind, ...where(kinds.get(name)), changed: 0, importers: 0, sample: [] });
   }
   // a new domain nobody changed a file of is still new
-  for (const name of newDomains) if (!nodes.has(name)) nodes.set(name, { name, status: 'new', kind: 'domain', changed: 0, importers: 0, sample: [] });
+  const drawnDomains = new Set([...nodes.values()].map((n) => n.label ?? n.name));
+  for (const name of newDomains) if (!drawnDomains.has(name)) nodes.set(name, { name, status: 'new', kind: 'domain', changed: 0, importers: 0, sample: [] });
 
   const edgeList = [...edges.values()].sort((a, b) => cmp(a.from, b.from) || cmp(a.to, b.to));
   const structural = newDomains.length > 0 || removedDomains.length > 0 || [...nodes.values()].some((n) => n.status === 'nodomain')
@@ -255,6 +273,8 @@ export function prStructure({ baseEdges, headEdges, changed, config, baseDomainN
     newDomains: newDomains.map((name) => ({ name, paths: config.domains.find((d) => d.name === name)?.paths ?? [] })),
     removedDomains,
     nodes: [...nodes.values()].sort((a, b) => cmp(a.name, b.name)),
+    // zones that have a node, in the order given
+    zones: (zones ?? []).map((z) => z.name).filter((z) => [...nodes.values()].some((n) => n.zone === z)),
     edges: edgeList,
     mutual,
     violations: newViolations.map((v) => ({ rule: v.rule, message: v.message, fix: v.fix })),
