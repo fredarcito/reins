@@ -47,8 +47,12 @@ test('tasks one after another: a new session never takes the open task silently,
 
 test('the same task from a new session, after a compaction, and without a session id', async () => {
   const dir = await branchWithTask();
+  const before = read(dir, CSS);
   assert.match((await cli(dir, ['progress', 'show', '--task', 'css'], as('s3'))).stdout, /in progress|checkout buttons/);
-  assert.match(read(dir, CSS), /session: s3/, 'continuing a task claims it');
+  assert.equal(read(dir, CSS), before, 'looking at a task does not take it');
+  assert.match((await cli(dir, ['progress', 'show'], as('s3'))).stderr, /No task chosen for this session/, 'and it is still not this session\'s task');
+  await cli(dir, ['progress', 'next', 'continue', 'the', 'buttons', '--task', 'css'], as('s3'));
+  assert.match(read(dir, CSS), /session: s3/, 'continuing a task (the first edit) claims it');
   const own = JSON.parse(hookResponse(dir, { session_id: 's3', source: 'compact' }, {}, '2026-11-04')).hookSpecificOutput.additionalContext;
   assert.match(own, /## Your task css: \.reins\/progress\/feat-checkout\/css\/notebook\.md/);
   assert.doesNotMatch(own, /has not claimed/);

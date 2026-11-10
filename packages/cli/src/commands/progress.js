@@ -1,6 +1,7 @@
 // reins progress: mechanical edits of the current task's notebook (.reins/progress/<branch>/<task>/notebook.md),
 // so the agent doesn't rewrite the file. Every edit validates the format before and after. The task is resolved by
-// notebooks.js (explicit --task, or the one this session claimed); every command claims the task it acts on.
+// notebooks.js (explicit --task, or the one this session claimed); every command that edits a task claims it.
+// `show` only reads: looking at another session's task must not take it.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -50,9 +51,9 @@ export const help = `Usage:
 
 One notebook per task: .reins/progress/<branch>/<task>/notebook.md, on the current branch (--branch to choose
 another). <task> is a short name for the person's request (css-refactor). The task is the one given with --task
-(or REINS_TASK), else the open one this session works on; every command claims the task it acts on for this
-session (session: in the header, from CLAUDE_CODE_SESSION_ID or REINS_SESSION). Never edit another session's
-task. Every edit keeps the notebook valid and updates its date; an invalid notebook is refused with its problems.
+(or REINS_TASK), else the open one this session works on; every command that edits a task claims it for this
+session (session: in the header, from CLAUDE_CODE_SESSION_ID or REINS_SESSION); show only reads, so looking at
+another session's task does not take it. Never edit another session's task. Every edit keeps the notebook valid and updates its date; an invalid notebook is refused with its problems.
 
 close runs the end of the done skill for you and refuses while it is not finished: every item must be done [x] or
 dropped [-] with a reason, and the doctor must not flag the module notes of the task's files (missing, not updated,
@@ -121,7 +122,7 @@ export async function progress(ctx) {
     if (missing) throw new CliError(`Task "${missing}" has no notebook on ${branch}. Create it with \`reins progress new ${missing}\`.`);
     const open = others.map((t) => `  - ${taskName(t)}${t.summary.goal ? `: ${t.summary.goal}` : ''}`);
     throw new CliError(open.length
-      ? `No task chosen for this session. Open tasks on ${branch}:\n${open.join('\n')}\nContinue one with --task <name> (that claims it), or create one with \`reins progress new <task>\`.`
+      ? `No task chosen for this session. Open tasks on ${branch}:\n${open.join('\n')}\nContinue one with --task <name> (the first edit claims it; show only reads), or create one with \`reins progress new <task>\`.`
       : `No notebook on ${branch}. Create one with \`reins progress new <task>\` (medium) or \`reins progress new <task> --hot\` (large).`);
   }
   const file = current.file;
@@ -139,7 +140,6 @@ export async function progress(ctx) {
         const nb = parseNotebook(text);
         const problems = formatProblems(nb);
         const items = problems.length ? nb.items.map((it, i) => ({ n: i + 1, ...it })) : listItems(text);
-        if (session && !problems.length && nb.header?.session !== session) writeFileSync(abs, claim(text, session, date));
         if (values.json) {
           out(JSON.stringify({ file, header: nb.header, problems, items }, null, 2));
           return 0;

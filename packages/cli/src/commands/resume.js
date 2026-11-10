@@ -101,7 +101,7 @@ export function render(g, notes = g.notes) {
     if (g.others.length > MAX_OTHERS) shown.push(`- … and ${g.others.length - MAX_OTHERS} more`);
     parts.push(`## Other open tasks on this branch (other sessions' work: read them, never edit them)\n${shown.join('\n')}${g.closed.length ? `\nDone: ${g.closed.join(', ')}.` : ''}`);
     if (!g.notebook) {
-      parts.push('No task chosen for this session yet. If the request continues one of these tasks, continue it: pass `--task <name>` to `npx reins progress` (that claims it). If it is new, create one with `npx reins progress new <task>`. If it overlaps one of them, or it is unclear, ask the person first.');
+      parts.push('No task chosen for this session yet. If the request continues one of these tasks, continue it: pass `--task <name>` to `npx reins progress` (its first edit claims it; `show` only reads). If it is new, create one with `npx reins progress new <task>`. If it overlaps one of them, or it is unclear, ask the person first.');
     }
   }
   for (const r of g.removed) parts.push(`Removed the open notebook of task ${r.task}: branch ${r.branch} no longer exists and the notebook had not changed for 7 days.`);

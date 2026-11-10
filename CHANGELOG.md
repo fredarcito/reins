@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Looking at a task no longer takes it.** `reins progress show --task <name>` only reads; a session becomes the task's owner with its first edit (`done`, `add`, `next`…). Before, an agent that checked what another session had done silently took its task.
 - **Ruby on Rails adapter: `@agentreins/adapter-rails`.** `reins check`, `init` and `impact` now work on a Rails app. Ruby has no imports, so the adapter reads which constants each file names (parsed with Prism; Ruby does not need to be installed), plus `require_relative` and associations. With Inertia, a controller is linked to the React, Vue or Svelte page it renders: use `adapters: [js, rails]` to cover both halves with one plan. `reins init` in a Rails app drafts `adapters: [rails]` with the new `rails` preset. Experimental: [what it reads and what it can't see](packages/adapters/rails/README.md).
 - **`init` drafts one plan for several languages.** In a Rails app with a Vite frontend (Inertia) and both adapters installed, `reins init` writes `adapters: [rails, js]`, with the Ruby layers above the pages they render. The JS adapter has a new preset for that frontend, `inertia-react` (code in `app/frontend` or `app/javascript`), picked automatically.
 - **`init` no longer knows any language.** What counts as source, as a test or as a folder's index file now comes from each adapter's preset, so a new language needs no change in the CLI. Nothing changes for JavaScript and TypeScript repos: the draft is identical. Update the CLI and the adapters together (`npx reins update` does).

@@ -15,8 +15,8 @@ Read this for medium and large tasks. The notebook is local (`.reins/progress/`,
 `npx reins resume` (delivered automatically at session start by client hooks that support it) shows your task's notebook, one line for each other open task on the branch, and the files and notes of your task.
 
 - **It shows your task:** resume from its "Next step".
-- **It shows no task of yours but other open tasks:** never take one silently. If the request continues one of them, continue it by passing `--task <name>` to `npx reins progress` (that claims it for this session). If the request is new, create a task. If unclear, ask the person.
-- **Every `npx reins progress` command claims the task it acts on** (`session:` in the header; the session comes from `CLAUDE_CODE_SESSION_ID` or `REINS_SESSION`). Agents without a session id: pass `--task <name>` when the branch has several open tasks.
+- **It shows no task of yours but other open tasks:** never take one silently. If the request continues one of them, continue it by passing `--task <name>` to `npx reins progress` (the first command that edits it claims it for this session). If the request is new, create a task. If unclear, ask the person.
+- **Every `npx reins progress` command that edits a task claims it** (`session:` in the header; the session comes from `CLAUDE_CODE_SESSION_ID` or `REINS_SESSION`). `show` only reads: use `npx reins progress show --task <name>` to look at another session's task without taking it. Agents without a session id: pass `--task <name>` when the branch has several open tasks.
 - **Write only your own notebook.** Read the others as much as you like; never edit them.
 - **Planning for another session to implement:** create the task (`npx reins progress new <task>`) and set its "Next step" to where the plan is (for example `implement docs/proposals/x.md, phase 1`). The implementing session finds the task with `resume` and continues it.
 
