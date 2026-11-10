@@ -1,0 +1,59 @@
+{
+  "name": "@agentreins/adapter-rails",
+  "version": "0.13.0",
+  "license": "MIT",
+  "files": [
+    "src",
+    "LICENSE"
+  ],
+  "description": "Ruby on Rails language adapter for reins (constant references, Zeitwerk style; Inertia pages).",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "keywords": [
+    "reins-adapter",
+    "reins",
+    "ai",
+    "coding-agents",
+    "claude-code",
+    "architecture",
+    "lint",
+    "dependencies",
+    "ruby",
+    "rails",
+    "inertia"
+  ],
+  "reins": {
+    "contract": 1
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@agentreins/core": "workspace:^"
+  },
+  "devDependencies": {
+    "@agentreins/core": "workspace:^"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "prepack": "node -e \"require('fs').copyFileSync('../../../LICENSE','LICENSE')\""
+  },
+  "dependencies": {
+    "@ruby/prism": "^2.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fredarcito/reins.git",
+    "directory": "packages/adapters/rails"
+  },
+  "homepage": "https://fredarcito.github.io/reins/",
+  "bugs": {
+    "url": "https://github.com/fredarcito/reins/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

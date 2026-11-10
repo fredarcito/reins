@@ -24,6 +24,7 @@ You never import this package yourself: the `reins` command finds it from `adapt
 | `vite-react` | Vite + React single page app | `vite.config.*` |
 | `next-app` | Next.js, app router | `next.config.*` and an `app/` folder |
 | `next-pages` | Next.js, pages router | `next.config.*` and a `pages/` folder |
+| `inertia-react` | Vite frontend inside a Rails app ([Inertia](https://inertia-rails.dev)), code in `app/frontend` or `app/javascript` | `vite.config.*` next to a `Gemfile` and `config/application.rb`. Use it with [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails) |
 
 Plain JS/JSX or TypeScript, with or without `src/`, single package or monorepo workspaces. `reins init` detects the preset; force one with `reins init --preset <name>`.
 

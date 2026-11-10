@@ -11,6 +11,9 @@ importers:
       '@agentreins/adapter-js':
         specifier: workspace:*
         version: link:packages/adapters/js
+      '@agentreins/adapter-rails':
+        specifier: workspace:*
+        version: link:packages/adapters/rails
       '@agentreins/cli':
         specifier: workspace:*
         version: link:packages/cli
@@ -34,6 +37,16 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/adapters/rails:
+    dependencies:
+      '@ruby/prism':
+        specifier: ^2.1.0
+        version: 2.1.0
+    devDependencies:
+      '@agentreins/core':
+        specifier: workspace:^
+        version: link:../../core
+
   packages/cli:
     dependencies:
       '@agentreins/core':
@@ -46,6 +59,9 @@ importers:
       '@agentreins/adapter-js':
         specifier: workspace:^
         version: link:../adapters/js
+      '@agentreins/adapter-rails':
+        specifier: workspace:^
+        version: link:../adapters/rails
 
   packages/core:
     dependencies:
@@ -54,6 +70,9 @@ importers:
         version: 2.9.1
 
 packages:
+
+  '@ruby/prism@2.1.0':
+    resolution: {integrity: sha512-+lMGoxR5YQ8HEX7e2EuLn4H9GBpaDIrIkwtaAdTo/+lhzCxijAOhjrNBMFJtFr+DhbX+32CrA+j0R/WsLYrefw==}
 
   acorn-jsx-walk@2.0.0:
     resolution: {integrity: sha512-uuo6iJj4D4ygkdzd6jPtcxs8vZgDX9YFIkqczGImoypX2fQ4dVImmu3UzA4ynixCIMTrEOWW+95M2HuBaCEOVA==}
@@ -242,6 +261,8 @@ packages:
     hasBin: true
 
 snapshots:
+
+  '@ruby/prism@2.1.0': {}
 
   acorn-jsx-walk@2.0.0: {}
 

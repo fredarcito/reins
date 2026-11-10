@@ -12,7 +12,7 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - `src/graph.js`: runs dependency-cruiser, filters to local files, classifies edge kinds, computes entries, collects warnings.
 - `src/aliases.js`: reads aliases from tsconfig/jsconfig `paths`/`baseUrl` (following `extends`/`references`) and `vite.config.*` `resolve.alias`, as text.
 - `src/detect.js`: Vite vs Next (and which router) from config files and folders; suggests a preset.
-- `src/presets.js` + `presets/*.yml`: `vite-react`, `next-app`, `next-pages` (layers, `domains_from`, `route_domains_from`, `entries`, `default_rules`).
+- `src/presets.js` + `presets/*.yml`: `vite-react`, `next-app`, `next-pages`, `inertia-react` (layers, `domains_from`, `route_domains_from`, `entries`, `default_rules`). 2026-11-10: `CONVENTIONS` in `presets.js` is merged into every preset: `sources`, `tests`, `index_files`, `orphans_ignore`, `ignore_kinds` (what `reins init` used to hardcode; changing a glob changes every JS repo's draft). `inertia-react` (Vite inside a Rails app, suggested by `detectFramework` when Rails markers exist) sets `index_files: []` because `pages/users/index.tsx` is a page.
 - `rules/next-server-client.js`: a `'use client'` file must not reach a module importing `server-only` or `next/headers`.
 - `src/barrels.js`: finds `index.*` files that only re-export and what each importer uses through them (`barrels`, `uses` in the graph result, for `init` only). `src/source.js`: `stripComments`, shared with the rule.
 

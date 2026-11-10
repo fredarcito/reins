@@ -70,10 +70,14 @@ export async function resolveAdapter(repoRoot, name, opts = {}) {
 }
 
 /**
- * Cheap guess of which adapter a repo needs, before any adapter is installed. Only looks at marker files.
- * @returns {string | null}
+ * Cheap guess of which adapters a repo needs, before any adapter is installed. Only looks at marker files.
+ * The first one is the repo's main language; `init` adds the others when they are installed and recognize the repo
+ * (a Rails app with a Vite frontend is `rails` + `js`; a Rails API whose package.json only holds tooling is `rails`).
+ * @returns {string[]}
  */
-export function guessAdapterName(repoRoot) {
-  if (existsSync(path.join(repoRoot, 'package.json'))) return 'js';
-  return null;
+export function guessAdapterNames(repoRoot) {
+  const names = [];
+  if (existsSync(path.join(repoRoot, 'Gemfile')) && existsSync(path.join(repoRoot, 'config/application.rb'))) names.push('rails');
+  if (existsSync(path.join(repoRoot, 'package.json'))) names.push('js');
+  return names;
 }

@@ -1,12 +1,13 @@
 # Publishing to npm
 
-Three packages, published together with the same version:
+Four packages, published together with the same version:
 
 | Package | What it is |
 | --- | --- |
 | `@agentreins/cli` | The CLI and the `reins` command |
 | `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of the CLI |
 | `@agentreins/adapter-js` | JavaScript/TypeScript adapter. Peer of `@agentreins/core` |
+| `@agentreins/adapter-rails` | Ruby on Rails adapter (first published after 0.13.0). Peer of `@agentreins/core` |
 
 Users install them with:
 
@@ -42,7 +43,7 @@ Tag after publishing, not before: if the publish fails and you fix something, th
 
 `pnpm -r publish`:
 
-- publishes in dependency order: `@agentreins/core`, `@agentreins/adapter-js`, then `@agentreins/cli`;
+- publishes in dependency order: `@agentreins/core`, the adapters (`adapter-js`, `adapter-rails`), then `@agentreins/cli`;
 - replaces every `workspace:^` with the real version;
 - runs each package's `prepack`, which copies `LICENSE` (and, for the CLI, `templates/`) into the package;
 - requires a clean working tree on `main`.

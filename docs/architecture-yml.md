@@ -8,8 +8,8 @@ Location in a consumer repo: `.reins/architecture.yml`.
 
 ```yaml
 version: 1            # required, always 1 for now
-adapters: [js]        # required: the language adapters that compute the graph (JS + Rust: [js, rust])
-preset: next-app      # optional: vite-react | next-app | next-pages (adapter presets)
+adapters: [js]        # required: the language adapters that compute the graph (Rails + React: [js, rails])
+preset: next-app      # optional: vite-react | next-app | next-pages | inertia-react | rails (adapter presets)
 ignore: ["src/generated/**"]   # optional: files left out of the analysis
 
 layers:               # ordered from TOP to BOTTOM
@@ -65,8 +65,25 @@ layers:
 - Each adapter receives the repo root and finds its own files. `check`, `impact`, `scope`, `notes` and the PR map work on the union of their graphs, with one baseline.
 - Layers, domains and `allow` are paths, so they apply to every language the same way.
 - Each adapter runs its own rules on its own graph. Two adapters may not declare the same rule id.
-- Languages usually talk through strings (a Tauri `invoke("name")`, an HTTP route), not imports, so no edge crosses from one language to the other: a rule between a JS layer and a Rust layer never fires.
-- `reins init` drafts a plan for one adapter (`adapters: [js]`); add the others to the list by hand.
+- Languages usually talk through strings (a Tauri `invoke("name")`, an HTTP route), not imports, so no edge crosses from one language to the other: a rule between a JS layer and a Rust layer never fires. The exception is Inertia, below.
+- `reins init` drafts one plan for every adapter the repo needs: each adapter brings its preset (its layers and what `init` must know about the language) and `init` joins them. A Rails app with a Vite frontend gets `adapters: [rails, js]` when both adapters are installed. With several adapters the draft has no `preset:` line: each adapter detects its own.
+
+### Rails + Inertia + React
+
+A Rails app that renders React pages through [Inertia](https://inertia-rails.dev) lists both adapters. The Rails adapter adds an edge from each controller to the page it renders (`render inertia: 'users/show'` → `app/frontend/pages/users/show.tsx`, kind `inertia`), so layers and `impact` cross the two languages:
+
+```yaml
+version: 1
+adapters: [rails, js]
+layers:
+  - { name: web,        paths: ["app/controllers/**"] }
+  - { name: services,   paths: ["app/services/**", "app/jobs/**"] }
+  - { name: models,     paths: ["app/models/**"] }
+  - { name: pages,      paths: ["app/frontend/pages/**"] }
+  - { name: components, paths: ["app/frontend/components/**"] }
+```
+
+Controllers sit above the pages they render. `reins init` drafts this plan by itself when both adapters are installed. Details and limits: [`@agentreins/adapter-rails`](../packages/adapters/rails/README.md).
 
 ## Paths and globs
 

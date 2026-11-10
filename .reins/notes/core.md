@@ -23,6 +23,7 @@ Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (
 The CLI reads files, git state and the adapter's graph, and passes them in. `evaluate` drops `ignore`d edges, merges duplicates (one edge per from/to with all its kinds) and runs each rule; `runCheck` adds `extra` violations (integrity, adapter rules), compares keys with the baseline and returns `ok` = no new error. `report/` formats the result. `doctor` and the notes/backlog/progress helpers follow the same pattern: pure functions over text the caller loads.
 
 ## Decisions
+- 2026-11-10: the `Preset` typedef in `contract/index.js` documents the optional fields that tell `reins init` about a language (`sources`, `tests`, `index_files`, `orphans_ignore`, `ignore_kinds`, `route_domains_from`). Types only: the core never reads a preset, the CLI does (`init/conventions.js`). Contract still version 1.
 - 2026-11-04: the core never opens source files and knows no framework; it only sees `{ from, to, kind }` edges. Anything JS/Vite/Next lives in adapters.
 - 2026-11-09: doctor's `note-missing` also fires, at any level, for every domain without a note when `architecture.yml` changed (`planChanged`): domains added to the plan have no changed code, so they never got a note. Coverage uses `repoFiles` when given, else note globs overlapping the domain's.
 - 2026-11-04: own glob matcher instead of a dependency (`path.matchesGlob` is experimental in Node 22). First matching layer/domain wins.

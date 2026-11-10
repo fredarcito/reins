@@ -95,3 +95,23 @@ test('presets: every preset loads with layers and entries', () => {
   }
   assert.throws(() => loadPreset('remix'), /unknown preset "remix"/);
 });
+
+test('detect: Vite inside a Rails app suggests the inertia-react preset', () => {
+  const dir = mkdtempSync(path.join(tmpdir(), 'reins-inertia-'));
+  writeFileSync(path.join(dir, 'vite.config.ts'), 'export default {};\n');
+  assert.equal(detectFramework(dir).suggestedPreset, 'vite-react');
+  mkdirSync(path.join(dir, 'config'));
+  writeFileSync(path.join(dir, 'Gemfile'), "gem 'rails'\n");
+  writeFileSync(path.join(dir, 'config/application.rb'), '');
+  assert.deepEqual(detectFramework(dir), { framework: 'vite', configFile: 'vite.config.ts', rails: true, suggestedPreset: 'inertia-react' });
+});
+
+test('presets: every preset declares what init needs to know about JS; inertia-react has no index files', () => {
+  for (const name of PRESETS) {
+    const p = loadPreset(name);
+    assert.ok(p.sources.length && p.tests.length && p.orphans_ignore.length && p.layers.length && p.entries.length, name);
+    assert.equal(p.ignore_kinds[0].kind, 'type', name);
+  }
+  assert.ok(loadPreset('vite-react').index_files.includes('index.ts'));
+  assert.deepEqual(loadPreset('inertia-react').index_files, []);
+});

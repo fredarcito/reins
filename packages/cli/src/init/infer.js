@@ -1,9 +1,11 @@
 // Pure inference for `reins init`: layers, domains and orphans from the files and edges of a repo.
 // The code says what exists, not what should exist: these are drafts for a person to review.
+// Nothing here knows a language: what is source, what is a test and what is an index file come from the adapters'
+// presets, as `lang` (see conventions.js).
 import { matchesAny } from '@agentreins/core';
+import { ANY } from './conventions.js';
 
-const SOURCE = /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/;
-export const TEST = /\.(test|spec|stories)\.[^/]+$|(^|\/)(__tests__|__mocks__|test|tests|e2e)\//;
+/** @typedef {import('./conventions.js').Conventions} Conventions */
 
 /**
  * @typedef {{ name: string, paths: string[], files: number }} InferredLayer
@@ -16,12 +18,13 @@ export const TEST = /\.(test|spec|stories)\.[^/]+$|(^|\/)(__tests__|__mocks__|te
  * @param {{ name: string, paths: string[] }[]} presetLayers top to bottom
  * @param {string[]} files
  * @param {{ from: string, to: string, kind: string }[]} edges
+ * @param {Conventions} [lang]
  * @returns {{ layers: InferredLayer[], pairs: LayerPair[], conflicts: string[],
  *   unclassified: { folder: string, files: number, importedBy: string[], imports: string[], fits: string | null }[] }}
  *   `fits`: the lowest layer an unclassified folder could join without violations, from its imports
  */
-export function inferLayers(presetLayers, files, edges) {
-  const sources = files.filter((f) => SOURCE.test(f));
+export function inferLayers(presetLayers, files, edges, lang = ANY) {
+  const sources = files.filter((f) => lang.isSource(f));
   const kept = [];
   for (const layer of presetLayers) {
     const paths = layer.paths.filter((g) => sources.some((f) => matchesAny(f, [g])));
@@ -83,7 +86,7 @@ export function inferLayers(presetLayers, files, edges) {
 
   const unclassifiedCount = new Map();
   for (const f of sources) {
-    if (layerOf.has(f) || TEST.test(f) || !f.includes('/')) continue;
+    if (layerOf.has(f) || lang.isTest(f) || !f.includes('/')) continue;
     const parts = f.split('/');
     const folder = parts[0] === 'src' && parts.length > 2 ? `${parts[0]}/${parts[1]}` : parts[0];
     unclassifiedCount.set(folder, (unclassifiedCount.get(folder) ?? 0) + 1);
@@ -140,18 +143,17 @@ export const MIN_ROUTE_FILES = 2;
  * through to its children; route folders with the same route path in different groups are one domain; and a
  * route with fewer than `opts.minFiles` (default MIN_ROUTE_FILES) source files is left out (its folders listed in
  * `opts.small` when given).
- * Public API: the folder's `index.*`; for routes without one, the files imported from outside the folder plus
- * the entry points inside it (e.g. Next's page.tsx); otherwise an `index.js` placeholder flagged as missing.
+ * Public API: see publicApiOf.
  * @param {string[]} domainsFrom globs of domain folders
  * @param {string[]} files
- * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean, small?: string[], minFiles?: number }} [opts]
+ * @param {{ edges?: { from: string, to: string }[], entries?: string[], routes?: boolean, small?: string[], minFiles?: number, lang?: Conventions }} [opts]
  * @returns {Domain[]}
  */
 export function inferDomains(domainsFrom, files, opts = {}) {
-  const { edges = [], entries = [], routes = false, small = [], minFiles = MIN_ROUTE_FILES } = opts;
+  const { edges = [], entries = [], routes = false, small = [], minFiles = MIN_ROUTE_FILES, lang = ANY } = opts;
   const folders = new Map();
   for (const f of files) {
-    if (!SOURCE.test(f) || (routes && TEST.test(f))) continue;
+    if (!lang.isSource(f) || (routes && lang.isTest(f))) continue;
     const parts = f.split('/');
     for (let i = 1; i < parts.length; i++) {
       if (!matchesAny(parts.slice(0, i).join('/'), domainsFrom)) continue;
@@ -183,7 +185,7 @@ export function inferDomains(domainsFrom, files, opts = {}) {
   return sorted.filter((g) => !routes || g.count >= minFiles).map((g) => {
     const folder = g.folders[0];
     const name = uniqueName(segmentName(folder.split('/').pop()), used);
-    const apis = g.folders.map((f) => publicApiOf(f, files, edges, entrySet, routes));
+    const apis = g.folders.map((f) => publicApiOf(f, files, edges, entrySet, routes, lang));
     const missingIndex = apis.every((a) => a.missingIndex);
     const publicApi = missingIndex ? apis[0].publicApi : apis.filter((a) => !a.missingIndex).flatMap((a) => a.publicApi);
     return { name, folder, folders: g.folders, paths: g.folders.map((f) => `${f}/**`), publicApi, missingIndex, files: g.count, owned: [] };
@@ -210,18 +212,21 @@ function uniqueName(base, used) {
 }
 
 /**
- * Public API of a folder: its `index.*`; for routes without one, the files imported from outside the folder plus
- * the entry points inside it; otherwise an `index.js` placeholder flagged as missing.
+ * Public API of a folder: its index file, when the language has that convention (the preset's `index_files`).
+ * Without one: for routes, and for languages with no index convention, the files imported from outside the folder
+ * plus the entry points inside it. If there is still nothing, a placeholder index flagged as missing, or the whole
+ * folder (nothing guarded yet) when the language has no index convention.
  */
-function publicApiOf(folder, files, edges, entrySet, routes) {
+function publicApiOf(folder, files, edges, entrySet, routes, lang = ANY) {
   const inside = (f) => f.startsWith(`${folder}/`);
-  const index = files.filter((f) => inside(f) && /^index\.(js|jsx|mjs|ts|tsx)$/.test(f.slice(folder.length + 1)));
+  const names = lang.indexFilesIn(files.filter(inside));
+  const index = files.filter((f) => inside(f) && names.includes(f.slice(folder.length + 1)));
   // a route folder rarely has an index: its public API is what the router (or the framework) reaches
-  const reached = routes && !index.length
+  const reached = (routes || !names.length) && !index.length
     ? [...new Set([...edges.filter((e) => inside(e.to) && !inside(e.from)).map((e) => e.to), ...files.filter((f) => inside(f) && entrySet.has(f))])].sort()
     : [];
-  const publicApi = index.length ? index : reached.length ? reached : [`${folder}/index.js`];
-  return { publicApi, missingIndex: !index.length && !reached.length };
+  if (index.length || reached.length) return { publicApi: index.length ? index : reached, missingIndex: false };
+  return names.length ? { publicApi: [`${folder}/${names[0]}`], missingIndex: true } : { publicApi: [`${folder}/**`], missingIndex: false };
 }
 
 /** A sub-module needs at least this many source files (a lone page.js is not worth a note). */
@@ -237,7 +242,7 @@ export const MAX_SUBMODULES = 12;
  * Names are `<domain>/<part>`: the note goes to `.reins/notes/<domain>/<part>.md`.
  * @param {{ name: string, folder: string, folders?: string[] }} domain
  * @param {string[]} files
- * @param {{ edges?: { from: string, to: string }[], entries?: string[], used?: Set<string>, max?: number }} [opts]
+ * @param {{ edges?: { from: string, to: string }[], entries?: string[], used?: Set<string>, max?: number, lang?: Conventions }} [opts]
  *   `used`: names already taken (domains, other sub-modules); new names are added to it
  * Parts with the same route path in different groups are one part with several folders. A parameter folder with
  * files of its own (`rating/[slug]/page.js` + `index.js`, the page at `/rating/acme`) is a part too, covering
@@ -246,9 +251,9 @@ export const MAX_SUBMODULES = 12;
  *   `more`: folders left out by `max` (fewest files first out)
  */
 export function inferSubmodules(domain, files, opts = {}) {
-  const { edges = [], entries = [], used = new Set(), max = MAX_SUBMODULES } = opts;
+  const { edges = [], entries = [], used = new Set(), max = MAX_SUBMODULES, lang = ANY } = opts;
   const roots = domain.folders ?? [domain.folder];
-  const own = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && roots.some((r) => f.startsWith(`${r}/`)));
+  const own = files.filter((f) => lang.isSource(f) && !lang.isTest(f) && roots.some((r) => f.startsWith(`${r}/`)));
   const count = (dir) => own.filter((f) => f.startsWith(`${dir}/`)).length;
   const childDirs = (dir) => {
     const names = new Set();
@@ -291,7 +296,7 @@ export function inferSubmodules(domain, files, opts = {}) {
     folders: xs.map((x) => x.dir),
     paths: xs.map((x) => `${x.dir}/${x.direct ? '*' : '**'}`),
     publicApi: xs.flatMap((x) => {
-      const api = publicApiOf(x.dir, files, edges, entrySet, true).publicApi;
+      const api = publicApiOf(x.dir, files, edges, entrySet, true, lang).publicApi;
       return x.direct ? api.filter((f) => !f.slice(x.dir.length + 1).includes('/')) : api;
     }),
     files: n,
@@ -300,21 +305,17 @@ export function inferSubmodules(domain, files, opts = {}) {
 }
 
 /**
- * Source files nobody imports that are not entry points, tests or config files.
+ * Source files nobody imports that are not entry points, tests or files the language ignores (config files…).
  * @param {string[]} files
  * @param {string[]} entries
  * @param {{ to: string }[]} edges
+ * @param {Conventions} [lang]
  */
-export function findOrphans(files, entries, edges) {
+export function findOrphans(files, entries, edges, lang = ANY) {
   const imported = new Set(edges.map((e) => e.to));
   const entrySet = new Set(entries);
-  return files.filter(
-    (f) => SOURCE.test(f) && !imported.has(f) && !entrySet.has(f) && !TEST.test(f) && !/(^|\/)[^/]+\.config\.[^/]+$/.test(f) && !f.endsWith('.d.ts'),
-  );
+  return files.filter((f) => lang.isSource(f) && !imported.has(f) && !entrySet.has(f) && !lang.isTest(f) && !lang.isOrphanIgnored(f));
 }
-
-/** True if the repo has TypeScript sources. */
-export const hasTypeScript = (files) => files.some((f) => /\.(ts|tsx|mts|cts)$/.test(f) && !f.endsWith('.d.ts'));
 
 /** A folder (or loose file) belongs to the domain that makes at least this share of the imports into it. */
 export const OWN_SHARE = 2 / 3;
@@ -354,13 +355,14 @@ function globRoots(glob) {
  * @param {{ from: string, to: string }[]} edges
  * @param {{ paths: string[] }[]} layers top to bottom; the last one is shared by design
  * @param {{ barrels?: string[], uses?: { from: string, to: string }[] }} [through] from the adapter
+ * @param {Conventions} [lang]
  * @returns {{ doubtful: { folder: string, domain: string, share: number, imports: number }[] }}
  */
-export function inferOwnedFolders(domains, files, edges, layers, through = {}) {
+export function inferOwnedFolders(domains, files, edges, layers, through = {}, lang = ANY) {
   const barrels = new Set(through.barrels ?? []);
   const sharedGlobs = layers.length > 1 ? layers[layers.length - 1].paths : [];
-  const sources = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && !barrels.has(f) && !matchesAny(f, sharedGlobs));
-  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !TEST.test(e.from));
+  const sources = files.filter((f) => lang.isSource(f) && !lang.isTest(f) && !barrels.has(f) && !matchesAny(f, sharedGlobs));
+  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !lang.isTest(e.from));
   const domainOf = (f) => domains.find((d) => matchesAny(f, d.paths));
   const roots = [...new Set(layers.slice(0, sharedGlobs.length ? -1 : undefined).flatMap((l) => l.paths.flatMap(globRoots)))];
   /** @type {Map<string, string>} loose file -> domain name */
@@ -473,13 +475,14 @@ export const importsFromOutside = (domain, edges) => edges.filter((e) => matches
  * @param {string[]} files
  * @param {{ from: string, to: string }[]} edges
  * @param {{ barrels?: string[], uses?: { from: string, to: string }[] }} [through] from the adapter
+ * @param {Conventions} [lang]
  * @returns {{ merged: Domain[], rest: Domain[] }}
  */
-export function mergeSmallRoutes(small, kept, files, edges, through = {}) {
+export function mergeSmallRoutes(small, kept, files, edges, through = {}, lang = ANY) {
   const barrels = new Set(through.barrels ?? []);
-  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !TEST.test(e.from));
+  const runtime = [...edges.filter((e) => !barrels.has(e.from) && !barrels.has(e.to)), ...(through.uses ?? [])].filter((e) => !lang.isTest(e.from));
   const containers = new Set(kept.flatMap((d) => d.owned.map((o) => o.folder.split('/').slice(0, -1).join('/'))));
-  const sources = files.filter((f) => SOURCE.test(f) && !TEST.test(f) && !barrels.has(f) && !kept.some((d) => matchesAny(f, d.paths)));
+  const sources = files.filter((f) => lang.isSource(f) && !lang.isTest(f) && !barrels.has(f) && !kept.some((d) => matchesAny(f, d.paths)));
   const folders = new Map(); // folder -> source files inside it
   for (const f of sources) {
     const c = [...containers].find((x) => f.startsWith(`${x}/`));

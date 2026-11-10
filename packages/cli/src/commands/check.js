@@ -12,6 +12,7 @@ import { resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
 import { computeCoverage, formatCoverage } from '../coverage.js';
+import { conventions, presetsOf } from '../init/conventions.js';
 
 export const options = {
   files: { type: 'string', multiple: true },
@@ -183,11 +184,12 @@ export async function check(ctx) {
   const files = values.files?.flatMap((f) => f.split(',')).map((f) => f.trim()).filter(Boolean).map((f) => toRepoPath(root, cwd, f));
   if (values['update-baseline'] && files) throw new CliError('--update-baseline needs the whole project: run it without --files.');
 
-  const { config, graph, extra } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
+  const { config, loaded, graph, extra } = await analyze(root, { searchPaths: ctx.adapterSearchPaths });
   const warnings = [...graph.warnings];
 
   if (values.coverage) {
-    const coverage = computeCoverage(config, graph, readBaseline(root).baseline);
+    const lang = conventions(presetsOf(loaded, root, config.preset).map((p) => p.preset));
+    const coverage = computeCoverage(config, graph, readBaseline(root).baseline, lang);
     out(values.json ? JSON.stringify({ ...coverage, warnings }, null, 2) : formatCoverage(coverage));
     if (!values.json) for (const w of warnings) out(`! warning  ${w}`);
     return 0;

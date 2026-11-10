@@ -409,6 +409,40 @@ First real run on a Vite repo whose routes are one `index.jsx` each and whose co
 | Routes sharing a feature folder | Small routes are merged into one domain when a folder right inside a container organized by feature is imported only by them, by two or more (`mergeSmallRoutes`); the domain takes the folder's name | `notifications` + `notificationsPreferences` over `components/pages/notifications/`. Graph only: grouping by a shared `api/auth` file would depend on names and the lowest layer, so the `arch` skill proposes those groups instead, and a person decides |
 | Notes of new domains | `doctor` flags `note-missing` for every domain without a note whenever `architecture.yml` changed, at any level; the `arch` skill drafts the notes of the domains it adds | Before, `note-missing` needed changed code in the domain, so domains added to the plan never got a note |
 
+## Rails adapter (2026-11-10)
+
+The team's backends are Rails, some with React through Inertia. The design planned a Ruby adapter that would wrap Packwerk; the adapter built does not.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| How Ruby is read | Parse every file with Prism compiled to WebAssembly (`@ruby/prism`, the only new dependency, in the adapter) | Packwerk needs Ruby, the gem in the Gemfile and its own `package.yml` setup, and the CLI would have to run Bundler. Prism is the parser Ruby ships, maintained by ruby-core, MIT, 1.1 MB, no transitive dependencies; it read 4440 files in 1.5 s. A regex reader was rejected: strings, heredocs and comments full of capitalized words would become false edges |
+| What an edge is | A file names a constant that another file defines; plus `require_relative`/`require` of a repo file | Zeitwerk apps have no imports; the constant is the dependency |
+| Where constants are defined | Indexed from the parsed `class`/`module`/`CONST =` definitions, not from file names | No inflector and no autoload-path configuration to mirror; files outside the autoload paths work. A module that only wraps other definitions is a namespace, not an owner |
+| Lookup | Ruby's lexical lookup (innermost module outwards), then the longest prefix that has an owner. Ancestors are not followed | Covers what apps write; following superclasses needs the whole class hierarchy, gems included |
+| Unresolved constants | Silent | Gems and Ruby itself are unresolved by design, so a warning would fire on every file. The contract's "never drop edges silently" is kept where a miss can be told apart: syntax errors and missing Inertia pages warn |
+| Associations | `has_many :orders` is an edge of kind `association` to `Order`, resolved in the model's namespaces, with the app's acronyms and irregulars | It is a real dependency between models that no constant shows. Its own kind lets a rule ignore it (`ignore_kinds`) |
+| Inertia | `render inertia:` (named or inferred from controller and action) and `inertia` routes become edges of kind `inertia` to the page file | The one place where Ruby names a frontend file. With `adapters: [js, rails]` the graph crosses languages, which the several-adapters design thought would not happen |
+| Name | `rails`, not `ruby` | Detection, entry points, associations and the preset are Rails conventions; a plain Ruby gem would need different ones |
+| Guessing the adapter in `init` | A `Gemfile` with `config/application.rb` wins over `package.json` | Rails apps with Vite have both, and the app is a Rails app. The frontend is added to `adapters:` by hand until `init` drafts for several adapters |
+| `init` and Ruby files | `SOURCE` and `TEST` in the CLI's `init/infer.js` now include `.rb`, `.rake`, `spec/` and `_spec.rb` | The inference counted only JS extensions, so a Rails plan came out with no layers. The contract did not change (still version 1) |
+
+## `init` knows no language (2026-11-10)
+
+The Rails adapter showed that `init` was written for JavaScript: file extensions, test patterns, `index.js` as a folder's public API and the TypeScript check lived in the CLI. Every new language would have meant editing `init`.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Where language knowledge lives | In the adapter's preset, as data: `sources`, `tests`, `index_files`, `orphans_ignore`, `ignore_kinds`. The CLI turns them into one `Conventions` object (`init/conventions.js`) that every inference function receives | The preset was already the channel from the adapter to `init`. Data, not callbacks: the CLI keeps the algorithms and nothing in the adapter runs during inference |
+| Contract version | Still 1: the fields are optional | An adapter without them still works: every file counts as source |
+| Older adapter with a newer CLI | `init` says the adapter is older and the draft rougher; no JS defaults are kept in the CLI | Keeping the old patterns as a fallback would keep the language in the CLI forever. `reins update` upgrades them together, and `init` runs once |
+| TypeScript's `ignore_kinds: [type]` | The JS presets declare it (`if_files`, `unless_files`, `reason`) | Detecting it from `type` edges changed the draft of TypeScript repos that have no `import type` yet (2 of 8 repos compared) |
+| A language without index files | A domain's public API is the files the rest of the code already imports, or the whole folder when nothing does | Proposing `index.js` in a Ruby pack was wrong; "what is used today" is the honest starting point, and a person narrows it |
+| `init` with several adapters | One preset per adapter, joined: layers in the adapters' order (the graph decides the final order), the union of the rest. The draft has no `preset:` line; each adapter detects its own | Replaces "`init` drafts for one adapter" from the several-adapters decision. A single `preset:` can't name two presets |
+| Which adapters `init` picks | The repo's main language first (Rails markers win), then any other guessed adapter that is installed and whose `detect` recognizes the repo | A Rails API with a `package.json` for tooling must not need the JS adapter; a missing one gets a one-line hint |
+| Inertia pages | Preset `inertia-react` in the JS adapter, suggested when `vite.config.*` sits in a Rails app; `index_files: []` | In a pages folder `index.tsx` is a page, not a barrel, and every page is rendered by name |
+| Not moved | Route conventions (`(group)`, `[param]`, private folders) stay in `init/infer.js` | Only Next uses them and no adapter needs different ones yet |
+| Check that nothing changed | `init --dry-run` with the code before and after, on both examples and 8 real repos: identical output | The existing tests pin the examples; real repos pin the rest |
+
 ## Open
 
 - **Agent adapters for Codex and Cursor (proposed 2026-11-08):** [`proposals/agent-adapters.md`](proposals/agent-adapters.md). All logic stays in the CLI; each agent gets a generated adapter that only translates hook config and payloads.

@@ -66,7 +66,17 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * @property {{ name: string, paths: string[] }[]} layers  candidate layers, top to bottom
  * @property {string[]} domains_from  globs of folders whose children become domains, e.g. "src/features/*"
  * @property {string[]} entries  entry-point globs
+ * @property {string[]} [route_domains_from]  globs of route folders that become domains when `domains_from` finds none
  * @property {string[]} [default_rules] adapter rules `init` should propose for this preset
+ *
+ * What `reins init` needs to know about the language, so the CLI knows none (all optional, all globs):
+ * @property {string[]} [sources]  source files, e.g. "**\/*.{rb,rake}". Without it every file of the graph counts as source
+ * @property {string[]} [tests]  test files: left out of domains, orphans and unclassified folders
+ * @property {string[]} [index_files]  file names that are a folder's public API ("index.js"); the first one is proposed
+ *   when a domain has none. Without it, a domain's public API is what the rest of the code already imports from it
+ * @property {string[]} [orphans_ignore]  files nobody imports by design (config files, type declarations)
+ * @property {{ kind: string, if_files?: string[], unless_files?: string[], reason?: string }[]} [ignore_kinds]
+ *   edge kinds the drafted rules should ignore when the repo has files matching `if_files` (and not `unless_files`)
  */
 
 /**

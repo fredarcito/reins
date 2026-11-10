@@ -258,6 +258,7 @@ The packages are on npm under `@agentreins`. Without a registry (offline, or a v
 ```bash
 # 1. Install the CLI and the JavaScript/TypeScript adapter (pnpm: pnpm add -D …)
 npm install -D @agentreins/cli @agentreins/adapter-js
+#    Ruby on Rails: @agentreins/adapter-rails (with Inertia + React, install both adapters)
 
 # 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md
 npx reins install --skip-claude    # omit optional Claude Code files for a provider-neutral setup
@@ -288,7 +289,8 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | `reins init`: draft plan, baseline and report | stable | ✅ |
 | `adapter-js`: Vite + React and Next, JS or TS, `@/` aliases | stable | ✅ tested on [`examples/`](examples/) |
 | `next-server-client` rule | stable (optional) | ✅ |
-| Several languages in one repo (`adapters: [js, rust]`) | experimental | ✅ one plan and one baseline for every language; the Rust adapter comes next |
+| `adapter-rails`: Ruby on Rails, with [Inertia](https://inertia-rails.dev) pages | experimental | ✅ reads Ruby without needing Ruby installed; tried on a Rails app of 4,400 files in 1.5 s |
+| Several languages in one repo (`adapters: [rails, js]`) | experimental | ✅ one plan and one baseline for every language; `init` drafts it for all of them; a Rails controller is linked to the React page it renders |
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
 | `reins install`, `reins update` | experimental | ✅ install tested with npm and pnpm; update package-manager selection tested in dry-run; shared `AGENTS.md` workflow does not require Claude Code |
 | `reins sync`, `notes`, `scope` | experimental | ✅ notes reach Claude Code before it edits |

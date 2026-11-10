@@ -314,3 +314,10 @@ Everything below is assumed, not tested. Each is a candidate for the pilot or fo
 - That an agent actually stops and re-triages when the notes hook delivers the impact warning (tested only as hook output), and that the detached `reins impact --map` started by the `SessionStart` hook keeps running after the hook returns inside a real Claude Code session (checked by hand from a shell).
 - That agents write `triage.log` lines, keep the notebook format and use `harness progress` / `harness audit` instead of rewriting files (instructions, not enforced).
 - That agents skip triage (no level, announcement or `triage.log` line) for information-only messages, and still triage questions that need repository work (policy text, not enforced).
+
+**Rails adapter (2026-11-10), not verified**
+- Inertia behavior was taken from the inertia-rails documentation, never run: that a `render inertia:` without a component name resolves to `<controller path>/<action>`, that pages live in `pages/` next to the entry point (`app/frontend/pages`), and that `config/vite.json` keeps `sourceCodeDir` under `all`. No real Inertia app was analyzed, only a fixture.
+- Inertia's default rendering (an action with no `render` call) and `render inertia:` with a variable are not followed, and nothing warns about them.
+- `@ruby/prism` as WebAssembly was run only on macOS arm64 with Node 22.21; Linux CI and Windows are untested. Hiding Node's WASI `ExperimentalWarning` depends on the warning being emitted through `process.emitWarning` while Prism loads.
+- A Rails repo with no `package.json` (installing reins there needs `npm init` first), and the installed CI workflow on a repo whose main toolchain is Ruby, were not tried.
+- `reins review --map` on a Rails repo (the base graph through a worktree; the adapter has no `prepareCheckout` because it needs nothing installed) was not run.

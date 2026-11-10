@@ -2,9 +2,8 @@
 // checked by layer-direction), imports between layers, exceptions and the baseline. Used by
 // `reins check --coverage`, mainly as the facts behind an architecture review.
 import { matchesAny } from '@agentreins/core';
-import { TEST } from './init/infer.js';
+import { ANY } from './init/conventions.js';
 
-const SOURCE = /\.(js|jsx|mjs|cjs|ts|tsx|mts|cts)$/;
 const MAX_FOLDERS = 15;
 
 /** Top folder a file is grouped under: src/<x> inside src, otherwise the first folder. */
@@ -17,9 +16,10 @@ const folderOf = (f) => {
  * @param {import('@agentreins/core').ArchitectureConfig} config
  * @param {{ files: string[], edges: { from: string, to: string }[] }} graph
  * @param {{ violations: { rule: string }[] }} baseline
+ * @param {import('./init/conventions.js').Conventions} [lang] what is source and what is a test, from the adapters' presets
  */
-export function computeCoverage(config, graph, baseline) {
-  const sources = graph.files.filter((f) => SOURCE.test(f));
+export function computeCoverage(config, graph, baseline, lang = ANY) {
+  const sources = graph.files.filter((f) => lang.isSource(f));
   const layerOf = new Map();
   for (const f of sources) {
     const i = config.layers.findIndex((l) => matchesAny(f, l.paths));
@@ -30,7 +30,7 @@ export function computeCoverage(config, graph, baseline) {
   const outsideCount = new Map();
   let outside = 0;
   for (const f of sources) {
-    if (layerOf.has(f) || TEST.test(f) || !f.includes('/')) continue;
+    if (layerOf.has(f) || lang.isTest(f) || !f.includes('/')) continue;
     outside++;
     outsideCount.set(folderOf(f), (outsideCount.get(folderOf(f)) ?? 0) + 1);
   }

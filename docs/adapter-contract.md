@@ -28,7 +28,7 @@ export default {
   evaluate(repoPath, config, graph) {}, // required if `rules` is not empty
   presets: ['vite-react', 'next-app', 'next-pages'], // optional, used by `reins init`
   suggestPreset(repoPath) {},    // optional: best preset name, or null
-  loadPreset(name) {},           // optional: { description, layers, domains_from, route_domains_from?, entries, default_rules? }
+  loadPreset(name) {},           // optional: the preset, see "Presets" below
   prepareCheckout(dir, repoRoot) {}, // optional: make a checkout of another commit analyzable → { warnings }
 };
 ```
@@ -38,6 +38,26 @@ Without `presets`/`loadPreset`, `reins init` can't draft a plan and asks the use
 In a repo with several adapters (`adapters: [js, rust]`), every adapter gets the repo root and must return only the files of its language. Rule ids must not collide with another adapter's, and `config.preset` is left out unless the preset is in the adapter's `presets`.
 
 `validateAdapter()` from `@agentreins/core/contract` checks this shape; the CLI refuses an adapter that fails it.
+
+## Presets: what `reins init` knows about a language
+
+`reins init` knows no language. Everything it needs comes from the preset, as data:
+
+| Field | Required | What |
+| --- | --- | --- |
+| `description` | yes | One line |
+| `layers` | yes | `[{ name, paths }]`, candidate layers top to bottom. `init` keeps the ones that exist and orders them by the imports |
+| `domains_from` | yes | Globs of folders whose children become domains (`src/features/*`, `packs/*`) |
+| `route_domains_from` | no | Globs of route folders that become domains when `domains_from` finds none |
+| `entries` | yes | Entry-point globs: never orphans |
+| `default_rules` | no | Adapter rules `init` proposes |
+| `sources` | no | Globs of source files (`**/*.{rb,rake}`). Without it, every file of the graph counts as source |
+| `tests` | no | Globs of test files: left out of domains, orphans and "folders outside every layer" |
+| `index_files` | no | File names that are a folder's public API (`index.js`, `index.ts`); the first is proposed when a domain has none. Without it, a domain's public API is what the rest of the code already imports from it |
+| `orphans_ignore` | no | Globs of files nobody imports by design (`*.config.*`, `*.d.ts`) |
+| `ignore_kinds` | no | `[{ kind, if_files, unless_files?, reason }]`: the drafted rules get `ignore_kinds: [kind]` when the repo has files matching `if_files`. The JS adapter uses it for type-only imports in TypeScript repos |
+
+In a repo with several adapters, `init` loads one preset per adapter and joins them: layers in the adapters' order, and the union of everything else. `check --coverage` reads `sources` and `tests` the same way.
 
 ## `graph()` result
 
@@ -113,7 +133,11 @@ Heavy dependencies (dependency-cruiser…) belong to the adapter, never to the c
 
 The CLI refuses an adapter whose `contract` differs from the core's `CONTRACT_VERSION`, and says which version to install. Package managers only **warn** on an incompatible peer dependency ([VERIFIED.md, P7](VERIFIED.md#p7-peerdependencies-with-pnpm--pass)), so this check is the real one.
 
-Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`; for the PR map, `prepareCheckout`. All optional. The contract will probably change for real when a second adapter (Ruby/Packwerk) arrives; that would be contract 2.
+Version 1 grew without breaking: in phase 3 `graph()` may return an object instead of an array, and `rules` + `evaluate` were added; in phase 4, `presets`, `suggestPreset` and `loadPreset`; for the PR map, `prepareCheckout`; on 2026-11-10, the preset fields that tell `init` about the language. All optional. The second adapter (`@agentreins/adapter-rails`, 2026-11-10) fit in contract 1 unchanged: constant references are edges like any other.
+
+## A language without imports: `@agentreins/adapter-rails`
+
+Ruby files don't import each other, so the adapter builds the edges itself: it parses every file with Prism (WebAssembly, no Ruby needed), indexes which file defines each constant, and resolves each constant reference the way Ruby does. It uses its own edge kinds next to `static`: `association` (`has_many :orders`) and `inertia` (a controller renders a page component, an edge into the frontend files that `adapter-js` owns). It has a preset and no adapter rules, and needs no `prepareCheckout`. See its [README](../packages/adapters/rails/README.md).
 
 ## Reference implementation: `@agentreins/adapter-js`
 
@@ -122,6 +146,6 @@ Version 1 grew without breaking: in phase 3 `graph()` may return an object inste
 | `detect` | `vite.config.*` → Vite; `next.config.*` → Next (app, pages or both routers) |
 | aliases | Reads `jsconfig.json`/`tsconfig.json` `paths` and `baseUrl` (following `extends` and `references`) and `resolve.alias` in `vite.config.*`, statically. No TypeScript needed for JS projects |
 | `graph` | dependency-cruiser with those aliases. Edge kinds: `type` (type-only imports), `dynamic` (`import()`), `static` |
-| presets | `vite-react`, `next-app`, `next-pages`: starting layers for `init` and entry-point globs |
+| presets | `vite-react`, `next-app`, `next-pages`, `inertia-react` (Vite inside a Rails app): starting layers for `init`, entry-point globs, and what `init` needs to know about JS (sources, tests, index files) |
 | `prepareCheckout` | Mirrors `node_modules` into a worktree of another commit (pnpm workspace links stay relative); warns with Yarn PnP |
 | `next-server-client` | Optional rule: a `'use client'` component must not reach a module that imports `server-only` or `next/headers` |

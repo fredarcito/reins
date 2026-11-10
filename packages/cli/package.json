@@ -29,7 +29,8 @@
     "postpack": "node -e \"require('fs').rmSync('templates',{recursive:true,force:true})\""
   },
   "devDependencies": {
-    "@agentreins/adapter-js": "workspace:^"
+    "@agentreins/adapter-js": "workspace:^",
+    "@agentreins/adapter-rails": "workspace:^"
   },
   "repository": {
     "type": "git",

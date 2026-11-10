@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { resolveAdapter, candidates } from '../src/adapter.js';
 import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans } from '../src/init/infer.js';
 import { tempDir } from './helpers.js';
+import jsAdapter from '@agentreins/adapter-js';
+import { conventions } from '../src/init/conventions.js';
+
+// init knows no language: what is source, a test or an index file comes from the adapter's preset
+const lang = conventions([jsAdapter.loadPreset('vite-react')]);
 
 const fakeAdapter = (pkgName, { contract = 1, exportsPkg = true, body } = {}) => ({
   [`node_modules/${pkgName}/package.json`]: {
@@ -49,7 +54,7 @@ test('layers: absent layers and globs are dropped; order follows the dominant im
     edge('src/components/b.js', 'src/lib/e.js'),
     edge('src/lib/e.js', 'src/pages/a.js', 'type'), // type-only: not evidence
   ];
-  const r = inferLayers(presetLayers, files, edges);
+  const r = inferLayers(presetLayers, files, edges, lang);
   assert.deepEqual(r.layers.map((l) => `${l.name}:${l.files}`), ['pages:1', 'features:2', 'components:1', 'shared:1']);
   assert.deepEqual(r.layers[3].paths, ['src/lib/**']);
   assert.deepEqual(r.pairs.find((p) => p.above === 'features' && p.below === 'components'), { above: 'features', below: 'components', down: 2, up: 1 });
@@ -59,7 +64,7 @@ test('layers: absent layers and globs are dropped; order follows the dominant im
 
 test('layers: a loop in the dominant directions keeps the preset order and is reported', () => {
   const edges = [edge('src/pages/a.js', 'src/components/b.js'), edge('src/components/b.js', 'src/features/x/c.js'), edge('src/features/x/c.js', 'src/pages/a.js')];
-  const r = inferLayers(presetLayers, files, edges);
+  const r = inferLayers(presetLayers, files, edges, lang);
   assert.equal(r.conflicts.length, 1);
   assert.match(r.conflicts[0], /form a loop/);
 });
@@ -79,7 +84,7 @@ test('layers: an unclassified folder gets the lowest layer its imports allow, or
     e('src/app/layout.js', 'src/providers/Theme.js'), e('src/providers/Theme.js', 'src/components/Card.js'), // providers: above components
     e('src/legacy/x.js', 'src/app/page.js'), e('src/utils/fmt.js', 'src/legacy/x.js'), // both ways
   ];
-  const r = inferLayers(preset, files, edges);
+  const r = inferLayers(preset, files, edges, lang);
   const fit = Object.fromEntries(r.unclassified.map((u) => [u.folder, [u.fits, u.importedBy.join(','), u.imports.join(',')]]));
   assert.deepEqual(fit['src/store'], ['shared', 'components', 'shared']);
   assert.deepEqual(fit['src/providers'], ['components', 'app', 'components']);
@@ -89,7 +94,7 @@ test('layers: an unclassified folder gets the lowest layer its imports allow, or
 test('domains: one per folder, public API from its index, missing index flagged, names deduplicated', () => {
   const d = inferDomains(['src/features/*', 'src/modules/*'], [
     'src/features/billing/index.ts', 'src/features/billing/tax.ts', 'src/features/search/Results.jsx', 'src/modules/billing/a.js', 'src/features/README.md',
-  ]);
+  ], { lang });
   assert.deepEqual(d.map((x) => [x.name, x.publicApi.join(','), x.missingIndex, x.files]), [
     ['billing', 'src/features/billing/index.ts', false, 2],
     ['search', 'src/features/search/index.js', true, 1],
@@ -110,6 +115,7 @@ test('domains from routes: look through [param] and (group), skip catch-alls, pr
   const d = inferDomains(['src/app/*'], files, {
     routes: true,
     small,
+    lang,
     entries: ['src/app/[lang]/flights/page.tsx', 'src/app/[lang]/(search)/results/page.tsx', 'src/app/api/ping/route.ts', 'src/app/[lang]/[id]/edit/page.tsx'],
     edges: [{ from: 'src/app/[lang]/trips/List.tsx', to: 'src/app/[lang]/shared/util.ts' }],
   });
@@ -130,13 +136,13 @@ test('a route split across (groups) is one domain with several folders, and so a
     'src/app/(staticMain)/companies/salaries/x/page.js', 'src/app/(staticMain)/companies/salaries/x/Extra.js',
     'src/app/(main)/jobs/page.js', 'src/app/(main)/jobs/List.js',
   ];
-  const d = inferDomains(['src/app/*'], files, { routes: true });
+  const d = inferDomains(['src/app/*'], files, { routes: true, lang });
   assert.deepEqual(d.map((x) => [x.name, x.folders, x.paths]), [
     ['companies', ['src/app/(companies)/companies', 'src/app/(main)/companies', 'src/app/(staticMain)/companies'],
       ['src/app/(companies)/companies/**', 'src/app/(main)/companies/**', 'src/app/(staticMain)/companies/**']],
     ['jobs', ['src/app/(main)/jobs'], ['src/app/(main)/jobs/**']],
   ]);
-  const { submodules } = inferSubmodules(d[0], files);
+  const { submodules } = inferSubmodules(d[0], files, { lang });
   assert.deepEqual(submodules.map((x) => [x.name, x.folders, x.files]), [
     ['companies/slug', ['src/app/(companies)/companies/[slug]'], 2],
     ['companies/salaries', ['src/app/(companies)/companies/[slug]/salaries'], 2],
@@ -149,7 +155,7 @@ test('a route split across (groups) is one domain with several folders, and so a
 test('a parameter folder that is a page itself is a part, covering only its own files', () => {
   const r = 'src/app/(emptyLayout)/rating';
   const files = [`${r}/[slug]/index.js`, `${r}/[slug]/page.js`, `${r}/success/index.js`, `${r}/success/page.js`, `${r}/re-rate/index.js`, `${r}/re-rate/page.js`];
-  const { submodules } = inferSubmodules({ name: 'rating', folder: r }, files, { entries: [`${r}/[slug]/page.js`] });
+  const { submodules } = inferSubmodules({ name: 'rating', folder: r }, files, { entries: [`${r}/[slug]/page.js`], lang });
   assert.deepEqual(submodules.map((x) => [x.name, x.paths, x.publicApi]), [
     ['rating/slug', [`${r}/[slug]/*`], [`${r}/[slug]/index.js`]],
     ['rating/re-rate', [`${r}/re-rate/**`], [`${r}/re-rate/index.js`]],
@@ -196,7 +202,7 @@ test('owned folders: whole feature folders by imports, never split; shared code 
     e(`${P}/Tabs.js`, 'src/utils/vote.js'), e(C, 'src/constants/dates.js'),
   ];
   const layers = [{ paths: ['src/app/**'] }, { paths: ['src/components/**'] }, { paths: ['src/{utils,constants}/**'] }];
-  const { doubtful } = inferOwnedFolders(domains, files, edges, layers);
+  const { doubtful } = inferOwnedFolders(domains, files, edges, layers, {}, lang);
   assert.deepEqual(domains[0].owned.map((o) => [o.folder, o.files, o.imports, o.total]), [
     [P, 5, 2, 3],
     ['src/components/widgets', 2, 1, 1],
@@ -213,6 +219,7 @@ test('orphans: not imported, not entries, not tests, not config, not .d.ts', () 
     ['src/a.js', 'src/b.js', 'src/page.js', 'src/a.test.js', 'vite.config.js', 'src/env.d.ts', 'src/c.ts'],
     ['src/page.js'],
     [{ from: 'src/a.js', to: 'src/b.js' }],
+    lang,
   );
   assert.deepEqual(o, ['src/a.js', 'src/c.ts']);
 });
@@ -228,7 +235,7 @@ test('sub-modules of a route domain: follow single folders and [param], one per 
     `${base}/_lib/a.js`, `${base}/_lib/b.js`,
   ];
   const used = new Set(['companies', 'companies/culture']);
-  const { submodules, more } = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { entries: [`${base}/culture/page.js`], used });
+  const { submodules, more } = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { entries: [`${base}/culture/page.js`], used, lang });
   assert.deepEqual(submodules.map((s) => [s.name, s.folder, s.files, s.publicApi.join(',')]), [
     ['companies/slug', base, 3, `${base}/index.js`],
     ['companies/culture-2', `${base}/culture`, 2, `${base}/culture/index.js`],
@@ -238,8 +245,26 @@ test('sub-modules of a route domain: follow single folders and [param], one per 
   assert.deepEqual(more, []);
   assert.ok(used.has('companies/salaries'));
 
-  const capped = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { max: 2 });
+  const capped = inferSubmodules({ name: 'companies', folder: 'src/app/(companies)' }, files, { max: 2, lang });
   assert.deepEqual(capped.submodules.map((s) => s.name), ['companies/slug', 'companies/questions']);
   assert.deepEqual(capped.more, [`${base}/salaries`, `${base}/culture`]);
-  assert.deepEqual(inferSubmodules({ name: 'jobs', folder: 'src/app/jobs' }, ['src/app/jobs/page.js', 'src/app/jobs/list/a.js', 'src/app/jobs/list/b.js']).submodules, []);
+  assert.deepEqual(inferSubmodules({ name: 'jobs', folder: 'src/app/jobs' }, ['src/app/jobs/page.js', 'src/app/jobs/list/a.js', 'src/app/jobs/list/b.js'], { lang }).submodules, []);
+});
+
+test('conventions: several presets are a union; a language without an index convention exposes what is used', () => {
+  const ruby = { sources: ['**/*.rb'], tests: ['spec/**'] };
+  const both = conventions([jsAdapter.loadPreset('vite-react'), ruby]);
+  assert.ok(both.isSource('app/models/user.rb') && both.isSource('src/a.tsx') && !both.isSource('README.md'));
+  assert.ok(both.isTest('spec/models/user_spec.rb') && both.isTest('src/a.test.js') && !both.isTest('spec.js'));
+  assert.deepEqual(both.indexFilesIn(['packs/billing/app/models/invoice.rb']), []);
+  assert.ok(both.indexFilesIn(['src/features/cart/Cart.jsx']).includes('index.js'));
+  // an adapter without a preset: every file counts as source
+  assert.ok(conventions([null]).isSource('anything.xyz'));
+
+  const files = ['packs/billing/invoice.rb', 'packs/billing/tax.rb', 'packs/empty/x.rb', 'app/models/user.rb'];
+  const d = inferDomains(['packs/*'], files, { edges: [{ from: 'app/models/user.rb', to: 'packs/billing/invoice.rb' }], lang: both });
+  assert.deepEqual(d.map((x) => [x.name, x.publicApi, x.missingIndex]), [
+    ['billing', ['packs/billing/invoice.rb'], false],
+    ['empty', ['packs/empty/**'], false],
+  ]);
 });

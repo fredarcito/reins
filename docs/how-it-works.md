@@ -78,6 +78,17 @@ flowchart LR
     core --> report["Report<br/>text or JSON"]
 ```
 
+A Rails app has no imports to read, so `adapter-rails` finds the dependencies in the constants each file names. With Inertia it also links each controller to the page it renders, and both adapters feed the same rules:
+
+```mermaid
+flowchart LR
+    rb["Ruby files<br/>.rb .rake"] --> rails["adapter-rails<br/>(Prism parser)"]
+    rails -- "constants<br/>associations" --> edges["[{ from, to, kind }]"]
+    rails -- "render inertia: 'users/show'" --> edges
+    fe["app/frontend<br/>.tsx .jsx"] --> js["adapter-js"] --> edges
+    edges --> core["core rules"]
+```
+
 Rules:
 
 | Rule | Fails when | Example |
