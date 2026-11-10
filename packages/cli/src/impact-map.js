@@ -106,7 +106,7 @@ export function impactHint(root, file) {
   const who = `imported by ${entry.consumers} file${entry.consumers === 1 ? '' : 's'}${entry.domains.length ? ` (domains: ${entry.domains.join(', ')})` : ''}`;
   const head = `Impact of changing ${file} (from reins impact): ${who}. Minimum level if the change breaks its importers: ${entry.level} (${entry.reasons.join('; ')}).`;
   const action = declared
-    ? `This task is declared ${declared}. Before editing it: tell the person the task is ${entry.level}, run \`npx reins triage ${entry.level} "<reason>"\`${entry.level === 'large' ? ' and present the plan; wait for confirmation' : ''}. Run \`npx reins impact ${file}\` for the details.`
-    : `No level is declared for this task yet: triage it first (\`npx reins triage <level> "<reason>"\`), at least ${entry.level}.`;
+    ? `This task is declared ${declared}. Before editing it: tell the person the task is ${entry.level}, run \`npx reins triage ${entry.level} "<reason>"${entry.level === 'large' ? '' : ` --files ${file}`}\`${entry.level === 'large' ? ' and present the plan; wait for confirmation' : ''}. Run \`npx reins impact ${file}\` for the details.`
+    : `No level is declared for this task yet: triage it first (\`npx reins triage "<reason>" --files <paths you expect to touch>\`); it is at least ${entry.level}.`;
   return { text: `${head}\n${action}`, key: declared ? `impact:${file}` : `impact:untriaged:${entry.level}` };
 }

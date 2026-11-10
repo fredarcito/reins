@@ -456,6 +456,21 @@ The JS adapter kept its presets as YAML files plus shared fields merged in code;
 | Dependency | `yaml` removed from `adapter-js` | Its only use was reading presets |
 | Check | `loadPreset` of the five presets compared before and after: deep-equal | |
 
+## The task level is measured, not guessed (2026-11-10)
+
+In one long session an agent declared the level by eye four times and was wrong twice (small → medium, medium → large). `doctor` caught both, at the end, when the level could no longer change anything: a task that had become large was never presented as a plan.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Who decides the level | `reins triage --files <paths>` measures it with the same signals as `reins scope` and records the higher of the declared and the measured level. With `--files` the level is optional | The level was the agent's estimate, checked afterwards. The same split as the rest of reins: what a tool can decide, a tool decides. The agent can still raise it (it knows what the diff will become); it can't go below the measure |
+| The agent does not state the level | The instruction is `reins triage "<reason>" --files <paths>`: reins prints the level and the agent announces it. A level is given only to raise it | The first version still asked the agent for a level and corrected it. But the agent's real knowledge is which files the request means; the level follows from them. Asking for an estimate that a tool then overrules is ceremony |
+| `--files` required below large | `small`/`medium` without files is refused with the fix; `large` alone is accepted | Without files there is nothing to measure, so only "it is big and I can't list the files" (a new feature, a migration, "review everything") makes sense. Older `AGENTS.md` blocks get the new instruction with `reins update`, which syncs them with the CLI |
+| The person's level | `--override` records it without measuring | `[quick]` and `[deep]` are the person's decision; a measure must not overrule it |
+| What counts | `triage.not_counted` in `doctor.yml` (default: Markdown and the usual test file and folder names): those files count neither as files nor as domains | A repo that asks for a test, a changelog entry and a note with every change made almost nothing "small" (3 files). The default lives in the config, so a team can replace it; the core applies globs and knows no language |
+| When the agent hears about drift | `reins triage` and every `reins progress` edit print the doctor's `triage-mismatch` | `doctor` runs when closing. The in-flight warning came only from the notes hook, which does not fire on edits made through the shell. Updating the notebook is something the agent does mid-task |
+| Not done | Hooking shell commands to see every edit | Fragile (pipes, `sed -i`, scripts), already rejected |
+| Still an instruction | Telling the person when the level changes, and waiting for confirmation on large | reins can say it; it can't make the agent stop. The policy now says to tell the person when it happens, not in the final summary |
+
 ## Open
 
 - **Agent adapters for Codex and Cursor (proposed 2026-11-08):** [`proposals/agent-adapters.md`](proposals/agent-adapters.md). All logic stays in the CLI; each agent gets a generated adapter that only translates hook config and payloads.

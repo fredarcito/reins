@@ -28,7 +28,7 @@ See [@agentreins/cli](https://www.npmjs.com/package/@agentreins/cli) for the qui
 - **Audit backlog**: the local findings file behind `reins audit` — parsing, rendering, status changes.
 - **Glob matching**: its own matcher (`*`, `**`, `?`, `{a,b}`) for layers, domains and public APIs. No glob dependency.
 
-The core never reads source files and knows no framework: it only sees `{ from, to, kind }` import edges, computed by a language adapter. Everything framework- or language-specific (TypeScript, Vite, Next) lives in adapters such as [@agentreins/adapter-js](https://www.npmjs.com/package/@agentreins/adapter-js).
+The core never reads source files and knows no framework: it only sees `{ from, to, kind }` import edges, computed by a language adapter. Everything framework- or language-specific (TypeScript, Vite, Next, Rails) lives in adapters: [@agentreins/adapter-js](https://www.npmjs.com/package/@agentreins/adapter-js) and [@agentreins/adapter-rails](https://www.npmjs.com/package/@agentreins/adapter-rails).
 
 ## Writing an adapter
 
@@ -44,9 +44,9 @@ The contract is versioned (`reins.contract: 1` in the adapter's `package.json`; 
 - **`graph(repoPath, config)`** — the import edges: `{ from, to, kind }` with kinds `static`, `dynamic` (`import()`) and `type` (type-only), plus the file list, entry points and warnings. An edge kind the rules should skip is the team's call (`ignore_kinds` per rule), not the adapter's. **Never drop edges silently**: an unresolved alias must become a warning, or `check` goes green over a hole.
 - **`GraphResult` may add `barrels` and `uses`** — what each importer really uses through re-export barrels, so `init` can tell which folder owns what and `impact` can count importers behind a barrel as consumers of the real file. Optional: the rules only need `edges`.
 - **`evaluate(edges, config, graph)`** — optional framework rules that need more than edges (file contents, directives; `next-server-client` is one), merged into the same report and baseline.
-- **`presets`, `suggestPreset`, `loadPreset`** — optional starting plans for `reins init` (layers, where domains come from). Without them `check` works the same; `init` just asks for a hand-written `architecture.yml`.
+- **`presets`, `suggestPreset`, `loadPreset`** — optional starting plans for `reins init`: layers, where domains come from, and the language's conventions (what is source, a test, an index file), so the CLI knows no language. Without them `check` works the same; `init` just asks for a hand-written `architecture.yml`.
 
-The contract is documented in [docs/adapter-contract.md](https://github.com/fredarcito/reins/blob/main/docs/adapter-contract.md). Name a third-party adapter `reins-adapter-<language>`; the CLI finds it from `adapter: <language>` in `architecture.yml`.
+The contract is documented in [docs/adapter-contract.md](https://github.com/fredarcito/reins/blob/main/docs/adapter-contract.md). Name a third-party adapter `reins-adapter-<language>`; the CLI finds it from `adapters: [<language>]` in `architecture.yml`.
 
 ## Learn more
 

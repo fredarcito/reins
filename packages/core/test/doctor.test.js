@@ -35,8 +35,23 @@ test('doctor.yml: defaults, partial overrides, clear errors', () => {
   assert.equal(c.progress.hot_max_lines, 60);
   assert.equal(c.agents_md.max_lines, 45);
   assert.throws(() => parseDoctorConfig('triage:\n  tiny: {}\nagents_md: { max_lines: -1 }\n', { file: 'd.yml' }), {
-    message: 'd.yml is not valid:\n  - triage.tiny: unknown key (expected one of: small, medium)\n  - agents_md.max_lines: expected a whole number ≥ 0',
+    message: 'd.yml is not valid:\n  - triage.tiny: unknown key (expected one of: small, medium, not_counted)\n  - agents_md.max_lines: expected a whole number ≥ 0',
   });
+  // not_counted: a list replaces the default list; anything else is an error
+  assert.deepEqual(parseDoctorConfig('triage:\n  not_counted: ["docs/**"]\n').triage.not_counted, ['docs/**']);
+  assert.deepEqual(parseDoctorConfig('triage:\n  not_counted: []\n').triage.not_counted, []);
+  assert.throws(() => parseDoctorConfig('triage:\n  not_counted: 3\n'), /triage\.not_counted: expected a list of globs/);
+});
+
+test('signals: docs and tests that come along with a change are not counted', () => {
+  const domains = [{ name: 'cart', paths: ['src/cart/**'], publicApi: ['src/cart/index.js'] }, { name: 'docs', paths: ['docs/**'], publicApi: [] }];
+  const files = ['src/cart/total.js', 'src/cart/total.test.js', 'test/cart.js', 'docs/cart.md', 'CHANGELOG.md', 'README.md'];
+  const all = scopeSignals(files, domains, 'a.yml');
+  assert.deepEqual([all.files, all.domains], [6, ['cart', 'docs']]);
+  const code = scopeSignals(files, domains, 'a.yml', DOCTOR_DEFAULTS.triage.not_counted);
+  assert.deepEqual([code.files, code.domains], [1, ['cart']]);
+  assert.equal(suggestLevel(code, DOCTOR_DEFAULTS.triage).level, 'small');
+  assert.equal(suggestLevel(all, DOCTOR_DEFAULTS.triage).level, 'large');
 });
 
 test('triage.log: entries, comments and malformed lines', () => {

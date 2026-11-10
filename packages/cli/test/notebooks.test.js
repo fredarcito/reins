@@ -42,7 +42,7 @@ test('tasks one after another: a new session never takes the open task silently,
   assert.match(read(dir, LOGIN), /- \[ \] fix the redirect/);
   assert.equal(read(dir, CSS), css, 'the other task is untouched');
   assert.match((await cli(dir, ['progress', 'show'], as('s1'))).stdout, /feat-checkout\/css\/notebook\.md/, 'each session finds its own task');
-  assert.match((await cli(dir, ['triage', 'small', 'one more'], as('s2'))).stdout, / \| task:login\n$/, 'the triage line carries the task name');
+  assert.match((await cli(dir, ['triage', 'small', 'one more', '--files', 'src/x.js'], as('s2'))).stdout, / \| task:login\n$/, 'the triage line carries the task name');
 });
 
 test('the same task from a new session, after a compaction, and without a session id', async () => {
@@ -98,7 +98,7 @@ test('close refuses while the done steps are not finished: open items, then flag
   write(dir, note, '---\npaths: ["src/ui/**"]\n---\n# ui\n\n## Purpose\nShared UI.\n');
   git(dir, 'add', '-A');
   git(dir, 'commit', '-qm', 'ui note');
-  await cli(dir, ['triage', 'small', 'css'], as('s1'));
+  await cli(dir, ['triage', 'small', 'css', '--files', 'src/x.js'], as('s1'));
   for (const c of ['Button', 'Card', 'Modal', 'Tabs']) write(dir, `src/ui/${c}.jsx`, `export const ${c} = () => null;\n`); // medium: doctor checks notes
   const notes = await cli(dir, ['progress', 'close'], as('s1'));
   assert.equal(notes.code, 2);

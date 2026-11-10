@@ -7,7 +7,7 @@ Four packages, published together with the same version:
 | `@agentreins/cli` | The CLI and the `reins` command |
 | `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of the CLI |
 | `@agentreins/adapter-js` | JavaScript/TypeScript adapter. Peer of `@agentreins/core` |
-| `@agentreins/adapter-rails` | Ruby on Rails adapter (first published after 0.13.0). Peer of `@agentreins/core` |
+| `@agentreins/adapter-rails` | Ruby on Rails adapter (since 0.14.0). Peer of `@agentreins/core` |
 
 Users install them with:
 
@@ -23,7 +23,7 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 ## Every release
 
 ```bash
-# 1. Bump "version" in packages/core, packages/cli and packages/adapters/js (same number) and in CHANGELOG.md
+# 1. Bump "version" in the root package.json, packages/core, packages/cli and every packages/adapters/* (same number) and in CHANGELOG.md
 # 2. Check everything and commit
 pnpm install && pnpm lint && pnpm test && pnpm self-check
 git commit -am "release 0.x.y"

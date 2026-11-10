@@ -27,7 +27,7 @@ export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 
  */
 export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [], repoFiles = null, anchor = null }) {
   const findings = [];
-  const signals = scopeSignals(changedFiles, domains, architectureFile);
+  const signals = scopeSignals(changedFiles, domains, architectureFile, config.triage.not_counted);
 
   findings.push(
     ...checkTriage({

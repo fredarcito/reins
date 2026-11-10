@@ -29,7 +29,7 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 # yarn add -D @agentreins/cli @agentreins/adapter-js
 ```
 
-`@agentreins/cli` is the `reins` command; `@agentreins/adapter-js` teaches it to read JavaScript/TypeScript imports.
+`@agentreins/cli` is the `reins` command; `@agentreins/adapter-js` teaches it to read JavaScript/TypeScript imports. For Ruby on Rails, install [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails); with Inertia + React, install both adapters.
 
 ## Quick start
 
@@ -123,7 +123,7 @@ A boundary crossing is an import that reaches a domain's internals instead of it
 
 What `install` sets up, in the order the agent hits it:
 
-1. **Announce.** Every task gets a level — `small`, `medium`, `large` — from the triage policy in `.reins/core/policies/`. `reins scope <paths>` gives the objective signals: domains touched, notes to read, minimum level.
+1. **Size the task.** The agent runs `reins triage "<why>" --files <paths it expects to touch>` and reins measures the level — `small`, `medium`, `large` — from the domains, public APIs and code files involved (docs and tests don't count). The agent announces it, and can only raise it.
 2. **Plan.** Before changing a file other domains may import (a util, a type, a barrel, a public API), the agent runs `reins impact` on it. "Medium, but could be large if another domain shows up" stops being a guess.
 3. **Edit.** The module note arrives the moment the agent opens a file — a Claude Code hook, or the notes index in `AGENTS.md` for any other agent.
 4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes. `reins progress close` only closes the task once nothing in its notebook is pending and those notes are updated, so what the agent learned stays.
@@ -141,6 +141,7 @@ What `install` sets up, in the order the agent hits it:
 | `reins resume` | Notebook, changed files and notes to resume a task. `--json`, `--hook` (Claude Code `SessionStart`) |
 | `reins sync` | Refreshes `.reins/core/` (rules, policies, skills, agents), the rules and notes blocks in `AGENTS.md`, and the optional Claude Code files. `--check`, `--skip-claude`, `--claude` |
 | `reins update` | Updates the CLI and installed adapters with your package manager, then runs the new `reins sync`. `--dry-run`, `--skip-claude`, `--claude` |
+| `reins triage "<why>" --files <paths>` | Measures and records the task level. A level of your own only raises it; `--override` records the one the person chose with `[quick]` or `[deep]` |
 | `reins doctor` | Local workflow checks: declared task level vs the branch diff, the notebook, the notes, `AGENTS.md` size. Warns, never blocks, never in CI |
 | `reins audit`, `reins progress`, `reins review` | Local backlog of findings; one notebook per task (`close` refuses while something is pending or a touched module's note is behind); review prompt, and `review --map` prints the pull request architecture map |
 

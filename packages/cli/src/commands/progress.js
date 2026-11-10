@@ -13,7 +13,7 @@ import { CliError } from '../context.js';
 import { branchTasks, explicitTask, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
-import { doctorResult } from './doctor.js';
+import { doctorResult, levelDrift } from './doctor.js';
 
 /**
  * A notebook template: the repo's own copy in .reins/templates/ (so a team can adapt it), or the packaged one.
@@ -132,6 +132,9 @@ export async function progress(ctx) {
   const write = (t, msg) => {
     writeFileSync(abs, session ? claim(t, session, date) : t);
     out(msg);
+    // the moment the agent updates its notebook is the moment to say the task outgrew its declared level
+    const drift = levelDrift(root, env);
+    if (drift) out(`! warning  ${drift.message}\n    Fix: ${drift.fix}`);
     return 0;
   };
   try {

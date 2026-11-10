@@ -65,15 +65,17 @@ export const isReinsFile = (f) => /^(\.reins|\.claude)\//.test(f) || f === 'AGEN
 
 /**
  * Objective signals of a set of changed files. Reins and agent files (.reins/, .claude/, AGENTS.md, CLAUDE.md)
- * don't count as files or domains; touching architecture.yml is reported on its own.
+ * don't count as files or domains, and neither do the files matching `notCounted` (docs and tests that come along
+ * with a change: `triage.not_counted` in doctor.yml); touching architecture.yml is reported on its own.
  * @param {string[]} files repo-relative changed files
  * @param {{ name: string, paths: string[], publicApi: string[] }[]} domains from architecture.yml
  * @param {string} architectureFile repo-relative path of architecture.yml
+ * @param {string[]} [notCounted] globs
  */
-export function scopeSignals(files, domains, architectureFile) {
+export function scopeSignals(files, domains, architectureFile, notCounted = []) {
   const touched = new Set();
   const publicApi = [];
-  const counted = files.filter((f) => !isReinsFile(f));
+  const counted = files.filter((f) => !isReinsFile(f) && !(notCounted.length && matchesAny(f, notCounted)));
   for (const f of counted) {
     const d = domains.find((x) => matchesAny(f, x.paths));
     if (!d) continue;

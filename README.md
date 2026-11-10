@@ -4,7 +4,7 @@
 
 Hold the reins of your coding agents: they respect your architecture and remember your project. reins is not a framework for building agents: it shapes how the agents you already use (Claude Code, Codex, Cursor or any other) work on your codebase.
 
-Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js)
+Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js) · [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails)
 
 Coding agents write code fast, but they forget, in two ways:
 
@@ -59,6 +59,7 @@ In the root of your project (Node 22 or newer):
 - Steps 4 and 5 are done by your agent; don't skip them. The draft only describes what exists, and the notes start as templates.
 - `/reins-arch` and `/reins-notes` are Claude Code commands. With other agents, ask: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*, then *"fill in the TODO lines of the notes in .reins/notes/"*.
 - For a provider-neutral setup, use `npx reins install --skip-claude`.
+- Ruby on Rails: install `@agentreins/adapter-rails` instead; with Inertia + React, install both adapters and `init` drafts one plan for the two.
 
 Nothing of yours is overwritten: `install` and `init` only add files or ask first. With pnpm, `pnpm add -D`. More: [Installation](#installation) · [Updating](#updating) · a full tour with real output in [`docs/walkthrough.md`](docs/walkthrough.md).
 
@@ -118,7 +119,7 @@ Everything in reins falls on one side of this line. The left side is guaranteed 
 
 | Enforced by a machine | Guidance for the agent |
 | --- | --- |
-| `reins check` in the git hook and in CI | Announcing the task level (triage) |
+| `reins check` in the git hook and in CI | Sizing each task: the agent runs `reins triage`, reins measures the level |
 | `baseline.json` (existing violations are frozen) | Progress notebook |
 | Integrity of `architecture.yml`, `baseline.json` and generated files | Module notes, policies, skills, agents |
 | Branch protection: PR with human approval + CI green | Audit backlog |
@@ -245,7 +246,7 @@ Your agent runs these for you. You mostly talk to it; this is what it uses. `npx
 | `reins notes <path…>` | The notes that apply to a path. `notes new <folder>` drafts one; `notes stale` ranks the ones behind their code |
 | `reins scope <path…>` · `reins impact <file>` | Path → domains and minimum task level · file → the domains that import it |
 | `reins resume` | The session's task notebook and notes: what an agent needs to pick a task up |
-| `reins triage <level> "<why>"` | Records the task level |
+| `reins triage "<why>" --files <paths>` | Measures the task level from the files the agent expects to touch, and records it |
 | `reins progress` · `reins audit` | The task notebook and the audit backlog, edited one line at a time |
 | `reins review` | A review prompt with the diff, checklist and notes (`--map` for the PR architecture map) |
 
@@ -275,7 +276,7 @@ npx reins check --update-baseline
 npx reins check
 ```
 
-`reins install` is additive and idempotent: it never overwrites existing files, never installs packages, and tells you what is missing. `--dry-run` shows what it would do. Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**.
+`reins install` is additive and idempotent: it never overwrites existing files, never installs packages, and tells you what is missing. `--dry-run` shows what it would do. Supported projects: Vite + React and Next (app and pages router), in **plain JS/JSX or TypeScript**, and Ruby on Rails, with or without an Inertia frontend.
 
 The repo you get, the example `architecture.yml` and the layers: [docs/how-it-works.md](docs/how-it-works.md#what-lands-in-your-repo).
 

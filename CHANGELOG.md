@@ -1,7 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.14.0 · 2026-11-10
 
+Ruby on Rails, and a task level that reins measures instead of the agent guessing it.
+
+```bash
+npx reins update
+```
+
+`update` also runs `sync`, which brings the new triage instruction: commit what it changed (`.reins/core/`, `AGENTS.md`). Nothing else to do in a JavaScript or TypeScript repo. For a Rails app, install `@agentreins/adapter-rails` and run `npx reins init`.
+
+- **reins measures the task level; the agent no longer guesses it.** The agent runs `reins triage "<reason>" --files <paths it expects to touch>` and reins states the level from those files (domains, public APIs, `architecture.yml`, number of code files). The agent gives a level only to raise it, and reins keeps the higher of the two; when the level is large, it tells the agent to present the plan and wait. Below large, `--files` is required: `reins triage small "…"` alone is now refused with the fix (`npx reins update` brings the new instructions). `--override` records the level the person chose with `[quick]` or `[deep]`. Docs and tests no longer count toward the level (`triage.not_counted` in `.reins/doctor.yml`): a one-line fix with its test and its changelog entry is small again. And `reins triage` and every `reins progress` edit now say, while the work is in progress, that the task outgrew its level; before, only `reins doctor` did, at the end.
 - **Looking at a task no longer takes it.** `reins progress show --task <name>` only reads; a session becomes the task's owner with its first edit (`done`, `add`, `next`…). Before, an agent that checked what another session had done silently took its task.
 - **Ruby on Rails adapter: `@agentreins/adapter-rails`.** `reins check`, `init` and `impact` now work on a Rails app. Ruby has no imports, so the adapter reads which constants each file names (parsed with Prism; Ruby does not need to be installed), plus `require_relative` and associations. With Inertia, a controller is linked to the React, Vue or Svelte page it renders: use `adapters: [js, rails]` to cover both halves with one plan. `reins init` in a Rails app drafts `adapters: [rails]` with the new `rails` preset. Experimental: [what it reads and what it can't see](packages/adapters/rails/README.md).
 - **`init` drafts one plan for several languages.** In a Rails app with a Vite frontend (Inertia) and both adapters installed, `reins init` writes `adapters: [rails, js]`, with the Ruby layers above the pages they render. The JS adapter has a new preset for that frontend, `inertia-react` (code in `app/frontend` or `app/javascript`), picked automatically.

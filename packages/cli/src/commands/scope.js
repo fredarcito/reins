@@ -17,10 +17,11 @@ For the files (or folders) a task will touch: the domains involved, public APIs,
 minimum task level the objective signals suggest:
   small  = 1 domain and ≤ 3 files;  medium = 1 domain, more files;
   large  = 2+ domains, a public API, or architecture.yml.
-Thresholds come from .reins/doctor.yml.`;
+Docs and tests are not counted. Thresholds and what is not counted come from .reins/doctor.yml.
+reins triage --files <paths> measures the same and records the level.`;
 
 /** Expands folders into the files they contain (repo-relative). */
-function expand(root, rel) {
+export function expand(root, rel) {
   const abs = path.join(root, rel);
   if (!existsSync(abs) || !statSync(abs).isDirectory()) return [rel];
   const out = [];
@@ -42,7 +43,7 @@ export async function scope(ctx) {
   const notesInfo = [];
   const domains = readDomains(root, notesInfo);
   const thresholds = readDoctorConfig(root).triage;
-  const signals = scopeSignals(files, domains, ARCHITECTURE_FILE);
+  const signals = scopeSignals(files, domains, ARCHITECTURE_FILE, thresholds.not_counted);
   const suggestion = suggestLevel(signals, thresholds);
   const { notes: all } = loadNotes(root);
   const notes = [...new Set(files.flatMap((f) => notesFor(f, all).map((n) => n.file)))];

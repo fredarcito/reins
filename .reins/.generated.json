@@ -6,9 +6,9 @@
     ".reins/core/agents/reviewer.md": "fe12cd89374e7375deef7c0d4c867c4851347456f87d5ad7567e3a00bcc40c12",
     ".reins/core/policies/multiagent.md": "cf0b480d58de00100d2a00a15d462dacf2e5fd9e9b1df69e012e77e25cf48726",
     ".reins/core/policies/progress.md": "ae9c79777f26b8909130edf08ba24b44633c195714aa07250eeedc1b15c12504",
-    ".reins/core/policies/triage.md": "d5554a38ea531f10ae8846b9a87f3a72d78a0fc684bb4a0e8117166e83dea7a9",
+    ".reins/core/policies/triage.md": "31a03f7f3624d6d2658f0898fbd96ba87c54d3b63dfd2309258790a1b70a7dd7",
     ".reins/core/review/checklist.md": "8e6f13f1be6c85d635cc63ad22637d830b1e13e0b90104d4bbab860f66ac1767",
-    ".reins/core/rules.md": "0b84d9bf84fdfff1437860ace7bf5050b3e3e194676034df62247fe03fd5dfae",
+    ".reins/core/rules.md": "353d9ea59f64c769141f8e8bf07c71af53d74be7009b40775a3049c754d5eb02",
     ".reins/core/skills/agent/SKILL.md": "908857fcf8b727413fb172218cce7e763ab38b65b4d7ebff697d7e9629a66542",
     ".reins/core/skills/arch/SKILL.md": "a65add4561adb138fe1822fad71d27191137bf925bb53dcbb14da15475366b93",
     ".reins/core/skills/audit/SKILL.md": "4c62f319df2f19c18f58d4ba9a2870f85c699a3f859f3d3085787b6c52580e68",
@@ -34,7 +34,7 @@
     ".claude/agents/reins-reviewer.md": "4675c8fa40679bb18cde972a189cf7a66fcaf250a4ed48d25311fb07d63525bc"
   },
   "blocks": {
-    "AGENTS.md#rules": "0b84d9bf84fdfff1437860ace7bf5050b3e3e194676034df62247fe03fd5dfae",
+    "AGENTS.md#rules": "353d9ea59f64c769141f8e8bf07c71af53d74be7009b40775a3049c754d5eb02",
     "AGENTS.md#notes": "977cb3034d7c09d30c3b5e4c25e9cdf1a174575e2702cb1a69d483ccf2b1e291"
   },
   "adapters": {

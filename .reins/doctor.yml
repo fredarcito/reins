@@ -2,6 +2,8 @@
 triage:
   small:  { max_files: 3, max_domains: 1 }
   medium: { max_domains: 1 }
+  # Files that come along with a change and say nothing about its size: not counted for the level.
+  not_counted: ["**/*.md", "**/*.{test,spec}.*", "**/*_{test,spec}.*", "{test,tests,spec,__tests__}/**", "**/{test,tests,spec,__tests__}/**", "scripts/*.test.mjs", "pnpm-lock.yaml"]
 agents_md: { max_lines: 45 }
 progress:  { hot_max_lines: 40 }
 notes:     { max_lines: 60 }

@@ -52,6 +52,20 @@ export async function doctor(ctx) {
  * @param {Record<string, any>} values
  * @param {NodeJS.ProcessEnv} env
  */
+/**
+ * The warning to show mid-task when the task's diff already looks bigger than its declared level, or null.
+ * Never throws: it runs after commands whose own work must not fail because of it.
+ * @returns {{ message: string, fix: string } | null}
+ */
+export function levelDrift(root, env) {
+  try {
+    const v = doctorResult(root, {}, env).result.violations.find((x) => x.rule === 'triage-mismatch');
+    return v ? { message: v.message, fix: v.fix } : null;
+  } catch {
+    return null;
+  }
+}
+
 export function doctorResult(root, values, env) {
   const config = readDoctorConfig(root);
 
