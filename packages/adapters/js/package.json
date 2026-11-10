@@ -49,8 +49,7 @@
     "prepack": "node -e \"require('fs').copyFileSync('../../../LICENSE','LICENSE')\""
   },
   "dependencies": {
-    "dependency-cruiser": "^18.7.2",
-    "yaml": "^2.9.1"
+    "dependency-cruiser": "^18.7.2"
   },
   "peerDependenciesMeta": {
     "typescript": {

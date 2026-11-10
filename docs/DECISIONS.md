@@ -203,7 +203,7 @@ Goal (author, 2026-11-04): an agent that comes back to a module a week later kno
 | --- | --- | --- |
 | `yaml` | `core` | Read `architecture.yml` and `doctor.yml`. Node has no YAML parser |
 | `dependency-cruiser` | `adapters/js` only | Compute the import graph (with aliases). Decided in the design over writing our own parser. Requires Node `^22 \|\| ^24 \|\| >=26` |
-| `yaml` | `adapters/js` | Read the presets (`presets/*.yml`). The adapter can't use the core's copy: it may only import `@agentreins/core/contract` |
+| `yaml` | `adapters/js` | Removed 2026-11-10: presets are JS modules now (see "Presets are JS modules"). Was: read the presets (`presets/*.yml`) |
 | `yaml` | `cli` | Edit `lefthook.yml` without losing comments (`reins install`) |
 | `typescript` | `adapters/js`: optional peer + dev | Only needed for TS repos; dependency-cruiser uses it to parse `.ts`/`.tsx`. Dev dependency so the TS example can be tested |
 
@@ -441,8 +441,20 @@ The Rails adapter showed that `init` was written for JavaScript: file extensions
 | `init` with several adapters | One preset per adapter, joined: layers in the adapters' order (the graph decides the final order), the union of the rest. The draft has no `preset:` line; each adapter detects its own | Replaces "`init` drafts for one adapter" from the several-adapters decision. A single `preset:` can't name two presets |
 | Which adapters `init` picks | The repo's main language first (Rails markers win), then any other guessed adapter that is installed and whose `detect` recognizes the repo | A Rails API with a `package.json` for tooling must not need the JS adapter; a missing one gets a one-line hint |
 | Inertia pages | Preset `inertia-react` in the JS adapter, suggested when `vite.config.*` sits in a Rails app; `index_files: []` | In a pages folder `index.tsx` is a page, not a barrel, and every page is rendered by name |
-| Not moved | Route conventions (`(group)`, `[param]`, private folders) stay in `init/infer.js` | Only Next uses them and no adapter needs different ones yet |
+| Route folders and `src/` | Also preset data: `route_segments` (`groups`, `params`, `skipped`, as regular expressions on a folder name) and `source_roots`. The three JS presets that already got those rules declare them; Rails declares `source_roots: [app]` | First left in `init/infer.js` because only Next used them; moved the same day: an `init` that still knew Next's folder names was not agnostic. Regular expressions, not globs, because the glob matcher has no character classes and `[slug]` vs `[...rest]` needs them |
 | Check that nothing changed | `init --dry-run` with the code before and after, on both examples and 8 real repos: identical output | The existing tests pin the examples; real repos pin the rest |
+
+## Presets are JS modules (2026-11-10)
+
+The JS adapter kept its presets as YAML files plus shared fields merged in code; the Rails adapter wrote its preset as an object inside `src/`. Two shapes for the same thing, and in the YAML one a reader could not see where half of the preset came from.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Format | Every adapter: `presets/<name>.js`, one file per preset, default export a plain object; `src/presets.js` lists them and `loadPreset` returns a copy | An adapter is a JS package whatever language it reads, so this layout works for every adapter (Rails today, Rust next) with no dependency |
+| Shared fields | A preset spreads them (`...CONVENTIONS`) and replaces what differs, in the same file | The composition is written where it is read. With YAML it was a merge in another file, explained by a comment in each preset |
+| What is given up | "Presets are YAML data, not code" (2026-11-04): a preset could now run code, and a tool without Node can't read it | An adapter is already code that runs, so nothing new is trusted. Presets are internal to the adapter package: teams edit `architecture.yml`, which stays YAML. No tool reads presets from outside |
+| Dependency | `yaml` removed from `adapter-js` | Its only use was reading presets |
+| Check | `loadPreset` of the five presets compared before and after: deep-equal | |
 
 ## Open
 

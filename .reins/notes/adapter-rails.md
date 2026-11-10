@@ -13,7 +13,7 @@ Language adapter for Ruby on Rails apps, with or without an Inertia frontend: tu
 - `src/graph.js`: walks the Ruby files, builds the constant index, `resolveConstant`, emits edges and warnings, entries from the preset.
 - `src/inertia.js`: is `inertia_rails` in the Gemfile, where the pages folders are, component name → page file, `inferredComponent`.
 - `src/inflect.js`: `camelize`, `singulars`, `readInflections` (acronyms and irregulars from `config/initializers/inflections.rb`), for associations only.
-- `src/presets.js`: the `rails` preset as a JS object. `src/detect.js`: `Gemfile` + `config/application.rb`.
+- `presets/rails.js`: the `rails` preset (one JS module per preset, the same layout as adapter-js); `src/presets.js` lists them and `loadPreset` returns a copy. `src/detect.js`: `Gemfile` + `config/application.rb`.
 
 ## How it works
 `graph()` parses every `.rb`/`.rake` outside the ignored folders. Pass 1 indexes definitions: `known` (every constant, namespaces included) and `owners` (constant → files that really define it). Pass 2 resolves each reference from the innermost lexical scope outwards; the first scope where the head of the path is known decides, and the longest prefix with an owner gives the target files. Edges: `static` (constants, requires), `association`, `inertia`; one edge per pair of files, `static` wins.
@@ -31,5 +31,5 @@ Language adapter for Ruby on Rails apps, with or without an Inertia frontend: tu
 - `readRuby` takes bytes (a Buffer), not a string: Prism offsets are byte offsets.
 - Compare Prism nodes with `instanceof` on the classes of the dynamically imported module (`parser.P`), never a static import: the static import prints the WASI warning.
 - Edge targets of kind `inertia` are frontend files this adapter does not list in `files` (they belong to adapter-js).
-- What `reins init` knows about Ruby is in the preset (`sources`, `tests`; no `index_files`): a new Ruby extension goes there and in `RUBY_FILE` (`graph.js`), never in the CLI.
+- What `reins init` knows about Ruby is in the preset (`sources`, `tests`, `source_roots: [app]` so folders outside every layer are reported as `app/ops`, not `app`; no `index_files`, no `route_segments`): a new Ruby extension goes there and in `RUBY_FILE` (`graph.js`), never in the CLI.
 - Tests run `node --test "test/**/*.test.js"`; fixtures are Ruby and are never executed.

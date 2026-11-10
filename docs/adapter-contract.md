@@ -41,7 +41,16 @@ In a repo with several adapters (`adapters: [js, rust]`), every adapter gets the
 
 ## Presets: what `reins init` knows about a language
 
-`reins init` knows no language. Everything it needs comes from the preset, as data:
+`reins init` knows no language. Everything it needs comes from the preset, a plain object.
+
+Every adapter keeps them the same way, whatever language it reads:
+
+| File | What |
+| --- | --- |
+| `presets/<name>.js` | One file per preset: `export default { description, layers, … }`. Fields shared by several presets live in one object that each preset spreads (`...CONVENTIONS`), so the file shows what it inherits and what it replaces |
+| `src/presets.js` | Imports them; exports `PRESETS` (the names) and `loadPreset(name)`, which returns a copy |
+
+The fields:
 
 | Field | Required | What |
 | --- | --- | --- |
@@ -56,6 +65,9 @@ In a repo with several adapters (`adapters: [js, rust]`), every adapter gets the
 | `index_files` | no | File names that are a folder's public API (`index.js`, `index.ts`); the first is proposed when a domain has none. Without it, a domain's public API is what the rest of the code already imports from it |
 | `orphans_ignore` | no | Globs of files nobody imports by design (`*.config.*`, `*.d.ts`) |
 | `ignore_kinds` | no | `[{ kind, if_files, unless_files?, reason }]`: the drafted rules get `ignore_kinds: [kind]` when the repo has files matching `if_files`. The JS adapter uses it for type-only imports in TypeScript repos |
+
+| `route_segments` | no | `{ groups, params, skipped }`: how route folders are named, as regular expressions on one folder name (first capture group: the name without the marker). `groups` only group routes (`(main)`), `params` are route parameters (`[slug]`), `skipped` are never modules (`[...rest]`, `_private`). Used with `route_domains_from` |
+| `source_roots` | no | Folders that only hold the code (`src`, `app`): files outside every layer are reported one level inside them (`src/store`) |
 
 In a repo with several adapters, `init` loads one preset per adapter and joins them: layers in the adapters' order, and the union of everything else. `check --coverage` reads `sources` and `tests` the same way.
 
@@ -122,6 +134,7 @@ Only `@agentreins/core/contract` (the core's `exports` field blocks everything e
 | Field in the adapter's `package.json` | Value |
 | --- | --- |
 | `name` | `@agentreins/adapter-<name>` (official) or `reins-adapter-<name>` (third party) |
+| `files` | include `presets` (and `rules`, when the adapter has rules) next to `src` |
 | `keywords` | include `reins-adapter` |
 | `peerDependencies` | `"@agentreins/core": "^<version>"`, never a regular dependency |
 | `reins.contract` | the contract version it implements, e.g. `1` |

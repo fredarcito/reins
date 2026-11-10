@@ -1,0 +1,33 @@
+// Preset for Next with the pages router (plain JS/JSX or TypeScript, with or without src/).
+// `reins init` uses `layers` as a starting point and keeps only the folders that exist.
+import { CONVENTIONS } from '../src/conventions.js';
+
+export default {
+  ...CONVENTIONS,
+  description: 'Next.js, pages router',
+
+  layers: [
+    { name: 'pages', paths: ['pages/**', 'src/pages/**'] },
+    { name: 'features', paths: ['features/**', 'src/features/**', 'modules/**', 'src/modules/**'] },
+    { name: 'components', paths: ['components/**', 'src/components/**', 'ui/**', 'src/ui/**'] },
+    { name: 'shared', paths: ['{lib,hooks,utils,services,types,constants,store,context}/**', 'src/{lib,hooks,utils,services,types,constants,store,api,context,config}/**'] },
+  ],
+
+  domains_from: ['features/*', 'src/features/*', 'modules/*', 'src/modules/*'],
+  // With no domain folder above, each route folder becomes a domain: `[lang]` parameters and `(group)` folders are
+  // looked through, folders mostly that route imports join it, one-file routes that own no folder are left out, and
+  // one-file routes sharing a feature folder only they use become one domain.
+  route_domains_from: ['pages/*', 'src/pages/*'],
+
+  // adapter rules `reins init` proposes for this preset
+  default_rules: ['next-server-client'],
+
+  // every file under pages/ is a route, so all of them are entries
+  entries: [
+    '{,src/}pages/**',
+    '{,src/}{middleware,instrumentation}.{js,ts}',
+    'next.config.*',
+    '**/*.{test,spec}.{js,jsx,ts,tsx}',
+    '**/*.stories.{js,jsx,ts,tsx}',
+  ],
+};

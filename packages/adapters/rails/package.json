@@ -4,6 +4,7 @@
   "license": "MIT",
   "files": [
     "src",
+    "presets",
     "LICENSE"
   ],
   "description": "Ruby on Rails language adapter for reins (constant references, Zeitwerk style; Inertia pages).",

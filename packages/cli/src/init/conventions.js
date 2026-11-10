@@ -1,6 +1,7 @@
 // What `init` and `check --coverage` need to know about a language, without knowing any: which files are source,
 // which are tests, which file is a folder's public API. Each adapter's preset declares it (`sources`, `tests`,
-// `index_files`, `orphans_ignore`, `ignore_kinds`); a repo with several adapters gets the union.
+// `index_files`, `orphans_ignore`, `ignore_kinds`, `route_segments`, `source_roots`); a repo with several adapters
+// gets the union.
 import { matchesAny } from '@agentreins/core';
 
 /**
@@ -12,6 +13,13 @@ import { matchesAny } from '@agentreins/core';
  *   for the language(s) of these files; empty when the language has no such convention
  * @property {(files: string[]) => { kind: string, reason: string }[]} ignoredKinds edge kinds the drafted rules should
  *   ignore in this repo, with why (TypeScript's type-only imports when the repo has TypeScript files)
+ * @property {{ isGroup: (segment: string) => boolean, isParam: (segment: string) => boolean,
+ *   isSkipped: (segment: string) => boolean, nameOf: (segment: string) => string }} routes
+ *   how route folders are named (the preset's `route_segments`): a group only groups routes and is not part of the
+ *   route path, a param is a route parameter, a skipped folder is never a module; `nameOf` drops the markers
+ *   (`(search)` -> `search`). A language without such conventions has none of them
+ * @property {(file: string) => string} folderOf the folder a file is grouped under when it is in no layer: one
+ *   level inside a source root (`src/store`, `app/services`), else its first folder
  */
 
 /**
@@ -32,6 +40,9 @@ export function conventions(presets) {
     };
   };
   const inSources = cached(all('sources'), false);
+  const segments = (field) => known.flatMap((p) => p.route_segments?.[field] ?? []).map((source) => new RegExp(source));
+  const [groups, params, skipped] = [segments('groups'), segments('params'), segments('skipped')];
+  const roots = [...new Set(all('source_roots'))].sort((a, b) => b.length - a.length); // the deepest root wins
   return {
     isSource: (file) => open || inSources(file),
     isTest: cached(all('tests'), false),
@@ -39,6 +50,22 @@ export function conventions(presets) {
     indexFilesIn: (files) => [
       ...new Set(known.filter((p) => p.index_files?.length && (!p.sources || files.some((f) => matchesAny(f, p.sources)))).flatMap((p) => p.index_files)),
     ],
+    routes: {
+      isGroup: (segment) => groups.some((r) => r.test(segment)),
+      isParam: (segment) => params.some((r) => r.test(segment)),
+      isSkipped: (segment) => skipped.some((r) => r.test(segment)),
+      nameOf: (segment) => {
+        for (const r of [...groups, ...params]) {
+          const m = r.exec(segment);
+          if (m) return m[1] ?? segment;
+        }
+        return segment;
+      },
+    },
+    folderOf: (file) => {
+      const root = roots.find((r) => file.startsWith(`${r}/`) && file.slice(r.length + 1).includes('/'));
+      return root ? `${root}/${file.slice(root.length + 1).split('/')[0]}` : file.split('/')[0];
+    },
     ignoredKinds: (files) => {
       const out = new Map();
       for (const rule of all('ignore_kinds')) {

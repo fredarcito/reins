@@ -6,12 +6,6 @@ import { ANY } from './init/conventions.js';
 
 const MAX_FOLDERS = 15;
 
-/** Top folder a file is grouped under: src/<x> inside src, otherwise the first folder. */
-const folderOf = (f) => {
-  const parts = f.split('/');
-  return parts[0] === 'src' && parts.length > 2 ? `${parts[0]}/${parts[1]}` : parts[0];
-};
-
 /**
  * @param {import('@agentreins/core').ArchitectureConfig} config
  * @param {{ files: string[], edges: { from: string, to: string }[] }} graph
@@ -32,7 +26,7 @@ export function computeCoverage(config, graph, baseline, lang = ANY) {
   for (const f of sources) {
     if (layerOf.has(f) || lang.isTest(f) || !f.includes('/')) continue;
     outside++;
-    outsideCount.set(folderOf(f), (outsideCount.get(folderOf(f)) ?? 0) + 1);
+    outsideCount.set(lang.folderOf(f), (outsideCount.get(lang.folderOf(f)) ?? 0) + 1);
   }
   const folders = [...outsideCount].map(([folder, files]) => ({ folder, files })).sort((a, b) => b.files - a.files || (a.folder < b.folder ? -1 : 1));
 

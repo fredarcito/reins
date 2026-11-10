@@ -10,7 +10,7 @@ ignore: ["examples/**", "packages/*/test/fixtures/**", "packages/adapters/*/test
 layers:
   - { name: tooling,  paths: ["scripts/**"] }
   - { name: cli,      paths: ["packages/cli/src/**"] }
-  - { name: adapters, paths: ["packages/adapters/*/src/**", "packages/adapters/*/rules/**"] }
+  - { name: adapters, paths: ["packages/adapters/*/src/**", "packages/adapters/*/rules/**", "packages/adapters/*/presets/**"] }
   - { name: core,     paths: ["packages/core/src/**"] }
 
 # Adapters may only use the core through its contract (also enforced by the "exports" field).

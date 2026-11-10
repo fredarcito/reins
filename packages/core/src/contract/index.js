@@ -77,6 +77,11 @@ export const EDGE_KINDS = Object.freeze(['static', 'dynamic', 'type']);
  * @property {string[]} [orphans_ignore]  files nobody imports by design (config files, type declarations)
  * @property {{ kind: string, if_files?: string[], unless_files?: string[], reason?: string }[]} [ignore_kinds]
  *   edge kinds the drafted rules should ignore when the repo has files matching `if_files` (and not `unless_files`)
+ * @property {{ groups?: string[], params?: string[], skipped?: string[] }} [route_segments]  how route folders are named,
+ *   as regular expressions on one folder name (first capture group: the name without the marker). groups: folders that
+ *   only group routes; params: route parameters; skipped: never modules. Used with `route_domains_from`
+ * @property {string[]} [source_roots]  folders that only hold the code ("src", "app"): files outside every layer are
+ *   reported one level inside them
  */
 
 /**

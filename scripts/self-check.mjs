@@ -15,11 +15,11 @@ const { cruise } = await import(pathToFileURL(path.join(adapterDir, 'node_module
 let failed = false;
 
 // 1. dependency-cruiser alone
-const SRC = '^packages/(core|cli|adapters/[^/]+)/(src|rules)/';
+const SRC = '^packages/(core|cli|adapters/[^/]+)/(src|rules|presets)/';
 const forbidden = [
   { name: 'core-imports-cli-or-adapters', severity: 'error', from: { path: '^packages/core/src/' }, to: { path: '^packages/(cli|adapters)/' } },
   { name: 'adapters-import-cli', severity: 'error', from: { path: '^packages/adapters/' }, to: { path: '^packages/cli/' } },
-  { name: 'adapters-use-only-the-contract', severity: 'error', from: { path: '^packages/adapters/[^/]+/(src|rules)/' }, to: { path: '^packages/core/src/', pathNot: '^packages/core/src/contract/' } },
+  { name: 'adapters-use-only-the-contract', severity: 'error', from: { path: '^packages/adapters/[^/]+/(src|rules|presets)/' }, to: { path: '^packages/core/src/', pathNot: '^packages/core/src/contract/' } },
   { name: 'no-cycles', severity: 'error', from: { path: SRC }, to: { circular: true } },
 ];
 const result = await cruise(['packages'], {

@@ -261,6 +261,18 @@ test('conventions: several presets are a union; a language without an index conv
   // an adapter without a preset: every file counts as source
   assert.ok(conventions([null]).isSource('anything.xyz'));
 
+  // route folder names and source roots come from the presets too; a language without them has no special folders
+  assert.ok(lang.routes.isGroup('(main)') && lang.routes.isParam('[slug]') && lang.routes.isSkipped('[...rest]') && lang.routes.isSkipped('_lib'));
+  assert.ok(!lang.routes.isParam('[...rest]') && !lang.routes.isGroup('users'));
+  assert.deepEqual(['(search)', '[slug]', 'users'].map(lang.routes.nameOf), ['search', 'slug', 'users']);
+  const plain = conventions([ruby]);
+  assert.ok(!plain.routes.isGroup('(main)') && !plain.routes.isParam('[slug]') && !plain.routes.isSkipped('_lib'));
+  assert.equal(plain.routes.nameOf('(main)'), '(main)');
+  assert.deepEqual(inferDomains(['app/*'], ['app/(main)/a.rb', 'app/(main)/b.rb'], { routes: true, lang: plain }).map((x) => x.folder), ['app/(main)']);
+  assert.deepEqual(['src/store/a.js', 'src/a.js', 'lib/x/y.js'].map(lang.folderOf), ['src/store', 'src', 'lib']);
+  const rails = conventions([{ ...ruby, source_roots: ['app'] }, { sources: ['**/*.tsx'], source_roots: ['app/frontend'] }]);
+  assert.deepEqual(['app/ops/x.rb', 'app/frontend/hooks/a.tsx', 'app/frontend/a.tsx', 'config/x.rb'].map(rails.folderOf), ['app/ops', 'app/frontend/hooks', 'app/frontend', 'config']);
+
   const files = ['packs/billing/invoice.rb', 'packs/billing/tax.rb', 'packs/empty/x.rb', 'app/models/user.rb'];
   const d = inferDomains(['packs/*'], files, { edges: [{ from: 'app/models/user.rb', to: 'packs/billing/invoice.rb' }], lang: both });
   assert.deepEqual(d.map((x) => [x.name, x.publicApi, x.missingIndex]), [
