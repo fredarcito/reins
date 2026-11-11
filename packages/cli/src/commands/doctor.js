@@ -5,7 +5,7 @@ import { runDoctor, formatText, formatJson } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, listNotebooks, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { TRIAGE_LOG, readTriage, taskFiles } from '../triage-log.js';
-import { pickBaseRef } from './check.js';
+import { baseBranch } from '../base.js';
 
 export const options = {
   strict: { type: 'boolean' },
@@ -84,10 +84,12 @@ export function doctorResult(root, values, env) {
         throw new CliError(`Base ref "${values.base}" not found.`);
       }
     }
-    const baseRef = pickBaseRef(root, values.base, env);
-    triage = readTriage(root, baseRef);
-    ({ files, anchor } = taskFiles(root, triage.log, branch, baseRef));
-    if (!baseRef && !anchor) notes.push('No base branch found: only uncommitted changes were compared.');
+    const base = baseBranch(root, values.base, env);
+    triage = readTriage(root, base.ref);
+    const task = taskFiles(root, triage.log, branch, { explicit: values.base, env, base });
+    ({ files, anchor } = task);
+    notes.push(...task.warnings);
+    if (!task.since) notes.push('No base branch found: only uncommitted changes were compared.');
   }
 
   const result = runDoctor({

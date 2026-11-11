@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.0 · 2026-11-11
+
+reins compares a branch with where it started, so tasks cut from `staging` or from a feature branch show only their own files.
+
+```bash
+npx reins update
+```
+
+- **Compared with where the branch started, with nothing to configure.** Locally, `check`, `review`, the pull request map, `doctor` and `resume` used to compare with `origin/HEAD` (usually `main`). On a branch cut from `staging`, everything `staging` had ahead of `main` counted as the task's: `resume` brought notes of modules the task never touched, `doctor` judged the level and the notes against them, and the integrity rule flagged, on every commit, an `architecture.yml` change already approved on `staging`. Now reins uses the commit the branch was created from, which git records when you run `git checkout -b` or `git switch -c`, and after merging newer `staging` into the task it leaves `staging`'s work out too. In CI nothing changes: the pull request's target decides. The output says what it compared with.
+- **`base:` in `architecture.yml`.** For branches without that record (fetched from a teammate, rebased, older than 90 days), a team can write `base: origin/staging` once, for everyone. It is used as written: `staging` is each person's local copy, `origin/staging` GitHub's. `reins init` and `reins update` suggest it when `origin/staging` or `origin/develop` exists; the agent asks you first, since in some teams `staging` is only a deploy branch.
+- **No more `REINS_BASE` in every shell.** If you set `REINS_BASE` to work around this, you can remove it: where the branch started now comes first, so a fixed `REINS_BASE` no longer spoils a task cut from somewhere else. It still works as a personal default, and `--base` still forces a branch for one command (`reins resume` accepts it too now).
+- **A mistyped base is no longer skipped silently.** A `REINS_BASE` or `base:` that names a branch that does not exist gives a warning in every command, instead of quietly comparing with `main`.
+
 ## 0.15.0 · 2026-11-10
 
 The pull request map tells back end from front end, and a fix for the task level.

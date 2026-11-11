@@ -18,6 +18,7 @@ export function renderArchitecture(d) {
     'version: 1',
     `adapters: [${d.adapters.map(key).join(', ')}]`,
     ...(d.preset ? [`preset: ${key(d.preset)}`] : []),
+    ...(d.base ? ['# Branch tasks start from: compared with when a branch has no start mark.', `base: ${key(d.base)}`] : []),
     '',
     '# Top to bottom: a layer may only import from itself and the layers below it.',
     d.layers.length ? 'layers:' : 'layers: []',

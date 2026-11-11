@@ -10,6 +10,7 @@ Location in a consumer repo: `.reins/architecture.yml`.
 version: 1            # required, always 1 for now
 adapters: [js]        # required: the language adapters that compute the graph (Rails + React: [js, rails])
 preset: next-app      # optional: vite-react | next-app | next-pages | inertia-react | rails (adapter presets)
+base: origin/staging  # optional: the branch tasks start from, when it is not main
 ignore: ["src/generated/**"]   # optional: files left out of the analysis
 
 layers:               # ordered from TOP to BOTTOM
@@ -40,6 +41,7 @@ allow:
 | `version` | yes | Format version. Must be `1` |
 | `adapters` | yes | List of adapter names, e.g. `[js]`, or `[js, rust]` for a repo with several languages (see [Several languages](#several-languages-in-one-repo)). For each name the CLI looks for `@agentreins/adapter-<name>`, then `reins-adapter-<name>`. Plans from reins 0.11.0 or older said `adapter: js`; `reins update` rewrites it |
 | `preset` | no | Preset of the adapter (with several adapters, only the one that has this preset receives it; a preset no adapter has is an error) |
+| `base` | no | The branch tasks start from, used as written (`origin/staging` is GitHub's copy, `staging` your local one; prefer `origin/…`, which is what CI sees). reins compares with it only when a branch has no start mark of its own; see [Which base reins compares with](commands.md#which-base-reins-compares-with). Leave it out when tasks start from the default branch |
 | `ignore` | no | Globs of files left out of the analysis entirely: generated code, fixtures, storybook. Imports from or to them are not checked and don't produce warnings |
 | `layers` | no | List of `{ name, paths }`, top layer first |
 | `domains` | no | Map of name → `{ paths, public_api }` |

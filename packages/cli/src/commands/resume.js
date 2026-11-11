@@ -5,26 +5,27 @@
 // --hook is the Claude Code SessionStart hook that reins sync installs (matcher startup|compact|clear).
 import { execFileSync } from 'node:child_process';
 import { notesFor } from '@agentreins/core';
-import { hookEventName, isGitRepo } from '../context.js';
+import { baseBranch, refExists } from '../base.js';
+import { CliError, hookEventName, isGitRepo } from '../context.js';
 import { buildImpactMapInBackground } from '../impact-map.js';
 import { branchTasks, cleanNotebooks, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
 import { loadNotes } from '../project.js';
 import { cleanTriageLog, readTriage, taskFiles } from '../triage-log.js';
-import { pickBaseRef } from './check.js';
 
 const MAX_FILES = 30;
 const MAX_NOTES = 6;
 const MAX_OTHERS = 5;
 
-export const options = { hook: { type: 'boolean' }, json: { type: 'boolean' } };
+export const options = { hook: { type: 'boolean' }, json: { type: 'boolean' }, base: { type: 'string' } };
 
-export const help = `Usage: reins resume [--json]
+export const help = `Usage: reins resume [--json] [--base <ref>]
        reins resume --hook
 
 Prints what is needed to resume this session's task on the current branch: its progress notebook, a short line for
-each other open task on the branch, the files the task changed (since the commit on its triage.log line; the
-branch diff when it has none), and the module notes of those files. Run it at the start of a session or after the
+each other open task on the branch, the files the task changed (since the commit on its triage.log line; since
+where the branch started, or the base branch, when it has none), and the module notes of those files. --base compares
+with that branch instead. Run it at the start of a session or after the
 context was compacted. It also tidies .reins/progress/: triage.log lines of deleted branches and of merged tasks,
 notebooks closed more than 7 days ago, and open notebooks of branches deleted more than 7 days ago.
 --hook is for the Claude Code SessionStart hook that reins sync installs: the same text arrives as context
@@ -43,10 +44,11 @@ const quietly = (fn, fallback) => {
  * Everything resume knows, no formatting.
  * @param {string} root
  * @param {NodeJS.ProcessEnv} env
- * @param {{ session?: string | null, today?: string }} [opts] `session`: the hook payload's session id
+ * @param {{ session?: string | null, today?: string, base?: string }} [opts] `session`: the hook payload's session id;
+ *   `base`: --base
  */
-export function gather(root, env, { session = null, today = new Date().toISOString().slice(0, 10) } = {}) {
-  const empty = { branch: null, notebook: null, guessed: false, coldDir: null, others: [], closed: [], removed: [], files: [], anchor: null, notes: [] };
+export function gather(root, env, { session = null, today = new Date().toISOString().slice(0, 10), base: explicit } = {}) {
+  const empty = { branch: null, notebook: null, guessed: false, coldDir: null, others: [], closed: [], removed: [], files: [], anchor: null, compared: null, warnings: [], notes: [] };
   if (!isGitRepo(root)) return empty;
   const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
   const removed = quietly(() => cleanNotebooks(root, today), []);
@@ -54,10 +56,16 @@ export function gather(root, env, { session = null, today = new Date().toISOStri
   const { current, guessed, others, closed } = resolveTask(branchTasks(root, branch), who);
   let files = [];
   let anchor = null;
+  let compared = null;
+  /** @type {string[]} */
+  let warnings = [];
   try {
-    const baseRef = pickBaseRef(root, undefined, env);
-    quietly(() => cleanTriageLog(root, baseRef));
-    ({ files, anchor } = taskFiles(root, readTriage(root, baseRef).log, branch, baseRef));
+    const base = baseBranch(root, explicit, env);
+    warnings = base.warnings;
+    quietly(() => cleanTriageLog(root, base.ref));
+    const task = taskFiles(root, readTriage(root, base.ref).log, branch, { explicit, env, base });
+    ({ files, anchor } = task);
+    compared = task.label;
   } catch {
     /* no commits yet */
   }
@@ -74,6 +82,8 @@ export function gather(root, env, { session = null, today = new Date().toISOStri
     removed,
     files,
     anchor,
+    compared,
+    warnings,
     notes,
   };
 }
@@ -84,7 +94,7 @@ const summaryLine = (t) =>
 
 /** The text an agent reads. Null when there is nothing to resume. */
 export function render(g, notes = g.notes) {
-  if (!g.branch || (!g.notebook && !g.files.length && !g.others.length && !g.removed.length)) return null;
+  if (!g.branch || (!g.notebook && !g.files.length && !g.others.length && !g.removed.length && !g.warnings.length)) return null;
   const parts = [`Context to resume the work on branch ${g.branch} (from reins resume). Read it before continuing.`];
   if (g.notebook) {
     const name = g.notebook.task ? `task ${g.notebook.task}` : 'notebook';
@@ -109,8 +119,9 @@ export function render(g, notes = g.notes) {
     const shown = g.files.slice(0, MAX_FILES).map((f) => `- ${f}`);
     if (g.files.length > MAX_FILES) shown.push(`- … and ${g.files.length - MAX_FILES} more`);
     const title = g.anchor ? `Files changed by the current task, since ${g.anchor.slice(0, 7)}` : 'Files changed on this branch';
-    parts.push(`## ${title} (${g.files.length})\n${shown.join('\n')}`);
+    parts.push(`## ${title} (${g.files.length})\n${shown.join('\n')}${!g.anchor && g.compared ? `\nCompared with ${g.compared}.` : ''}`);
   }
+  for (const w of g.warnings) parts.push(`Warning: ${w}`);
   if (notes.length) {
     const full = notes.slice(0, MAX_NOTES).map((n) => `### ${n.file} (applies to ${n.paths.join(', ')})\n${n.body}`);
     const rest = notes.slice(MAX_NOTES).map((n) => n.file);
@@ -160,10 +171,11 @@ export async function resume(ctx) {
     }
     return 0;
   }
-  const g = gather(root, env, { today: ctx.today });
+  if (values.base && isGitRepo(root) && !refExists(root, values.base)) throw new CliError(`Base ref "${values.base}" not found.`);
+  const g = gather(root, env, { today: ctx.today, base: values.base });
   if (values.json) {
-    const { branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, notes } = g;
-    out(JSON.stringify({ branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, notes }, null, 2));
+    const { branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes } = g;
+    out(JSON.stringify({ branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes }, null, 2));
     return 0;
   }
   out(render(g) ?? `Nothing to resume${g.branch ? ` on ${g.branch}` : ''}: no progress notebook and no changes on this branch.`);

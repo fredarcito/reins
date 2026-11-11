@@ -89,7 +89,7 @@ test('review: prompt with checklist, notes, changed and untracked files; no chan
   const r = await cli(dir, ['review']);
   assert.equal(r.code, 0);
   assert.match(r.stdout, /^# Code review request\n/);
-  assert.match(r.stdout, /## Files changed \(3, compared to main\)\n\n- \.reins\/notes\/cart\.md\n- src\/features\/cart\/cartStore\.js\n- src\/features\/cart\/discount\.js\n/);
+  assert.match(r.stdout, /## Files changed \(3, compared to the branch start \(from main\)\)\n\n- \.reins\/notes\/cart\.md\n- src\/features\/cart\/cartStore\.js\n- src\/features\/cart\/discount\.js\n/);
   assert.match(r.stdout, /## Checklist\n\n# Review checklist/);
   assert.match(r.stdout, /## Module notes for these paths\n\n### \.reins\/notes\/cart\.md\n\n- totals are cents\./);
   assert.match(r.stdout, /-  return \{ total: 2400 \};\n\+  return \{ total: 2500 \};/);

@@ -1,6 +1,5 @@
 // reins check: architecture rules + adapter rules + integrity, compared with the baseline.
 // Exit codes: 0 = no new errors, 1 = new errors, 2 = could not run (config, adapter, usage).
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseDocument } from 'yaml';
@@ -9,6 +8,7 @@ import {
   parseBaseline, emptyBaseline, createBaseline, serializeBaseline, checkIntegrity, formatText, formatJson,
 } from '@agentreins/core';
 import { resolveAdapter } from '../adapter.js';
+import { comparison } from '../base.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
 import { computeCoverage, formatCoverage } from '../coverage.js';
@@ -31,25 +31,12 @@ Checks the architecture rules of .reins/architecture.yml. Only violations that a
 Options:
   --files <a,b>        Only report violations involving these files (pre-commit hook). Repeatable
   --json               JSON output for agents and tools
-  --base <ref>         Base branch for the integrity rule (default: $GITHUB_BASE_REF, origin/HEAD, origin/main, main)
+  --base <ref>         Compare the integrity rule with this branch (default: where this branch started, then
+                       $REINS_BASE, $GITHUB_BASE_REF, base: in architecture.yml, origin/HEAD, origin/main, main)
   --update-baseline    Write the current violations to baseline.json (review the diff before committing)
   --verbose            Also list violations already in the baseline
   --coverage           Show what the plan covers instead of checking: files per layer and domain, folders outside
                        every layer, imports between layers, exceptions and the baseline (with --json too)`;
-
-/** First base ref that exists. */
-export function pickBaseRef(root, explicit, env = process.env) {
-  const list = [explicit, env.REINS_BASE, env.GITHUB_BASE_REF && `origin/${env.GITHUB_BASE_REF}`, 'origin/HEAD', 'origin/main', 'origin/master', 'main', 'master'];
-  for (const ref of list.filter(Boolean)) {
-    try {
-      execFileSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root, stdio: 'ignore' });
-      return ref;
-    } catch {
-      if (ref === explicit) return ref; // let integrity report that the explicit ref is missing
-    }
-  }
-  return null;
-}
 
 /**
  * @typedef {{ adapter: import('@agentreins/core/contract').Adapter, packageName: string }} LoadedAdapter
@@ -219,9 +206,12 @@ export async function check(ctx) {
   if (integrityRule && integrityRule.severity !== 'off') {
     if (!isGitRepo(root)) warnings.push('Not a git repository: the integrity rule was skipped.');
     else {
-      const baseRef = pickBaseRef(root, values.base, ctx.env);
-      if (!baseRef) warnings.push('No base branch found (tried origin/HEAD, origin/main, main…): the integrity rule was skipped. Pass --base <ref>.');
-      else integrity.push(...checkIntegrity({ repoRoot: root, baseRef, architectureFile: ARCHITECTURE_FILE, baselineFile: BASELINE_FILE, severity: /** @type {'error'|'warn'} */ (integrityRule.severity) }));
+      // the whole branch, like the pull request: never the task's triage line (a second task must not hide the first's changes)
+      const cmp = comparison(root, { explicit: values.base, env: ctx.env });
+      warnings.push(...cmp.warnings);
+      const baseRef = values.base ?? cmp.ref;
+      if (!cmp.commit && !baseRef) warnings.push('No base branch found (tried origin/HEAD, origin/main, main…): the integrity rule was skipped. Pass --base <ref>.');
+      else integrity.push(...checkIntegrity({ repoRoot: root, baseRef: baseRef ?? 'HEAD', since: cmp.commit ?? undefined, label: cmp.label, architectureFile: ARCHITECTURE_FILE, baselineFile: BASELINE_FILE, severity: /** @type {'error'|'warn'} */ (integrityRule.severity) }));
     }
   }
 

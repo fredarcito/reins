@@ -14,7 +14,7 @@ const DEFAULT_SEVERITY_WHEN_NO_RULES = { 'layer-direction': 'error', 'domain-bou
 /** `integrity` is on unless turned off explicitly; the other rules must be listed. */
 const DEFAULT_SEVERITY_WHEN_UNLISTED = { integrity: 'warn' };
 
-const TOP_KEYS = ['version', 'adapters', 'preset', 'ignore', 'layers', 'domains', 'rules', 'allow'];
+const TOP_KEYS = ['version', 'adapters', 'preset', 'base', 'ignore', 'layers', 'domains', 'rules', 'allow'];
 const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'];
 
 /**
@@ -26,6 +26,7 @@ const RULE_KEYS = ['id', 'severity', 'message', 'fix', 'ignore_kinds', 'options'
  * @property {number} version
  * @property {string[]} adapters  e.g. ["js"] or ["js", "rust"]
  * @property {string} [preset]
+ * @property {string} [base]  branch tasks start from, used as written ("origin/staging" or "staging"), when a branch has no start mark
  * @property {string[]} ignore  globs of files left out of the analysis (generated code, fixtures…)
  * @property {Layer[]} layers   ordered from top (may import anything below) to bottom
  * @property {Domain[]} domains
@@ -81,6 +82,7 @@ export function validateConfig(raw, opts = {}) {
   } else if (!isStrList(raw.adapters)) p('adapters: expected a non-empty list of adapter names, e.g. [js, rust]');
   else if (new Set(raw.adapters).size !== raw.adapters.length) p('adapters: an adapter is listed twice');
   if (raw.preset !== undefined && (typeof raw.preset !== 'string' || !raw.preset)) p('preset: must be a string');
+  if (raw.base !== undefined && (typeof raw.base !== 'string' || !/^[^\s~^:?*[\\]+$/.test(raw.base))) p('base: expected a branch name, e.g. "origin/staging" or "staging"');
   if (raw.ignore !== undefined && !isStrList(raw.ignore)) p('ignore: expected a non-empty list of globs, e.g. ["src/generated/**"]');
 
   /** @type {Layer[]} */
@@ -171,7 +173,7 @@ export function validateConfig(raw, opts = {}) {
 
   if (problems.length) return { config: null, problems };
   return {
-    config: { version: raw.version, adapters, ...(raw.preset ? { preset: raw.preset } : {}), ignore: isStrList(raw.ignore) ? raw.ignore : [], layers, domains, rules, allow },
+    config: { version: raw.version, adapters, ...(raw.preset ? { preset: raw.preset } : {}), ...(raw.base ? { base: raw.base } : {}), ignore: isStrList(raw.ignore) ? raw.ignore : [], layers, domains, rules, allow },
     problems,
   };
 }

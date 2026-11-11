@@ -1,5 +1,6 @@
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
 import { CliError } from '../context.js';
+import { suggestBase, suggestBaseHint } from '../base.js';
 
 export const options = {
   check: { type: 'boolean' },
@@ -39,5 +40,7 @@ export async function sync(ctx) {
     out(`reins sync: ${r.changes.length} change(s):`);
     for (const c of r.changes) out(`  - ${c}`);
   }
+  const base = suggestBase(root); // reins update runs sync: existing repos hear about base: once they upgrade
+  if (base) out(suggestBaseHint(base));
   return 0;
 }

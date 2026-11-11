@@ -54,7 +54,7 @@ allow:
   - { from: "a/**", to: "b/**" }
 `);
   assert.deepEqual(problems, [
-    'adaptor: unknown key (expected one of: version, adapters, preset, ignore, layers, domains, rules, allow)',
+    'adaptor: unknown key (expected one of: version, adapters, preset, base, ignore, layers, domains, rules, allow)',
     'version: expected 1, got 2',
     'adapters: required, e.g. "adapters: [js]"',
     'layers[0].paths: expected a non-empty list of globs',

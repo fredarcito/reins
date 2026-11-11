@@ -172,6 +172,8 @@ flowchart LR
 
 The hook can be skipped with `--no-verify`, so **CI plus branch protection is the real guarantee**. The hook is there to fail fast. Four rules run on every check: `layer-direction`, `domain-boundary`, `no-cycles` and, for Next, `next-server-client`. Today's violations are frozen in a baseline, so you start green and only new ones fail. Every finding says the rule, the reason and the fix.
 
+**Compared with where your branch started.** Locally, reins compares a branch with the commit it was created from, so a task cut from `staging` or from a feature branch shows only its own files, with nothing to configure. In CI it uses the pull request's target. A team whose tasks start from `staging` can also write `base: origin/staging` in `architecture.yml` once, for everyone: [which base reins compares with](docs/commands.md#which-base-reins-compares-with).
+
 On every pull request, CI also posts **one comment with the architecture map**: the new dependencies between domains, the folders no rule covers and who imports the changed code, so one new import isn't a single line among hundreds. It is plain templates filled with data (no AI) and experimental.
 
 → The rules with examples, a sample report, the baseline, the PR map, how the JS adapter reads aliases, the packages: [docs/how-it-works.md](docs/how-it-works.md) · `architecture.yml` reference: [docs/architecture-yml.md](docs/architecture-yml.md)

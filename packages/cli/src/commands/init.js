@@ -8,6 +8,7 @@ import { adapterNamesOf, normalizeGraph, runCheck, emptyBaseline, createBaseline
 import { candidates as adapterPackages, guessAdapterNames, resolveAdapter } from '../adapter.js';
 import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, REINS_DIR, INIT_REPORT_FILE } from '../context.js';
 import { analyze } from './check.js';
+import { planBase, suggestBase, suggestBaseHint } from '../base.js';
 import { conventions, presetsOf } from '../init/conventions.js';
 import { inferLayers, inferDomains, inferSubmodules, inferOwnedFolders, importsFromOutside, findOrphans, MAX_SUBMODULES, MIN_ROUTE_FILES, mergeSmallRoutes } from '../init/infer.js';
 import { renderArchitecture, renderReport } from '../init/render.js';
@@ -77,6 +78,9 @@ export async function init(ctx) {
   /** @type {{ name: string, adapter: import('@agentreins/core/contract').Adapter, packageName: string }[]} */
   const loaded = [];
   const hints = [];
+  const base = planBase(root); // kept when init runs again
+  const suggested = suggestBase(root);
+  if (suggested) hints.push(suggestBaseHint(suggested));
   for (const [i, name] of names.entries()) {
     // declared adapters, and the repo's main language, must be installed; a guessed second language joins only
     // when its adapter is installed and recognizes the repo
@@ -150,7 +154,7 @@ export async function init(ctx) {
     closed: fromRoutes && d.publicApi.every((f) => entrySet.has(f)),
   }));
   const adapterRules = loaded.flatMap(({ adapter }, i) => (picks[i].preset?.default_rules ?? []).filter((r) => (adapter.rules ?? []).includes(r)));
-  const yml = renderArchitecture({ adapters: loaded.map((l) => l.name), preset, date, layers: layerInfo.layers, domains, ignoreKinds: ignoredKinds.map((k) => k.kind), adapterRules });
+  const yml = renderArchitecture({ adapters: loaded.map((l) => l.name), preset, base, date, layers: layerInfo.layers, domains, ignoreKinds: ignoredKinds.map((k) => k.kind), adapterRules });
 
   // 4. Validate the draft by running the real analysis on it, then freeze what it finds.
   const analysis = await analyze(root, { searchPaths: ctx.adapterSearchPaths }, { configText: yml });

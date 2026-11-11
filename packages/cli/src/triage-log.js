@@ -1,9 +1,11 @@
 // The triage log (.reins/progress/triage.log) as doctor, resume and `reins triage` use it: which lines still
 // matter, the current task's diff (since the commit it started from) and the automatic cleanup that resume runs.
+/** @typedef {import('./base.js').baseBranch} baseBranch */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { parseTriageLog, taskAnchor } from '@agentreins/core';
 import { REINS_DIR, isGitRepo } from './context.js';
+import { comparison } from './base.js';
 import { withFileLock, writeFileAtomic } from './local-state.js';
 import { changedFiles, liveBranches, readText } from './project.js';
 
@@ -89,17 +91,24 @@ export function cleanTriageLog(root, baseRef) {
 }
 
 /**
- * The files of the current task: changed since the commit on the branch's latest triage line (plus uncommitted
- * changes). Falls back to the branch diff against the base when that line has no commit or the commit is no longer
- * an ancestor of HEAD (rebased).
+ * The files of the current task (plus uncommitted changes) and what they were compared with, in the order of
+ * `comparison` (base.js): `--base`; the commit on the branch's latest triage line while it is an ancestor of HEAD;
+ * the branch start; the merge base with the base branch.
  * @param {string} root
  * @param {ReturnType<typeof parseTriageLog> | null} log live lines (from `readTriage`)
  * @param {string} branch
- * @param {string | null} baseRef
- * @returns {{ files: string[], anchor: string | null }}
+ * @param {{ explicit?: string, env?: NodeJS.ProcessEnv, base: ReturnType<typeof baseBranch> }} opts `base`: the one
+ *   `readTriage` used, so it is resolved once
+ * @returns {{ files: string[], anchor: string | null, since: string | null, label: string, warnings: string[] }}
+ *   `anchor`: the triage commit when that line decided; `since`: the commit compared with (null: only uncommitted changes)
  */
-export function taskFiles(root, log, branch, baseRef) {
-  const anchor = taskAnchor(log?.entries ?? [], branch);
-  if (anchor && isAncestor(root, anchor, 'HEAD')) return { files: changedFiles(root, { since: anchor }), anchor };
-  return { files: changedFiles(root, { base: baseRef }), anchor: null };
+export function taskFiles(root, log, branch, { explicit, env, base }) {
+  const cmp = comparison(root, { explicit, env, base, anchor: taskAnchor(log?.entries ?? [], branch) });
+  return {
+    files: changedFiles(root, { since: cmp.commit ?? 'HEAD' }),
+    anchor: cmp.mark === 'task' ? cmp.commit : null,
+    since: cmp.commit,
+    label: cmp.label,
+    warnings: cmp.warnings,
+  };
 }

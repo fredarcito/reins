@@ -7,7 +7,8 @@ import {
   parseConfig, ConfigError, runCheck, emptyBaseline, impactOf, prStructure, renderPrMap,
 } from '@agentreins/core';
 import { ARCHITECTURE_FILE, REINS_DIR, CliError } from './context.js';
-import { analyze, knownRulesOf, pickBaseRef } from './commands/check.js';
+import { analyze, knownRulesOf } from './commands/check.js';
+import { comparison } from './base.js';
 
 export const TMP_DIR = `${REINS_DIR}/tmp`;
 const CHECKOUT_PREFIX = 'pr-map-base-';
@@ -124,8 +125,12 @@ function parseAt(text, knownRules) {
 export async function buildPrMap(ctx) {
   const { root, values } = ctx;
   const warnings = [];
-  const baseRef = pickBaseRef(root, values.base, ctx.env);
-  const mergeBase = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : git(root, ['rev-parse', 'HEAD']).trim();
+  // the whole branch, like the pull request (never the task's triage line)
+  const cmp = comparison(root, { explicit: values.base, env: ctx.env });
+  if (values.base && !cmp.commit) throw new CliError(`Could not compare with "${values.base}": the ref was not found or shares no history with HEAD.`);
+  warnings.push(...cmp.warnings);
+  const baseRef = cmp.commit ? cmp.label : null;
+  const mergeBase = cmp.commit ?? git(root, ['rev-parse', 'HEAD']).trim();
   const searchPaths = ctx.adapterSearchPaths;
 
   const head = await analyze(root, { searchPaths });

@@ -77,12 +77,13 @@ export function compareIntegrity({ base, head, files, baseLabel, severity }) {
 /**
  * Reads the files from disk and from git and compares them.
  * When architecture.yml / baseline.json don't exist at the base (first adoption), there is nothing to compare.
- * @param {{ repoRoot: string, baseRef: string, architectureFile: string, baselineFile: string, severity: 'error'|'warn' }} opts
- *   architectureFile / baselineFile are repo-relative POSIX paths
+ * @param {{ repoRoot: string, baseRef: string, since?: string, label?: string, architectureFile: string, baselineFile: string, severity: 'error'|'warn' }} opts
+ *   architectureFile / baselineFile are repo-relative POSIX paths. `since`: the commit to compare with, when the caller
+ *   already knows it (the branch start); otherwise the merge base with `baseRef`. `label` names it in messages.
  * @returns {import('./shared.js').Violation[]}
  */
-export function checkIntegrity({ repoRoot, baseRef, architectureFile, baselineFile, severity }) {
-  const commit = mergeBase(repoRoot, baseRef);
+export function checkIntegrity({ repoRoot, baseRef, since, label, architectureFile, baselineFile, severity }) {
+  const commit = since ?? mergeBase(repoRoot, baseRef);
   if (!commit) {
     return [{ rule: id, severity: 'warn', key: `${id}|noBase|${baseRef}`, from: baseRef,
       message: render(MESSAGES.noBase.message, { base: baseRef }), fix: render(MESSAGES.noBase.fix, { base: baseRef }) }];
@@ -92,7 +93,7 @@ export function checkIntegrity({ repoRoot, baseRef, architectureFile, baselineFi
     base: { architecture: showFile(repoRoot, commit, architectureFile), baseline: showFile(repoRoot, commit, baselineFile) },
     head: { architecture: read(architectureFile), baseline: read(baselineFile) },
     files: { architecture: architectureFile, baseline: baselineFile },
-    baseLabel: baseRef,
+    baseLabel: label ?? baseRef,
     severity,
   });
 }

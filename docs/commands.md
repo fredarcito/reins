@@ -45,12 +45,28 @@ If the adapter is missing, it prints the install command for your package manage
 | --- | --- |
 | `--files <a,b>` | Only report violations involving these files (what the pre-commit hook runs) |
 | `--json` | Machine-readable output for agents |
-| `--base <ref>` | Base branch for `integrity` (default: `$GITHUB_BASE_REF`, `origin/HEAD`, `origin/main`, `main`) |
+| `--base <ref>` | Compare `integrity` with this branch instead of [the usual base](#which-base-reins-compares-with) |
 | `--update-baseline` | Freeze the current violations into `baseline.json` |
 | `--verbose` | Also list violations already in the baseline |
 | `--coverage` | Instead of checking, show what the plan covers: files per layer and domain, folders outside every layer (not checked), imports between layers, exceptions and the baseline. With `--json` for agents |
 
 Exit codes: **0** no new errors · **1** new errors · **2** could not run (config, adapter, options).
+
+## Which base reins compares with
+
+`check` (integrity), `review`, the PR map, `doctor` and `resume` compare the branch with a starting point. reins takes the first one it finds, so nobody has to configure it:
+
+| # | Where it comes from | Used for |
+| --- | --- | --- |
+| 1 | `--base <ref>` on the command | Everything. The way out when the rest is wrong |
+| 2 | The task's `triage.log` line | `doctor` and `resume` only: they look at the task |
+| 3 | Where the branch started: git writes it when the branch is created (`git checkout -b`, `git switch -c`). If the branch it came from still exists, the merge base with it, so merging newer staging into the task does not count staging's work | Everything, locally. Not in CI, and not for a branch fetched from someone else, rebased away from its start, or older than the reflog (90 days) |
+| 4 | `REINS_BASE` | A person's own default |
+| 5 | `GITHUB_BASE_REF` | CI: the pull request's target |
+| 6 | `base:` in `architecture.yml` | The team's default, committed. `init` and `update` suggest it when `origin/staging` or `origin/develop` exists |
+| 7 | `origin/HEAD`, `origin/main`, `origin/master`, `main`, `master` | Everything else |
+
+Names are used as written: `staging` is your local branch, `origin/staging` GitHub's. A `REINS_BASE` or `base:` that does not exist is skipped with a warning, never silently; a `--base` that does not exist is an error. The output says what it compared with ("Compared with the branch start (from staging)").
 
 ## `reins doctor`
 
@@ -204,7 +220,7 @@ Boundary crossings are imports that reach a domain's internals instead of its pu
 | `reins notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
 | `reins notes stale` | Notes ranked by commits to their paths since the note last changed (git history). `--limit <n>` (default 10, 0 for all), `--json` |
 | `reins notes new <domain\|folder>` | Drafts `.reins/notes/<name>.md` from the import graph: public API, most imported files, who uses the module, what it depends on. The rest are `TODO` lines to fill in. `--paths` sets the globs, `--force` overwrites |
-| `reins resume` | This session's task notebook, one line per other open task on the branch, the files the task changed and their notes: what an agent needs to pick a task up. Also tidies old notebooks and triage lines. `--json` for agents |
+| `reins resume` | This session's task notebook, one line per other open task on the branch, the files the task changed and their notes: what an agent needs to pick a task up. Also tidies old notebooks and triage lines. `--json` for agents, `--base <ref>` to compare with another branch |
 | `reins resume --hook` | The same, as the Claude Code `SessionStart` hook (startup, `/clear`, compaction). After a compaction the notes are delivered again |
 | `reins scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
 | `reins impact <file-or-folder>` | The reverse of `scope`: the domains that consume a file, imports that bypass a public API, violations that already involve it, and the minimum level if the change breaks its importers. `--json` |

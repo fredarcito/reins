@@ -6,7 +6,7 @@ import { notesFor } from '@agentreins/core';
 import { CliError, isGitRepo } from '../context.js';
 import { loadNotes, readText } from '../project.js';
 import { readTemplate } from '../templates.js';
-import { pickBaseRef } from './check.js';
+import { comparison } from '../base.js';
 import { buildPrMap } from '../pr-map.js';
 
 export const CHECKLIST_FILE = '.reins/review/checklist.md';
@@ -101,8 +101,11 @@ export async function review(ctx) {
     out(markdown.trimEnd());
     return 0;
   }
-  const baseRef = pickBaseRef(root, values.base, ctx.env);
-  const base = baseRef ? git(root, ['merge-base', 'HEAD', baseRef]).trim() : 'HEAD';
+  const cmp = comparison(root, { explicit: values.base, env: ctx.env });
+  if (values.base && !cmp.commit) throw new CliError(`Could not compare with "${values.base}": the ref was not found or shares no history with HEAD.`);
+  for (const w of cmp.warnings) ctx.err?.(`! warning  ${w}`);
+  const base = cmp.commit ?? 'HEAD';
+  const label = cmp.commit ? cmp.label : 'HEAD';
   const untracked = git(root, ['ls-files', '--others', '--exclude-standard']).split('\n').filter((f) => f && !f.startsWith('.reins/progress/') && !f.startsWith('.reins/backlog/'));
   let diff = git(root, ['diff', base]);
   for (const f of untracked) {
@@ -114,11 +117,11 @@ export async function review(ctx) {
   }
   const files = [...new Set([...git(root, ['diff', '--name-only', base]).split('\n').filter(Boolean), ...untracked])].sort();
   if (!files.length) {
-    out(`No changes compared to ${baseRef ?? 'HEAD'}: nothing to review.`);
+    out(`No changes compared to ${label}: nothing to review.`);
     return 0;
   }
   const checklist = readText(root, CHECKLIST_FILE) ?? readText(root, CORE_CHECKLIST_FILE) ?? readTemplate(CORE_CHECKLIST_FILE);
   const all = loadNotes(root).notes;
   const notes = all.filter((n) => files.some((f) => notesFor(f, [n]).length));
-  return executor.run(buildReviewPrompt({ diff, files, checklist, notes, base: baseRef ?? 'HEAD', maxBytes }), { out });
+  return executor.run(buildReviewPrompt({ diff, files, checklist, notes, base: label, maxBytes }), { out });
 }
