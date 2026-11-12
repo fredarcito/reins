@@ -15,7 +15,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { countLines, DOCTOR_DEFAULTS, parentNoteFile, parseFrontmatter } from '@agentreins/core';
+import { countLines, DOCTOR_DEFAULTS, notePurpose, parentNoteFile, parseFrontmatter } from '@agentreins/core';
 import { ARCHITECTURE_FILE, REINS_DIR, runScriptCommand } from '../context.js';
 import { loadNotes, readDoctorConfig, readText } from '../project.js';
 import { readTemplate, renderAgentsMd, templatesDir } from '../templates.js';
@@ -35,7 +35,7 @@ export const NOTES_BLOCK_RE = /(<!-- reins:notes:start[^>]*-->\r?\n)([\s\S]*?)(<
 export const SETTINGS = Object.freeze({
   deny: ['Bash(git commit:*)', 'Bash(git push:*)'],
   hooks: [
-    { event: 'PreToolUse', matcher: 'Read|Edit|Write|MultiEdit', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/reins notes --hook' },
+    { event: 'PreToolUse', matcher: 'Read|Edit|Write|MultiEdit|Grep|Glob', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/reins notes --hook' },
     { event: 'SessionStart', matcher: 'startup|compact|clear', command: '"$CLAUDE_PROJECT_DIR"/node_modules/.bin/reins resume --hook' },
   ],
 });
@@ -252,8 +252,8 @@ export const MAX_INDEX_PATHS = 2;
 /**
  * One line per module note. The notes of a module's parts (`.reins/notes/<module>/<part>.md`) go on the line of
  * `<module>.md`, so AGENTS.md does not grow a line per part; the notes hook delivers both anyway. A part whose
- * module note is missing gets a line of its own.
- * @param {{ file: string, paths: string[] }[]} notes
+ * module note is missing gets a line of its own. Each line ends with the first sentence of the note's Purpose.
+ * @param {{ file: string, paths: string[], body?: string }[]} notes
  */
 export function renderNotesIndex(notes) {
   const files = new Set(notes.map((n) => n.file));
@@ -268,22 +268,24 @@ export function renderNotesIndex(notes) {
     // AGENTS.md is read on every session: a few paths say where the module is, the note itself has them all
     const shown = n.paths.slice(0, MAX_INDEX_PATHS).map((p) => `\`${p}\``).join(', ');
     const more = n.paths.length > MAX_INDEX_PATHS ? ` (+${n.paths.length - MAX_INDEX_PATHS} more)` : '';
-    return `- ${shown}${more} → \`${n.file}\`${tail}\n`;
+    // what the module does, so a task reaches it by meaning and not only by folder names
+    const purpose = n.body === undefined ? null : notePurpose(n.body);
+    return `- ${shown}${more} → \`${n.file}\`${purpose ? ` — ${purpose}` : ''}${tail}\n`;
   }).join('');
 }
 
 /**
- * The notes block that fits in `budget` lines. It always starts with how to get a file's notes with
- * `reins notes <path…>`: the hook only fires on Read/Edit/Write, and agents also read code from the shell or
- * other tools. Then the path → note index when it fits; otherwise only the count. Doctor's `agents-size` limit
+ * The notes block that fits in `budget` lines. It always starts with how to get the notes before exploring
+ * (`reins triage "<reason>"`, `reins notes <path…>`): the hook only fires on Read/Edit/Write/Grep/Glob, and agents
+ * also read code from the shell or other tools. Then the path → note index when it fits; otherwise only the count. Doctor's `agents-size` limit
  * counts every line of AGENTS.md, so sync must never write a block that breaks it.
- * @param {{ file: string, paths: string[] }[]} notes
+ * @param {{ file: string, paths: string[], body?: string }[]} notes
  * @param {number} budget lines available for the block
  * @returns {{ block: string, compact: boolean }}
  */
 export function fitNotesIndex(notes, budget) {
   if (notes.length === 0) return { block: '', compact: false };
-  const how = 'Before changing a file, run `npx reins notes <path…>` to get its module notes (the hook delivers them only on Read/Edit/Write)';
+  const how = 'Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands)';
   const index = renderNotesIndex(notes);
   if (1 + index.split('\n').length - 1 <= Math.max(budget, 1)) return { block: `- ${how}. By path:\n${index}`, compact: false };
   return { block: `- ${how}. ${notes.length} notes in \`${REINS_DIR}/notes/\`, too many to list here.\n`, compact: true };
@@ -346,8 +348,18 @@ export function mergeSettings(currentText, previous) {
   }
 
   const hooks = { ...(settings.hooks ?? {}) };
+  const moved = [];
   for (const h of previous.hooks) {
     if (SETTINGS.hooks.some((w) => sameHook(w, h)) || !hooks[h.event]) continue;
+    // the same hook with a new matcher (an upgrade): changed where it is, so settings.json keeps its order
+    const next = SETTINGS.hooks.find((w) => w.event === h.event && w.command === h.command);
+    const at = next ? hooks[h.event].findIndex((e) => hookMatches(e, h)) : -1;
+    if (next && at !== -1) {
+      hooks[h.event] = hooks[h.event].map((e, i) => (i === at ? { ...e, matcher: next.matcher } : e));
+      moved.push(next);
+      changed = true;
+      continue;
+    }
     const kept = hooks[h.event].filter((e) => !hookMatches(e, h));
     if (kept.length !== hooks[h.event].length) changed = true;
     if (kept.length) hooks[h.event] = kept;
@@ -359,7 +371,7 @@ export function mergeSettings(currentText, previous) {
       list.push({ matcher: h.matcher, hooks: [{ type: 'command', command: h.command }] });
       owned.hooks.push(h);
       changed = true;
-    } else if (previous.hooks.some((p) => sameHook(p, h))) owned.hooks.push(h);
+    } else if (previous.hooks.some((p) => sameHook(p, h)) || moved.includes(h)) owned.hooks.push(h);
   }
 
   if (!changed) return { text: currentText, changed, owned, problem: null };

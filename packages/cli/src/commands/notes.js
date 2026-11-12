@@ -38,8 +38,9 @@ new     Drafts .reins/notes/<name>.md for a domain of architecture.yml or a fold
 stale   Lists the notes most behind their code: commits to a note's paths since the note last changed (from
         git history). A signal, not proof: review the top ones (in Claude Code: /reins-notes review).
         --limit shows the first <n> (default 10; 0 for all).
---hook  For the Claude Code PreToolUse hook that reins sync installs: reads the tool call from stdin and
-        returns the notes as additional context, once per note and session.`;
+--hook  For the Claude Code PreToolUse hook that reins sync installs (Read, Edit, Write, Grep, Glob): reads the
+        tool call from stdin and returns the notes of its file or folder as additional context, once per note
+        and session.`;
 
 /** reins notes new <domain|folder> */
 async function newNote(ctx, target) {
@@ -157,8 +158,12 @@ export function hookResponse(root, input) {
   };
   const realRoot = real(root);
   const realTarget = existsSync(target) ? real(target) : path.join(real(path.dirname(target)), path.basename(target));
-  const file = toRepoPath(realRoot, realRoot, realTarget);
+  let file = toRepoPath(realRoot, realRoot, realTarget);
   if (file.startsWith('..') || path.isAbsolute(file)) return null;
+  // Grep and Glob search a folder: its notes are the ones of a file inside it. The repo root says nothing.
+  const folder = existsSync(realTarget) && statSync(realTarget).isDirectory();
+  if (folder && (!file || file === '.')) return null;
+  if (folder) file = `${file.replace(/\/$/, '')}/`;
   const session = typeof input.session_id === 'string' ? input.session_id : null;
   const parts = [];
   // a shared file touched under a lower declared level, or with no level declared (impactHint says how often)
@@ -169,10 +174,10 @@ export function hookResponse(root, input) {
     /* unreadable map: say nothing about impact */
   }
   if (hint && takeUnseen(root, session, [{ file: hint.key }]).length) parts.push(hint.text);
-  const notes = notesFor(file, loadNotes(root).notes);
+  const notes = notesFor(folder ? `${file}x` : file, loadNotes(root).notes);
   // once per note and session
   const unseen = notes.length ? takeUnseen(root, session, notes) : [];
-  if (unseen.length) parts.push(`Module notes for ${file} (from .reins/notes; follow them):\n\n${render(file, unseen)}`);
+  if (unseen.length) parts.push(`Module notes for ${file} (from .reins/notes; start from them; the code wins if they disagree, and say so):\n\n${render(file, unseen)}`);
   if (!parts.length) return null;
   return JSON.stringify({
     hookSpecificOutput: {

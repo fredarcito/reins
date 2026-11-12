@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, git } from './helpers.js';
 
@@ -28,8 +28,11 @@ test('triage: appends the line with date, branch and the start commit; validates
   await cli(dir, ['triage', 'large', 'it grew']);
   assert.deepEqual(readFileSync(path.join(dir, LOG), 'utf8').split('\n').slice(1), ['# no newline at the end', `2026-11-04 | feat/cart | large | it grew | commit:${head(dir).slice(0, 12)}`, '']);
 
-  assert.equal((await cli(dir, ['triage', 'huge', 'x'])).code, 2);
-  assert.match((await cli(dir, ['triage', 'small'])).stderr, /Expected a reason and --files/);
+  const before = readFileSync(path.join(dir, LOG), 'utf8');
+  const loose = await cli(dir, ['triage', 'huge', 'x']);
+  assert.equal(loose.code, 0, 'not a level: the words are a reason, and a reason alone only suggests');
+  assert.equal(readFileSync(path.join(dir, LOG), 'utf8'), before, 'nothing recorded without files');
+  assert.match((await cli(dir, ['triage', 'small'])).stderr, /Expected a reason/);
   // reins measures the level: below large, the files are required; the person's own level needs no measure
   const guess = await cli(dir, ['triage', 'small', 'just a guess']);
   assert.equal(guess.code, 2);
@@ -149,4 +152,32 @@ test('triage: files after a quoted reason, separated by spaces, are all measured
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /Measured level: medium \(4 files/);
   assert.match(readFileSync(path.join(dir, LOG), 'utf8'), /\| medium \| split the cart \|/, 'the files are not part of the reason');
+});
+
+test('triage without files: suggests the likely notes before exploring, records nothing', async () => {
+  const dir = exampleRepo('vite-react');
+  write(dir, '.reins/notes/sourceCandidates.md', '---\npaths: ["src/pages/candidates/**"]\n---\n# sourceCandidates\n\n## Purpose\nSource Talent search page.\n');
+  write(dir, '.reins/notes/billing.md', '---\npaths: ["src/features/billing/**"]\n---\n# billing\n\n## Purpose\nInvoices and taxes.\n');
+  write(dir, 'src/pages/candidates/JobMatches/FilterBar.jsx', 'export const FilterBar = 1;\n');
+  const env = { CLAUDE_CODE_SESSION_ID: 'sug-1' };
+  const r = await cli(dir, ['triage', 'add a Company filter to Job Matches'], { env });
+  assert.equal(r.code, 0, r.stderr);
+  // the note never names JobMatches/: the folder name leads to it
+  assert.match(r.stdout, /Likely areas for "add a Company filter to Job Matches"/);
+  assert.match(r.stdout, /\.reins\/notes\/sourceCandidates\.md \(src\/pages\/candidates\/\*\*\) · matches: job, matches · folders: src\/pages\/candidates\/JobMatches\//);
+  assert.doesNotMatch(r.stdout, /billing/);
+  assert.match(r.stdout, /Read these notes before exploring \(start from them; the code wins if they disagree, and say so\)/);
+  assert.match(r.stdout, /Source Talent search page/);
+  assert.match(r.stdout, /Nothing measured or recorded yet\. Once you know the files, run `npx reins triage "add a Company filter to Job Matches" --files/);
+  assert.equal(existsSync(path.join(dir, LOG)), false);
+  // once per session, shared with the notes hook
+  const again = await cli(dir, ['triage', 'job matches again'], { env });
+  assert.match(again.stdout, /Already delivered this session: \.reins\/notes\/sourceCandidates\.md/);
+  assert.doesNotMatch(again.stdout, /Source Talent search page/);
+  // nothing matches: points to the index
+  const none = await cli(dir, ['triage', 'zzz qqq'], { env });
+  assert.match(none.stdout, /No module note matches "zzz qqq"/);
+  // --files: the notes of those files come before the recorded line
+  const measured = await cli(dir, ['triage', 'tweak taxes', '--files', 'src/features/billing/tax.js'], { env: { CLAUDE_CODE_SESSION_ID: 'sug-2' } });
+  assert.match(measured.stdout, /Module notes for these files \(start from them[^)]*\):\n\nNote \.reins\/notes\/billing\.md[\s\S]*Invoices and taxes\.\nRecorded in /);
 });

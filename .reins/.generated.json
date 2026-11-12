@@ -6,15 +6,15 @@
     ".reins/core/agents/reviewer.md": "fe12cd89374e7375deef7c0d4c867c4851347456f87d5ad7567e3a00bcc40c12",
     ".reins/core/policies/multiagent.md": "cf0b480d58de00100d2a00a15d462dacf2e5fd9e9b1df69e012e77e25cf48726",
     ".reins/core/policies/progress.md": "ae9c79777f26b8909130edf08ba24b44633c195714aa07250eeedc1b15c12504",
-    ".reins/core/policies/triage.md": "31a03f7f3624d6d2658f0898fbd96ba87c54d3b63dfd2309258790a1b70a7dd7",
+    ".reins/core/policies/triage.md": "6f5c721a405413661820a311cd8812f1e31c2f6ee470ed7d7ba3c422f207be99",
     ".reins/core/review/checklist.md": "8e6f13f1be6c85d635cc63ad22637d830b1e13e0b90104d4bbab860f66ac1767",
-    ".reins/core/rules.md": "353d9ea59f64c769141f8e8bf07c71af53d74be7009b40775a3049c754d5eb02",
+    ".reins/core/rules.md": "b9f2c0893c4ac8631258f6d78ed7d2b592bccdc76cbed97294b232416d3dbf54",
     ".reins/core/skills/agent/SKILL.md": "908857fcf8b727413fb172218cce7e763ab38b65b4d7ebff697d7e9629a66542",
     ".reins/core/skills/arch/SKILL.md": "a65add4561adb138fe1822fad71d27191137bf925bb53dcbb14da15475366b93",
     ".reins/core/skills/audit/SKILL.md": "4c62f319df2f19c18f58d4ba9a2870f85c699a3f859f3d3085787b6c52580e68",
     ".reins/core/skills/backlog/SKILL.md": "9affee7b8c3ee2eb14b3aface0cdd03900a06319a176955c53987c2a80fc04c2",
-    ".reins/core/skills/done/SKILL.md": "673d779fade95ffebe16586dadc9047d6d24394684fe309e803923c5c1494c22",
-    ".reins/core/skills/notes/SKILL.md": "5d3a0038be7b6d72d06ce075fdc6136d527bff52118405c7fb3023630c2f3318",
+    ".reins/core/skills/done/SKILL.md": "cc999a84b408920500d1c7557411f4ad5ca3d2a8b98fb82ea4a7ae8ecd8eb52f",
+    ".reins/core/skills/notes/SKILL.md": "f432185214d632abc3558d23f3d1e4c9af2d094f05e1138f99dd27c218b774bb",
     ".reins/core/templates/progress-cold/decisions.md": "216234331c4326d541ada778463170816dc4cef786bb3afb4cfc7b29934bb55b",
     ".reins/core/templates/progress-cold/delivery.md": "fba6dd4789b25c2141b9afc04a7ced80685f11edd52c7d59c4241ac65366f96a",
     ".reins/core/templates/progress-cold/verification.md": "51efde62c6ba83581a96cdaf6a62ae6697ae5b25caa50b7a72ace569a3c115a7",
@@ -28,14 +28,14 @@
     ".claude/skills/reins-arch/SKILL.md": "50d22129ee51f25503ad639bedc296e3e12f324e47ed5898cd7f8145de19cb73",
     ".claude/skills/reins-audit/SKILL.md": "9ffa7e9ec25495cc2e52d075f7ed9cc099c07af118963bb44fb7387b7e47bb29",
     ".claude/skills/reins-backlog/SKILL.md": "9637f24e567c40641b67e0aedb2a25505aac03514d9c9168df08f86113de11aa",
-    ".claude/skills/reins-done/SKILL.md": "5a1da679e2fb90940d4404992afeba441ffeaaed8d4d7fe655278ead594b9f9c",
-    ".claude/skills/reins-notes/SKILL.md": "2c90f4a86c5a7a5b5728fc744a6c29e992c4bd4187f2ccbce83fd5f2456b8289",
+    ".claude/skills/reins-done/SKILL.md": "39837f191d90f44187119c3b90a8303c90bd6518ab00f84e6231fa6064511136",
+    ".claude/skills/reins-notes/SKILL.md": "a956fad0946e9d7632078a9437799b58508c0dcf783134479da751a643f0a98e",
     ".claude/agents/reins-explorer.md": "aad14f84393ea97b91a1387952ee3e420fe64aed696f524d1873ea5b0f2185ce",
     ".claude/agents/reins-reviewer.md": "4675c8fa40679bb18cde972a189cf7a66fcaf250a4ed48d25311fb07d63525bc"
   },
   "blocks": {
-    "AGENTS.md#rules": "353d9ea59f64c769141f8e8bf07c71af53d74be7009b40775a3049c754d5eb02",
-    "AGENTS.md#notes": "977cb3034d7c09d30c3b5e4c25e9cdf1a174575e2702cb1a69d483ccf2b1e291"
+    "AGENTS.md#rules": "b9f2c0893c4ac8631258f6d78ed7d2b592bccdc76cbed97294b232416d3dbf54",
+    "AGENTS.md#notes": "8b3092d66a615d4d1af6e17eadb4bf6f4b2535b6fd936f8b314912ff307b9083"
   },
   "adapters": {
     "claude": true
@@ -48,7 +48,7 @@
     "hooks": [
       {
         "event": "PreToolUse",
-        "matcher": "Read|Edit|Write|MultiEdit",
+        "matcher": "Read|Edit|Write|MultiEdit|Grep|Glob",
         "command": "\"$CLAUDE_PROJECT_DIR\"/node_modules/.bin/reins notes --hook"
       },
       {

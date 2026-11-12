@@ -335,6 +335,30 @@ test('note-dead-paths and note-dead-refs: for every note, only when the repo fil
   assert.ok(DOCTOR_RULES.includes('note-dead-paths') && DOCTOR_RULES.includes('note-dead-refs'));
 });
 
+test('note-uncovered: a sizeable folder the task changed that its note never names', () => {
+  const base = 'src/pages/candidates';
+  const jm = Array.from({ length: 12 }, (_, i) => `${base}/JobMatches/f${i}.jsx`);
+  const small = [`${base}/Tiny/a.jsx`, `${base}/Tiny/b.jsx`];
+  const repoFiles = [...jm, ...small, `${base}/index.jsx`];
+  const mod = note('.reins/notes/candidates.md', [`${base}/**`], '## Purpose\nSource Talent search page.\n## Map\n- `Search/`: the old page.');
+  const changed = [...jm.slice(0, 4), small[0], `${base}/index.jsx`];
+  const r = doctor({ changedFiles: changed, notes: [mod], repoFiles });
+  const v = r.violations.filter((x) => x.rule === 'note-uncovered');
+  assert.equal(v.length, 1);
+  assert.equal(v[0].from, '.reins/notes/candidates.md');
+  assert.match(v[0].message, /^This task changed `src\/pages\/candidates\/JobMatches\/` \(12 files\), but the note never names it/);
+  assert.doesNotMatch(v[0].message, /Tiny/, 'below uncovered_min_files');
+  // named in the note (any case), covered by a part note, a small task, or turned off: no warning
+  const named = note(mod.file, mod.paths, `${mod.body}\n- \`jobMatches/\`: filters.`);
+  assert.ok(!rules(doctor({ changedFiles: changed, notes: [named], repoFiles })).includes('note-uncovered'));
+  const part = note('.reins/notes/candidates/JobMatches.md', [`${base}/JobMatches/**`]);
+  assert.ok(!rules(doctor({ changedFiles: changed, notes: [mod, part], repoFiles })).includes('note-uncovered'));
+  assert.ok(!rules(doctor({ changedFiles: jm.slice(0, 2), notes: [mod], repoFiles })).includes('note-uncovered'), 'small');
+  const off = parseDoctorConfig('notes: { uncovered_min_files: 0 }\n');
+  assert.ok(!rules(doctor({ config: off, changedFiles: changed, notes: [mod], repoFiles })).includes('note-uncovered'));
+  assert.ok(DOCTOR_RULES.includes('note-uncovered'));
+});
+
 test('rankStaleNotes: commits to a note\'s paths since the note last changed, most behind first', () => {
   const notes = [note('.reins/notes/a.md', ['src/a/**']), note('.reins/notes/b.md', ['src/b/**']), note('.reins/notes/new.md', ['src/n/**'])];
   const history = [ // newest first

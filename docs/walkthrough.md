@@ -173,7 +173,7 @@ Resume from its "Next step"; keep it updated with `npx reins progress`.
 ## Files changed on this branch (1)
 - src/features/cart/cartStore.js
 
-## Module notes for those files (follow them)
+## Module notes for those files (start from them; the code wins)
 ### .reins/notes/cart.md (applies to src/features/cart/**)
 ...
 ```

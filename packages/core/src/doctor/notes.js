@@ -9,8 +9,8 @@ import { isReinsFile } from './triage.js';
 const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {const} */ ('warn'), key: `${rule}|${from}`, from, message, fix });
 
 /**
- * note-missing, note-outdated, note-draft, note-size, note-layout; with `repoFiles`, also note-dead-paths and
- * note-dead-refs, for every note (not only the touched ones).
+ * note-missing, note-outdated, note-draft, note-size, note-layout; with `repoFiles`, also note-uncovered (touched
+ * notes) and note-dead-paths and note-dead-refs, for every note (not only the touched ones).
  * @param {object} input
  * @param {string[]} input.changedFiles
  * @param {{ file: string, paths: string[], body: string }[]} input.notes
@@ -19,8 +19,9 @@ const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {cons
  * @param {number} input.maxLines
  * @param {string[] | null} [input.repoFiles] every file of the repo, repo-relative; null skips the dead-* rules
  * @param {boolean} [input.planChanged] architecture.yml changed: every domain without a note is flagged, at any level
+ * @param {number} [input.uncoveredMinFiles] note-uncovered: smallest folder (in files) worth naming in its note; 0 turns it off
  */
-export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null, planChanged = false }) {
+export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null, planChanged = false, uncoveredMinFiles = 10 }) {
   const code = changedFiles.filter((f) => !isReinsFile(f));
   const changed = new Set(changedFiles);
   const findings = [];
@@ -86,8 +87,54 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines, repo
       );
     }
   }
+  if (repoFiles && level !== 'small' && uncoveredMinFiles > 0) findings.push(...checkUncovered(touching, code, notes, repoFiles, uncoveredMinFiles));
   if (repoFiles) findings.push(...checkDead(notes, repoFiles));
   return findings;
+}
+
+/**
+ * note-uncovered: the task changed files in a sizeable folder of a module (a direct subfolder of one of the note's
+ * `<dir>/**` globs) that the note never names, and no part note covers. The next agent gets the note and still has
+ * to explore that folder from scratch (DEV-8939: `JobMatches/` grew inside a module whose note only described the
+ * older page). Only folders the task touched: the agent knows them now, so the fix is cheap.
+ * @param {{ file: string, paths: string[], body: string }[]} touching
+ * @param {string[]} code changed code files
+ * @param {{ file: string, paths: string[] }[]} notes
+ * @param {string[]} repoFiles
+ * @param {number} minFiles
+ */
+function checkUncovered(touching, code, notes, repoFiles, minFiles) {
+  const out = [];
+  for (const n of touching) {
+    const body = n.body.toLowerCase();
+    const found = new Map();
+    for (const glob of n.paths) {
+      if (!glob.endsWith('/**') || GLOB_CHARS.test(glob.slice(0, -3))) continue;
+      const base = `${glob.slice(0, -3)}/`;
+      for (const f of code) {
+        if (!f.startsWith(base)) continue;
+        const rest = f.slice(base.length);
+        if (!rest.includes('/')) continue;
+        const dir = base + rest.slice(0, rest.indexOf('/'));
+        if (found.has(dir)) continue;
+        const name = dir.slice(base.length).toLowerCase();
+        const part = notes.some((x) => x !== n && x.paths.some((p) => p === dir || p.startsWith(`${dir}/`)));
+        if (part || body.includes(name)) continue;
+        const size = repoFiles.filter((r) => r.startsWith(`${dir}/`)).length;
+        if (size >= minFiles) found.set(dir, size);
+      }
+    }
+    if (!found.size) continue;
+    const list = [...found].map(([d, size]) => `\`${d}/\` (${size} files)`).join(', ');
+    out.push(
+      finding(
+        'note-uncovered', n.file,
+        `This task changed ${list}, but the note never names ${found.size > 1 ? 'them' : 'it'}, so the next agent gets the note and still explores ${found.size > 1 ? 'those folders' : 'that folder'} from scratch.`,
+        `Add ${found.size > 1 ? 'them' : 'it'} to the note's Map: what lives there and how it fits the module (in Claude Code: /reins-notes). A large area can get a note of its own: \`npx reins notes new <folder>\`.`,
+      ),
+    );
+  }
+  return out;
 }
 
 /**

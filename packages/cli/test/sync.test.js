@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo } from './helpers.js';
 import { CURSOR_HOOKS, fitNotesIndex, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
-const HOW = '- Before changing a file, run `npx reins notes <path…>` to get its module notes (the hook delivers them only on Read/Edit/Write)';
+const HOW = '- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands)';
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
 const read = (dir, f) => readFileSync(path.join(dir, f), 'utf8');
 const write = (dir, f, text) => {
@@ -114,12 +114,12 @@ test('generated content: prefixed names, Claude frontmatter, notes index, CLAUDE
   assert.match(read(dir, '.claude/agents/reins-explorer.md'), /^---\nname: reins-explorer\ndescription: .+\ntools: Read, Grep, Glob\n---\n/);
   assert.match(read(dir, 'AGENTS.md'), /^# example-vite-react\nCommands: `npm run dev` · `npm run build` · `npx reins check`/);
   assert.match(read(dir, 'AGENTS.md'), /<!-- reins:rules:start[^>]*-->\n## Always/);
-  assert.match(read(dir, 'AGENTS.md'), /<!-- reins:notes:start[^>]*-->\n- Before changing a file, run `npx reins notes <path…>` .+ By path:\n- `src\/features\/cart\/\*\*` → `\.reins\/notes\/cart\.md`\n<!-- reins:notes:end -->/);
+  assert.match(read(dir, 'AGENTS.md'), /<!-- reins:notes:start[^>]*-->\n- Before reading or searching the code of an area, get its notes: .+ By path:\n- `src\/features\/cart\/\*\*` → `\.reins\/notes\/cart\.md`\n<!-- reins:notes:end -->/);
   assert.ok(read(dir, 'AGENTS.md').split('\n').length <= 31);
   assert.equal(read(dir, 'CLAUDE.md'), '@AGENTS.md\n');
   const settings = JSON.parse(read(dir, '.claude/settings.json'));
   assert.deepEqual(settings.permissions.deny, SETTINGS.deny);
-  assert.equal(settings.hooks.PreToolUse[0].matcher, 'Read|Edit|Write|MultiEdit');
+  assert.equal(settings.hooks.PreToolUse[0].matcher, 'Read|Edit|Write|MultiEdit|Grep|Glob');
   assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /reins notes --hook$/);
   assert.equal(settings.hooks.SessionStart[0].matcher, 'startup|compact|clear');
   assert.match(settings.hooks.SessionStart[0].hooks[0].command, /reins resume --hook$/);
@@ -173,7 +173,7 @@ test('existing AGENTS.md and CLAUDE.md belong to the repo: only the notes block 
   assert.equal(read(dir, 'CLAUDE.md'), 'my own CLAUDE.md\n');
   write(dir, 'AGENTS.md', '# mine\n<!-- reins:notes:start -->\nstale\n<!-- reins:notes:end -->\nafter\n');
   await cli(dir, ['sync']);
-  assert.equal(read(dir, 'AGENTS.md'), '# mine\n<!-- reins:notes:start -->\n- Before changing a file, run `npx reins notes <path…>` to get its module notes (the hook delivers them only on Read/Edit/Write). By path:\n- `src/features/cart/**` → `.reins/notes/cart.md`\n<!-- reins:notes:end -->\nafter\n');
+  assert.equal(read(dir, 'AGENTS.md'), '# mine\n<!-- reins:notes:start -->\n- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands). By path:\n- `src/features/cart/**` → `.reins/notes/cart.md`\n<!-- reins:notes:end -->\nafter\n');
 });
 
 test('--check detects hand edits, stale sources, new notes and removed settings; sync repairs them', async () => {
@@ -269,7 +269,7 @@ test('mergeSettings: removes entries reins no longer wants, keeps everything els
   const r = mergeSettings(current, previous);
   const s = JSON.parse(r.text);
   assert.deepEqual(s.permissions.deny, ['A', 'Bash(git commit:*)', 'B', 'Bash(git push:*)']);
-  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit']);
+  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit|Grep|Glob']);
   assert.deepEqual(r.owned.deny, SETTINGS.deny);
   assert.equal(mergeSettings(r.text, r.owned).changed, false);
 });
@@ -319,6 +319,32 @@ test('notes block: always says how to get the notes; only the count when the ind
   assert.equal(fit.compact, true);
   assert.equal(fit.block, `${HOW}. 4 notes in \`.reins/notes/\`, too many to list here.\n`);
   assert.deepEqual(fitNotesIndex([], 0), { block: '', compact: false });
+});
+
+test('notes index: each line ends with the first sentence of the note\'s Purpose, when there is one', () => {
+  const index = renderNotesIndex([
+    { file: '.reins/notes/a.md', paths: ['src/a/**'], body: '# a\n\n## Purpose\nSource Talent and Job Matches: search and filters. More detail.\n\n## Map\n- x' },
+    { file: '.reins/notes/b.md', paths: ['src/b/**'], body: '# b\n\n## Purpose\nTODO: what this module is for.\n' },
+    { file: '.reins/notes/c.md', paths: ['src/c/**'], body: '- a bare note' },
+  ]);
+  assert.equal(index, [
+    '- `src/a/**` → `.reins/notes/a.md` — Source Talent and Job Matches: search and filters.',
+    '- `src/b/**` → `.reins/notes/b.md`',
+    '- `src/c/**` → `.reins/notes/c.md`',
+    '',
+  ].join('\n'));
+});
+
+test('upgrading: the notes hook installed by an older reins (Read|Edit|Write|MultiEdit) is replaced, not duplicated', () => {
+  const command = SETTINGS.hooks.find((h) => h.event === 'PreToolUse')?.command ?? '';
+  const old = { event: 'PreToolUse', matcher: 'Read|Edit|Write|MultiEdit', command };
+  const current2 = JSON.stringify({ hooks: { PreToolUse: [{ matcher: old.matcher, hooks: [{ type: 'command', command }] }, { matcher: 'Mine', hooks: [] }], SessionStart: [] } });
+  const r = mergeSettings(current2, { deny: [], hooks: [old] });
+  const s = JSON.parse(r.text ?? '{}');
+  assert.deepEqual(Object.keys(s.hooks), ['PreToolUse', 'SessionStart'], 'events keep their order');
+  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['Read|Edit|Write|MultiEdit|Grep|Glob', 'Mine'], 'changed in place, not moved to the end');
+  assert.ok(r.owned.hooks.some((h) => h.matcher === 'Read|Edit|Write|MultiEdit|Grep|Glob'), 'still owned by reins');
+  assert.equal(mergeSettings(r.text, r.owned).changed, false);
 });
 
 test('sync never writes an AGENTS.md that doctor rejects: 40 notes still fit in the limit', async () => {

@@ -123,7 +123,7 @@ A boundary crossing is an import that reaches a domain's internals instead of it
 
 What `install` sets up, in the order the agent hits it:
 
-1. **Size the task.** The agent runs `reins triage "<why>" --files <paths it expects to touch>` and reins measures the level — `small`, `medium`, `large` — from the domains, public APIs and code files involved (docs and tests don't count). The agent announces it, and can only raise it.
+1. **Size the task.** Before exploring, `reins triage "<why>"` names the likely areas and hands over their notes. Then the agent runs `reins triage "<why>" --files <paths it expects to touch>` and reins measures the level — `small`, `medium`, `large` — from the domains, public APIs and code files involved (docs and tests don't count). The agent announces it, and can only raise it.
 2. **Plan.** Before changing a file other domains may import (a util, a type, a barrel, a public API), the agent runs `reins impact` on it. "Medium, but could be large if another domain shows up" stops being a guess.
 3. **Edit.** The module note arrives the moment the agent opens a file — a Claude Code hook, or the notes index in `AGENTS.md` for any other agent.
 4. **Close.** `reins check` confirms the boundaries instead of surprising; `reins doctor` (local, never in CI) compares the declared level with the branch diff and flags stale or missing notes. `reins progress close` only closes the task once nothing in its notebook is pending and those notes are updated, so what the agent learned stays.

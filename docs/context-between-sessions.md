@@ -20,19 +20,24 @@ flowchart LR
     end
     subgraph when["When it reaches the agent"]
         direction TB
-        open["Opens a file of the module<br/>PreToolUse hook"]
+        triage["Starts a task<br/>reins triage"]
+        open["Opens or searches the module<br/>PreToolUse hook"]
         start["Session start, /clear,<br/>compaction<br/>SessionStart hook"]
         any["Any agent<br/>AGENTS.md index ·<br/>reins resume"]
     end
+    note --> triage
     note --> open
     note --> start
     nb --> start
     note --> any
     nb --> any
-    open --> agent["Agent"]
+    triage --> agent["Agent"]
+    open --> agent
     start --> agent
     any --> agent
 ```
+
+**Starting a task.** Before reading code, the agent runs `npx reins triage "add a coupon field to the cart"`. reins matches those words against the notes (names, paths, the folders they cover, their text) and prints the likely modules with their notes; nothing is recorded yet. The agent explores from there, and runs triage again with `--files` once it knows what it will touch. The notes guide; when one disagrees with the code, the code wins and the agent says so, so the note gets fixed.
 
 **Coming back to a module a week later.** The agent opens `src/features/cart/cartStore.js` and, before it edits anything, receives:
 

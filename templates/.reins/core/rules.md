@@ -1,5 +1,5 @@
 ## Always
-- Before acting, run `npx reins triage "<reason>" --files <paths you expect to touch>`: reins measures the task level (small, medium, large). Then state that level and why in one line; give a level yourself only to raise it. See `.reins/core/policies/triage.md` (or `.reins/policies/triage.md`). A prompt starting with [quick] or [deep] decides the level; then don't announce it.
+- Before reading or searching the code, run `npx reins triage "<reason>"` (the reason with the names the code uses): it prints the likely areas and their notes; start from them. Once you know the files, run it again with `--files <paths you expect to touch>`: reins measures the task level (small, medium, large). Then state that level and why in one line; give a level yourself only to raise it. See `.reins/core/policies/triage.md` (or `.reins/policies/triage.md`). A prompt starting with [quick] or [deep] decides the level; then don't announce it.
 - Before restructuring a domain or folder, or editing a file other code may import (component, util, type, barrel, public API), run `npx reins impact <file-or-folder>` and plan with its domains and level. Unsure if it's shared → run it. It is not exploring: every level.
 - Never commit, push or open a PR. Leave the changes uncommitted.
 - Never use `--no-verify`.

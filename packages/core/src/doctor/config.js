@@ -13,19 +13,20 @@ export const DOCTOR_DEFAULTS = Object.freeze({
   },
   agents_md: { max_lines: 45 },
   progress: { hot_max_lines: 40 },
-  notes: { max_lines: 60 },
+  // a folder of a module with at least this many files, changed and never named by its note: note-uncovered
+  notes: { max_lines: 60, uncovered_min_files: 10 },
 });
 
 /**
  * @typedef {{ triage: { small: { max_files: number, max_domains: number }, medium: { max_domains: number }, not_counted: string[] },
- *   agents_md: { max_lines: number }, progress: { hot_max_lines: number }, notes: { max_lines: number } }} DoctorConfig
+ *   agents_md: { max_lines: number }, progress: { hot_max_lines: number }, notes: { max_lines: number, uncovered_min_files: number } }} DoctorConfig
  */
 
 const SHAPE = {
   triage: { small: { max_files: 0, max_domains: 0 }, medium: { max_domains: 0 }, not_counted: [] },
   agents_md: { max_lines: 0 },
   progress: { hot_max_lines: 0 },
-  notes: { max_lines: 0 },
+  notes: { max_lines: 0, uncovered_min_files: 0 },
 };
 
 /**

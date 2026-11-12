@@ -1,6 +1,6 @@
 ---
 name: notes
-description: Fill in, improve or review the module notes in .reins/notes/ (purpose, map, how it works, decisions, traps). Use it after reins init or reins notes new, when reins doctor reports note-draft, note-dead-paths or note-dead-refs, when asked to document a module, or with "review" to check notes that fell behind their code.
+description: Fill in, improve or review the module notes in .reins/notes/ (purpose, map, how it works, decisions, traps). Use it after reins init or reins notes new, when reins doctor reports note-draft, note-dead-paths, note-dead-refs or note-uncovered, when asked to document a module, or with "review" to check notes that fell behind their code.
 ---
 # Fill in module notes
 

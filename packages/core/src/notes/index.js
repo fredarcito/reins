@@ -88,3 +88,18 @@ export function pathsInside(part, module) {
   const dirs = module.paths.filter((p) => p.endsWith('/**')).map((p) => p.slice(0, -2));
   return part.paths.every((p) => dirs.some((d) => p.startsWith(d)));
 }
+
+/**
+ * The first sentence of a note's `## Purpose` section, or null when there is none (or it is still a TODO). Used for
+ * the AGENTS.md index, so a task reaches its module by what the module does, not only by its folder names.
+ * @param {string} body
+ * @param {number} [max] characters kept
+ */
+export function notePurpose(body, max = 110) {
+  const m = /^##\s+Purpose\s*\n+([\s\S]*?)(?=\n##\s|$)/m.exec(body);
+  if (!m) return null;
+  const text = m[1].split(/\n\s*\n/)[0].replace(/\s+/g, ' ').trim();
+  if (!text || /\bTODO\b/.test(text)) return null;
+  const sentence = /^(.+?[.!?])(\s|$)/.exec(text)?.[1] ?? text;
+  return sentence.length > max ? `${sentence.slice(0, max - 1).replace(/\s+\S*$/, '')}…` : sentence;
+}

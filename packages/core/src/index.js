@@ -12,7 +12,8 @@ export {
   parseNotebook, formatProblems, notebookFile, taskFolder, branchFolder, PROGRESS_DIR, NOTEBOOK_NAME, TASK_RE, formatHeader, summarizeNotebook,
   cleanupPlan, MARKERS, countLines,
 } from './doctor/index.js';
-export { NOTES_DIR, parseNote, parseFrontmatter, isNoteFile, notesFor, parentNoteFile, pathsInside } from './notes/index.js';
+export { NOTES_DIR, parseNote, parseFrontmatter, isNoteFile, notesFor, parentNoteFile, pathsInside, notePurpose } from './notes/index.js';
+export { suggestNotes, words } from './notes/suggest.js';
 export { NOTE_TODO_RE, summarizeModule, draftNote } from './notes/draft.js';
 export { rankStaleNotes } from './notes/stale.js';
 export { BACKLOG_FILE, BACKLOG_HEADER, STATUSES, parseBacklog, renderFinding, addFinding, setStatus, markRecheck } from './backlog/index.js';

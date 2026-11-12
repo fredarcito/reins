@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.17.0 · 2026-11-12
+
+Module notes reach the agent before it explores the code, not just before it edits.
+
+```bash
+npx reins update
+```
+
+- **`reins triage "<reason>"` hands over the notes first.** Without files it measures and records nothing: it matches the words of the task against the module notes (their names, paths, the folders they cover and their text) and prints the likely areas with their notes. The agent starts exploring from there, then runs triage again with `--files` to measure the level as before. Until now triage needed the files, so the agent explored to find them and got the notes at the end, when they could no longer save anything. Plain word matching, no model: a folder name counts even when the note never mentions it (`JobMatches/` for "job matches"). With `--files`, triage also prints the notes of those files.
+- **The rule in `AGENTS.md` changes to match:** run triage before reading or searching the code, not just before changing it. `reins update` rewrites it for you.
+- **The notes index in `AGENTS.md` says what each module does.** Each line ends with the first sentence of the note's Purpose, so a task reaches its module by meaning and not only by folder names.
+- **Notes guide, the code decides.** Notes used to arrive with "follow them"; now with "start from them; the code wins if they disagree, and say so". A stale note obeyed is worse than no note, and the disagreement is how it gets fixed.
+- **`reins doctor` warns when a note does not cover a folder the task changed** (`note-uncovered`): a subfolder with 10 or more files that the note never names. The next agent would get the note and still explore that folder from scratch. Tune it with `notes.uncovered_min_files` in `.reins/doctor.yml` (0 turns it off).
+- **The notes hook also fires on `Grep` and `Glob`** in Claude Code: searching a folder brings its notes. `reins update` changes the hook in place in `.claude/settings.json`.
+- **Changed:** `reins triage <words>` without files and without a level used to fail; now it suggests notes (only `small`/`medium` without files still fail, with the fix).
+
 ## 0.16.0 · 2026-11-11
 
 reins compares a branch with where it started, so tasks cut from `staging` or from a feature branch show only their own files.

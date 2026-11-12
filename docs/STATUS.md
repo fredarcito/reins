@@ -28,7 +28,8 @@ Version 0.15.0, on npm as `@agentreins/cli`, `@agentreins/core`, `@agentreins/ad
 | Cursor: runs the `.claude/settings.json` hooks; `sync` adds a no-op `sessionStart` to `.cursor/hooks.json`; session id from `CURSOR_CONVERSATION_ID` | cli | experimental | Yes (2026-11-08), tested; verified by hand in Cursor 3.29.9 (P12, few runs); compaction in Cursor not covered |
 | Impact warning in the notes hook (`impact --map` built in the background at session start) | cli | experimental | Yes (2026-11-08), tested; background build checked by hand; not yet seen changing a real agent's behavior |
 | Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `reins` |
-| Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2 |
+| Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2. `Grep`/`Glob` (folder → its notes) added 0.17.0, tested, not yet run in Claude Code |
+| Notes before exploring: `triage "<reason>"` without files suggests notes (word matching), `--files` prints them, purpose in the AGENTS.md index, `note-uncovered` | core + cli + rules | experimental | Tested (0.17.0); matching quality not yet measured on a real repo |
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Yes (phase 8), tested; end-to-end with Husky |

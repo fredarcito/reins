@@ -43,7 +43,7 @@ test('hook: returns additionalContext for Read/Edit of a noted path, once per no
   const call = (file, session = 's1', tool = 'Read') => hookResponse(dir, { session_id: session, hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { file_path: path.join(dir, file) } });
   const first = JSON.parse(call('src/features/billing/tax.ts'));
   assert.equal(first.hookSpecificOutput.hookEventName, 'PreToolUse');
-  assert.match(first.hookSpecificOutput.additionalContext, /^Module notes for src\/features\/billing\/tax\.ts \(from \.reins\/notes; follow them\):\n\nNote \.reins\/notes\/billing\.md/);
+  assert.match(first.hookSpecificOutput.additionalContext, /^Module notes for src\/features\/billing\/tax\.ts \(from \.reins\/notes; start from them; the code wins if they disagree, and say so\):\n\nNote \.reins\/notes\/billing\.md/);
   assert.equal(call('src/features/billing/Invoice.tsx', 's1', 'Edit'), null, 'same note, same session: not repeated');
   assert.notEqual(call('src/lib/date.ts'), null, 'another note in the same session');
   assert.notEqual(call('src/features/billing/tax.ts', 's2'), null, 'a new session gets it again');
@@ -52,6 +52,11 @@ test('hook: returns additionalContext for Read/Edit of a noted path, once per no
   assert.equal(call('src/components/Button.tsx'), null, 'no note');
   assert.equal(hookResponse(dir, { session_id: 's3', tool_input: { file_path: '/etc/hosts' } }), null, 'outside the repo');
   assert.equal(hookResponse(dir, { session_id: 's3', tool_input: { command: 'ls' } }), null, 'no file path');
+  // Grep and Glob pass a folder: the notes of the files inside it
+  const grep = JSON.parse(hookResponse(dir, { session_id: 's4', tool_name: 'Grep', tool_input: { pattern: 'tax', path: path.join(dir, 'src/features/billing') } }) ?? '{}');
+  assert.match(grep.hookSpecificOutput?.additionalContext ?? '', /^Module notes for src\/features\/billing\/ /);
+  assert.equal(hookResponse(dir, { session_id: 's5', tool_name: 'Glob', tool_input: { pattern: '**/*.ts', path: dir } }), null, 'the repo root says nothing');
+  assert.equal(hookResponse(dir, { session_id: 's5', tool_name: 'Grep', tool_input: { pattern: 'x' } }), null, 'no path: the whole repo');
 });
 
 test('notes --hook never breaks the tool call: bad input prints nothing and exits 0', async () => {

@@ -14,7 +14,7 @@ Coding agents write code fast, but they forget, in two ways:
 reins fixes both:
 
 - **Your architecture becomes a check.** It runs on every commit and every pull request, whatever agent wrote the code. When something breaks a rule, the commit is blocked with the reason and the fix, so the agent corrects it before you even review.
-- **Each module gets a short note.** What it does, how it works, the decisions taken and why, and its traps. The note reaches the agent as soon as it opens a file of that module, and after a compaction the task's notebook comes back on its own. The agent starts from what the team already knows instead of rediscovering it.
+- **Each module gets a short note.** What it does, how it works, the decisions taken and why, and its traps. The note reaches the agent before it explores: the first step of every task names the likely modules and hands over their notes, and the hook delivers them again when it opens a file. After a compaction the task's notebook comes back on its own. The agent starts from what the team already knows instead of rediscovering it.
 
 **Made for** frontend teams on Vite + React or Next (plain JS/JSX or TypeScript) working with Claude Code, Codex, Cursor or any other agent.
 
@@ -25,7 +25,7 @@ reins fixes both:
 | Without | With reins |
 | --- | --- |
 | A shared component imports from a feature. Someone spots it in review, or nobody does | The commit is blocked; the agent reads the fix and corrects it |
-| A week later, the agent reads a whole module again to find out what it does and why | Its note (purpose, map, decisions with their why, traps) reaches the agent as soon as it opens the module |
+| A week later, the agent reads a whole module again to find out what it does and why | Its note (purpose, map, decisions with their why, traps) reaches the agent before it starts exploring the module |
 | A long conversation gets compacted and the task's decisions are lost | The notebook and the notes of the files in play come back right after the compaction |
 | Architecture rules live in a long prompt the agent skims | They live in `architecture.yml`, checked by a tool. The prompt stays at 45 lines |
 | "Review the whole project" every few weeks, from scratch | Findings stay in a backlog; the next audit rechecks them |
@@ -198,16 +198,19 @@ flowchart LR
     end
     subgraph when["When it reaches the agent"]
         direction TB
-        open["Opens a file of the module<br/>PreToolUse hook"]
+        triage["Starts a task<br/>reins triage"]
+        open["Opens or searches the module<br/>PreToolUse hook"]
         start["Session start, /clear,<br/>compaction<br/>SessionStart hook"]
         any["Any agent<br/>AGENTS.md index ·<br/>reins resume"]
     end
+    note --> triage
     note --> open
     note --> start
     nb --> start
     note --> any
     nb --> any
-    open --> agent["Agent"]
+    triage --> agent["Agent"]
+    open --> agent
     start --> agent
     any --> agent
 ```
@@ -248,6 +251,7 @@ Your agent runs these for you. You mostly talk to it; this is what it uses. `npx
 | `reins notes <path…>` | The notes that apply to a path. `notes new <folder>` drafts one; `notes stale` ranks the ones behind their code |
 | `reins scope <path…>` · `reins impact <file>` | Path → domains and minimum task level · file → the domains that import it |
 | `reins resume` | The session's task notebook and notes: what an agent needs to pick a task up |
+| `reins triage "<why>"` | Before exploring: the likely areas of the task and their module notes (word matching; nothing recorded) |
 | `reins triage "<why>" --files <paths>` | Measures the task level from the files the agent expects to touch, and records it |
 | `reins progress` · `reins audit` | The task notebook and the audit backlog, edited one line at a time |
 | `reins review` | A review prompt with the diff, checklist and notes (`--map` for the PR architecture map) |
