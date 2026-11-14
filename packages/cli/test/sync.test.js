@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cli, exampleRepo } from './helpers.js';
-import { CURSOR_HOOKS, fitNotesIndex, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
+import { cli, exampleRepo, git } from './helpers.js';
+import { CURSOR_HOOKS, fitNotesIndex, installScript, PREPARE_STEP, withLocalSync, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
 const HOW = '- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands)';
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
@@ -407,4 +407,74 @@ test('hand-edited rules in an AGENTS.md without markers are left alone with a wa
   assert.match(r.stdout, /AGENTS\.md has no reins rules markers/);
   assert.doesNotMatch(read(dir, 'AGENTS.md'), /reins:rules:start/);
   assert.equal(read(dir, 'AGENTS.md').split('<!-- reins:notes:start')[0], before.split('<!-- reins:notes:start')[0]);
+});
+
+/** A synced repo that commits everything except .claude/, which it gitignores (repvue-employer). */
+async function ignoredClaudeRepo() {
+  const dir = repo();
+  assert.equal((await cli(dir, ['sync'])).code, 0);
+  write(dir, '.gitignore', `${existsSync(path.join(dir, '.gitignore')) ? read(dir, '.gitignore') : ''}\n.claude\n`);
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'reins');
+  return dir;
+}
+
+test('the prepare step is appended once, after the repo\'s own steps', () => {
+  assert.equal(withLocalSync(undefined), PREPARE_STEP);
+  assert.equal(withLocalSync('  '), PREPARE_STEP);
+  assert.equal(withLocalSync('husky'), `husky && ${PREPARE_STEP}`);
+  assert.equal(withLocalSync(`husky && ${PREPARE_STEP}`), null);
+});
+
+test('yarn runs postinstall on install, not prepare: the local sync goes there', () => {
+  const dir = repo();
+  assert.equal(installScript(dir, {}), 'prepare');
+  assert.equal(installScript(dir, { packageManager: 'yarn@4.9.2' }), 'postinstall');
+  write(dir, 'yarn.lock', '');
+  assert.equal(installScript(dir, {}), 'postinstall');
+});
+
+test('gitignored generated files: never an integrity finding; sync adds prepare; --local regenerates only them', async () => {
+  const dir = await ignoredClaudeRepo();
+  // package.json is committed: its missing prepare step is a normal divergence, the .claude/ files are not
+  const before = await cli(dir, ['sync', '--check']);
+  assert.equal(before.code, 1);
+  assert.match(before.stdout, /package\.json: "prepare" does not run `reins sync --local`/);
+  assert.doesNotMatch(before.stdout, /\.claude\//);
+
+  const r = await cli(dir, ['sync']);
+  assert.match(r.stdout, /package\.json: "prepare" now also runs/);
+  assert.equal(JSON.parse(read(dir, 'package.json')).scripts.prepare, withLocalSync(undefined));
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'prepare');
+
+  // a fresh clone: no .claude/ at all
+  rmSync(path.join(dir, '.claude'), { recursive: true });
+  assert.equal((await cli(dir, ['sync', '--check'])).code, 0, 'nothing to commit, nothing to report');
+  const check = await cli(dir, ['check']);
+  assert.doesNotMatch(check.stdout, /Generated file out of sync/);
+  assert.match(check.stdout, /generated file\(s\) the repo gitignores are missing or out of date on this machine.*npx reins sync --local/);
+  assert.doesNotMatch((await cli(dir, ['check'], { env: { CI: 'true' } })).stdout, /gitignores/, 'CI has no .claude/ and no use for it');
+
+  // --local: the .claude/ files come back; committed files stay as they are, even when out of date
+  write(dir, '.reins/notes/cart.md', '---\npaths: ["src/features/cart/**", "src/lib/cart/**"]\n---\n- 2026-11-01: totals are integer cents.\n');
+  const agents = read(dir, 'AGENTS.md');
+  const manifest = read(dir, '.reins/.generated.json');
+  const local = await cli(dir, ['sync', '--local']);
+  assert.equal(local.code, 0, local.stderr);
+  assert.match(local.stdout, /gitignored generated file\(s\) written for this machine/);
+  for (const f of ['.claude/settings.json', '.claude/skills/reins-done/SKILL.md', '.claude/agents/reins-explorer.md']) assert.ok(existsSync(path.join(dir, f)), f);
+  assert.equal(read(dir, 'AGENTS.md'), agents, 'committed: left to reins sync');
+  assert.equal(read(dir, '.reins/.generated.json'), manifest);
+  assert.equal((await cli(dir, ['sync', '--local'])).stdout, '', 'silent when nothing changes');
+  assert.doesNotMatch((await cli(dir, ['check'])).stdout, /gitignores/);
+});
+
+test('sync --local does nothing before the repo adopted sync, and goes alone', async () => {
+  const dir = repo();
+  const r = await cli(dir, ['sync', '--local']);
+  assert.equal(r.code, 0);
+  assert.equal(r.stdout, '');
+  assert.equal(existsSync(path.join(dir, '.claude')), false);
+  assert.equal((await cli(dir, ['sync', '--local', '--check'])).code, 2);
 });

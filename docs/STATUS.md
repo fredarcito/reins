@@ -30,6 +30,7 @@ Version 0.15.0, on npm as `@agentreins/cli`, `@agentreins/core`, `@agentreins/ad
 | Templates: AGENTS.md, policies, notebook, skills, agents, pre-commit hook | templates | experimental | Written (phase 6); shipped inside `reins` |
 | Notes delivered by `PreToolUse` hook | cli (`notes --hook`) | experimental | Yes (phase 6); on `Read` and edits, once per session; verified 2/2. `Grep`/`Glob` (folder → its notes) added 0.17.0, tested, not yet run in Claude Code |
 | Notes before exploring: `triage "<reason>"` without files suggests notes (word matching), `--files` prints them, purpose in the AGENTS.md index, `note-uncovered` | core + cli + rules | experimental | Tested (0.17.0); matching quality not yet measured on a real repo |
+| Gitignored generated files (`.claude/`): never an integrity finding; `sync --local`, added by `sync` to package.json's `prepare` (`postinstall` with yarn) | cli (`sync`, `check`) | experimental | Yes (2026-11-13), tested on temporary repos and on a copy of repvue-employer; install scripts checked with npm 11, pnpm 11, yarn 4 and bun 1.3; Windows `cmd` not tried |
 | Permissions denying `git commit`/`git push` | cli (`sync`) | experimental | Yes (phase 6), written by `sync`; known bypasses (P2) |
 | `audit`, `progress`, `review` | core + cli | experimental | Yes (phase 7), tested; `progress` fuzzed with 500 random edit sequences |
 | `install` in a consumer repo | cli | experimental | Yes (phase 8), tested; end-to-end with Husky |

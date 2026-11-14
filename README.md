@@ -246,7 +246,7 @@ Your agent runs these for you. You mostly talk to it; this is what it uses. `npx
 | `reins init` | Drafts the architecture plan, the baseline and a note per domain from your code (`--dry-run` to preview) |
 | `reins check` | Checks the rules; exit 1 on new errors. `--files`, `--json`, `--update-baseline`, `--coverage` |
 | `reins doctor` | Local warnings about how the work is going (triage, notebook, notes). Never blocks, never runs in CI |
-| `reins sync` | Refreshes `.reins/core`, the `AGENTS.md` blocks and the optional Claude Code files |
+| `reins sync` | Refreshes `.reins/core`, the `AGENTS.md` blocks and the optional Claude Code files (a gitignored `.claude/` is rebuilt on every install) |
 | `reins update` | Updates the CLI and adapters, then runs `sync` |
 | `reins notes <path…>` | The notes that apply to a path. `notes new <folder>` drafts one; `notes stale` ranks the ones behind their code |
 | `reins scope <path…>` · `reins impact <file>` | Path → domains and minimum task level · file → the domains that import it |

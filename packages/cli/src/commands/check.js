@@ -217,7 +217,12 @@ export async function check(ctx) {
 
   // integrity of generated files: only once reins sync has been adopted (a manifest exists)
   if (integrityRule && integrityRule.severity !== 'off' && existsSync(path.join(root, MANIFEST_FILE))) {
-    const { divergences } = runSync(root, { check: true });
+    const { divergences, ignored } = runSync(root, { check: true });
+    // gitignored generated files (say .claude/) are this machine's, not the PR's: a plain warning, and none in CI,
+    // where nobody uses them and a findings line on every PR would teach people to skip integrity warnings
+    if (ignored.length && !ctx.env?.CI) {
+      warnings.push(`${ignored.length} generated file(s) the repo gitignores are missing or out of date on this machine (${ignored[0]}${ignored.length > 1 ? ', …' : ''}): run \`npx reins sync --local\` (installing dependencies does it once \`reins sync\` has added it to package.json).`);
+    }
     for (const d of divergences) {
       integrity.push({
         rule: 'integrity', severity: /** @type {'error'|'warn'} */ (integrityRule.severity), key: `integrity|generated|${d}`, from: MANIFEST_FILE,

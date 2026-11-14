@@ -330,3 +330,9 @@ Everything below is assumed, not tested. Each is a candidate for the pilot or fo
 
 - **Unverified:** Claude Code's `Grep` and `Glob` tools send the searched folder as `tool_input.path` (absent = the working directory), and the `PreToolUse` matcher `Read|Edit|Write|MultiEdit|Grep|Glob` fires for them. Tested only with hand-built payloads.
 - **Unverified:** `CLAUDE_CODE_SESSION_ID` in a Bash call equals the hook's `session_id`, so notes printed by `reins triage` count as delivered for the hook. If they differ, a note may arrive twice (harmless).
+
+## Install scripts for gitignored generated files (2026-11-13)
+
+- **Pass, on empty temporary projects (macOS):** the repo's own `prepare` runs on `install` with npm 11.12, pnpm 11.22 and bun 1.3; yarn 4.9 skips `prepare` and runs `postinstall`. pnpm runs it on the first install and when a dependency changes (added, or its version), not on a no-op install. With the command missing, `(missing-cmd … || exit 0)` leaves the install at exit 0 in all four.
+- **Pass:** on a clone of repvue-employer (`staging`, reins 0.17.0, pnpm 12 project), `sync --check` reported only the missing `prepare` step instead of nine `.claude/` files; `sync --local` wrote the nine files and nothing committed; `sync` added the step after `husky`.
+- **Unverified:** Windows (`cmd` reading `( … || exit 0)`), yarn 1, and pnpm with `ignore-scripts` set in a user's config (then `check` keeps pointing to `npx reins sync --local`).

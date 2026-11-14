@@ -139,7 +139,7 @@ Notebook format (`.reins/progress/<branch>/<task>/notebook.md`, local, outside g
 
 ## `reins sync`, `reins notes`, `reins scope`, `reins impact`, `reins resume`
 
-`sync` refreshes the provider-neutral core sources and managed `AGENTS.md` blocks. By default it also generates the optional Claude Code adapter; `--skip-claude` updates only the shared files and leaves existing Claude files untouched. It only touches generated files recorded in `.reins/.generated.json`.
+`sync` refreshes the provider-neutral core sources and managed `AGENTS.md` blocks. By default it also generates the optional Claude Code adapter; `--skip-claude` updates only the shared files and leaves existing Claude files untouched. It only touches generated files recorded in `.reins/.generated.json`. `--local` writes only the generated files the repo gitignores ([below](#gitignored-generated-files)).
 
 ```mermaid
 flowchart LR
@@ -171,8 +171,15 @@ flowchart LR
 | `AGENTS.md` / `CLAUDE.md` missing | Created from the templates; afterwards they belong to the repo (only marked reins blocks are managed) |
 | Notes index | Its first line asks the agent to run `npx reins notes <path…>` before changing a file, then one line per note; hooks are an optional client-specific fast path |
 | More notes than fit in `AGENTS.md` | Only that first line and the number of notes, so `AGENTS.md` stays within doctor's `agents_md.max_lines` |
+| The repo gitignores generated files (say `.claude/`) | Generates them as usual, and adds `(reins sync --local \|\| exit 0)` to package.json's `prepare` (`postinstall` with yarn), so every install makes them on each machine |
 
 `sync --check` writes nothing and fails if anything differs. Once `.generated.json` exists, `reins check` reports the same differences under `integrity`.
+
+<a id="gitignored-generated-files"></a>**Gitignored generated files.** Committing `.claude/` is the simplest setup, but a repo may gitignore it. Those files can't be in a PR, so `sync --check` and `check` never report them; each machine makes its own:
+
+- `reins sync --local` writes only the generated files git ignores, never a committed file or the manifest. It is silent when nothing changes and always exits 0, because the install script runs it. Before the repo adopted `sync` (no manifest) it does nothing.
+- npm, pnpm and bun run the repo's `prepare` on install; yarn 4 only `postinstall`. pnpm runs it on the first install and whenever dependencies change, such as a `reins update`. `|| exit 0` keeps an install without dev dependencies (a Docker image) working.
+- If they are still missing or stale, `check` prints one plain warning (not a finding, and none in CI) saying to run `npx reins sync --local`.
 
 **How a module note reaches the agent:**
 

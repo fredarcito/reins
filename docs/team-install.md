@@ -62,6 +62,7 @@ Then `npm publish` from each package folder (never done by an agent), and consum
 | `.reins/architecture.yml`, `baseline.json` | yes | `reins init`, then people |
 | `.reins/policies/`, `skills/`, `agents/`, `templates/`, `review/`, `hooks/`, `doctor.yml`, `notes/` | yes | `reins install`, then people |
 | `.reins/.generated.json`, `.claude/`, `AGENTS.md`, `CLAUDE.md` | yes | `reins sync` (and people for `AGENTS.md` outside the notes block) |
+| `.claude/` when the repo gitignores it | no | `reins sync --local`, run by package.json's `prepare` (`postinstall` with yarn) on every install ([details](commands.md#reins-sync-reins-notes-reins-scope-reins-impact-reins-resume)) |
 | `.husky/pre-commit` or `lefthook.yml` entry | yes | `reins install` |
 | `.github/workflows/reins.yml` | yes | `reins install` |
 | `.reins/backlog/`, `.reins/progress/`, `.reins/init-report.md` | **no** | the agent, locally |

@@ -108,6 +108,23 @@ export function readHistory(root, max = 5000) {
   });
 }
 
+/**
+ * The paths among `paths` that git ignores: untracked and matched by .gitignore (a tracked file never is, even if a
+ * rule matches it). Empty outside git or when git fails.
+ * @param {string} root
+ * @param {string[]} paths repo-relative
+ * @returns {Set<string>}
+ */
+export function ignoredPaths(root, paths) {
+  if (!isGitRepo(root) || !paths.length) return new Set();
+  try {
+    const text = execFileSync('git', ['check-ignore', '--stdin', '-z'], { cwd: root, input: paths.join('\0'), encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+    return new Set(text.split('\0').filter(Boolean));
+  } catch {
+    return new Set(); // exit 1: none ignored
+  }
+}
+
 /** Files with uncommitted changes (staged, unstaged or untracked). */
 export function dirtyFiles(root) {
   if (!isGitRepo(root)) return [];
