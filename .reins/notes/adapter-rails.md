@@ -29,7 +29,7 @@ Language adapter for Ruby on Rails apps, with or without an Inertia frontend: tu
 ## Traps
 - An unresolved constant can't be a warning: gems and Ruby itself are unresolved by design. The loud cases are syntax errors and Inertia pages that don't exist; keep them.
 - `readRuby` takes bytes (a Buffer), not a string: Prism offsets are byte offsets.
-- Compare Prism nodes with `instanceof` on the classes of the dynamically imported module (`parser.P`), never a static import: the static import prints the WASI warning.
+- Compare Prism nodes with `instanceof` on the classes of the dynamically imported module (`parser.prism`), never a static import: the static import prints the WASI warning.
 - Edge targets of kind `inertia` are frontend files this adapter does not list in `files` (they belong to adapter-js).
 - What `reins init` knows about Ruby is in the preset (`sources`, `tests`, `source_roots: [app]` so folders outside every layer are reported as `app/ops`, not `app`; no `index_files`, no `route_segments`): a new Ruby extension goes there and in `RUBY_FILE` (`graph.js`), never in the CLI.
 - Tests run `node --test "test/**/*.test.js"`; fixtures are Ruby and are never executed.

@@ -29,7 +29,7 @@ npm install -D @agentreins/cli @agentreins/adapter-js
 # yarn add -D @agentreins/cli @agentreins/adapter-js
 ```
 
-`@agentreins/cli` is the `reins` command; `@agentreins/adapter-js` teaches it to read JavaScript/TypeScript imports. For Ruby on Rails, install [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails); with Inertia + React, install both adapters.
+`@agentreins/cli` is the `reins` command; `@agentreins/adapter-js` teaches it to read JavaScript/TypeScript imports. For Ruby on Rails, install [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails); with Inertia + React, install both adapters. For Rust, install [`@agentreins/adapter-rust`](https://www.npmjs.com/package/@agentreins/adapter-rust); for a Tauri app, next to `adapter-js`.
 
 ## Quick start
 

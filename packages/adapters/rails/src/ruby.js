@@ -17,7 +17,7 @@
 
 const ASSOCIATIONS = new Set(['has_many', 'has_one', 'belongs_to', 'has_and_belongs_to_many']);
 
-/** @type {Promise<{ P: any, parse: (source: Uint8Array) => any }> | null} */
+/** @type {Promise<{ prism: any, parse: (source: Uint8Array) => any }> | null} */
 let loading = null;
 
 /**
@@ -33,8 +33,8 @@ export function loadParser() {
       return original.call(process, warning, ...rest);
     });
     try {
-      const P = await import('@ruby/prism');
-      return { P, parse: await P.loadPrism() };
+      const prism = await import('@ruby/prism');
+      return { prism, parse: await prism.loadPrism() };
     } finally {
       process.emitWarning = original;
     }
@@ -43,11 +43,11 @@ export function loadParser() {
 }
 
 /**
- * @param {{ P: any, parse: (source: Uint8Array) => any }} parser from loadParser()
+ * @param {{ prism: any, parse: (source: Uint8Array) => any }} parser from loadParser()
  * @param {Uint8Array} source the file's bytes
  * @returns {FileFacts}
  */
-export function readRuby({ P, parse }, source) {
+export function readRuby({ prism, parse }, source) {
   const result = parse(source);
   /** @type {FileFacts} */
   const facts = { defs: [], refs: [], requires: [], associations: [], renders: [], routes: [], syntaxErrors: result.errors.length > 0 };
@@ -58,107 +58,151 @@ export function readRuby({ P, parse }, source) {
   const seen = new Set();
 
   const scopes = () => [...stack].reverse();
-  const qualify = (p) => (p.absolute || !stack.length ? p.path : `${stack[stack.length - 1]}::${p.path}`);
+  const qualify = (constant) => (constant.absolute || !stack.length ? constant.path : `${stack[stack.length - 1]}::${constant.path}`);
 
   /** `A::B` as text, or null when part of it is not a constant (`foo::Bar`). */
   const constPath = (node) => {
     const parts = [];
-    while (node instanceof P.ConstantPathNode) {
-      if (!node.name) return null;
-      parts.unshift(node.name);
-      if (!node.parent) return { path: parts.join('::'), absolute: true };
-      node = node.parent;
+    let current = node;
+    while (current instanceof prism.ConstantPathNode) {
+      if (!current.name) return null;
+      parts.unshift(current.name);
+      if (!current.parent) return { path: parts.join('::'), absolute: true };
+      current = current.parent;
     }
-    if (!(node instanceof P.ConstantReadNode)) return null;
-    parts.unshift(node.name);
+    if (!(current instanceof prism.ConstantReadNode)) return null;
+    parts.unshift(current.name);
     return { path: parts.join('::'), absolute: false };
   };
 
-  const text = (node) => (node instanceof P.StringNode || node instanceof P.SymbolNode ? node.unescaped.value : null);
+  const text = (node) => (node instanceof prism.StringNode || node instanceof prism.SymbolNode ? node.unescaped.value : null);
   const args = (call) => call.arguments_?.arguments_ ?? [];
   /** Keyword arguments of a call (`key: value` and `'key' => value`). */
   const keywords = (call) => {
-    const out = new Map();
+    const found = new Map();
     for (const arg of args(call)) {
-      if (!(arg instanceof P.KeywordHashNode)) continue;
-      for (const el of arg.elements) if (el instanceof P.AssocNode && text(el.key) !== null) out.set(text(el.key), el.value);
+      if (!(arg instanceof prism.KeywordHashNode)) continue;
+      for (const element of arg.elements) if (element instanceof prism.AssocNode && text(element.key) !== null) found.set(text(element.key), element.value);
     }
-    return out;
+    return found;
   };
 
   /** A module or class whose body is only other modules and classes: a namespace, defined again in every file under it. */
   const isWrapper = (node) => {
-    if (node instanceof P.ClassNode && node.superclass) return false;
-    const body = node.body instanceof P.StatementsNode ? node.body.body : [];
-    return body.length > 0 && body.every((s) => s instanceof P.ClassNode || s instanceof P.ModuleNode);
+    if (node instanceof prism.ClassNode && node.superclass) return false;
+    const body = node.body instanceof prism.StatementsNode ? node.body.body : [];
+    return body.length > 0 && body.every((statement) => statement instanceof prism.ClassNode || statement instanceof prism.ModuleNode);
   };
 
-  const call = (node) => {
+  // What each method call that names another file means. Keyed by the method name; a name not listed is ignored.
+  const addRequire = (node) => {
     const [first] = args(node);
-    if (node.name === 'require_relative' || node.name === 'require') {
-      if (first instanceof P.StringNode) facts.requires.push({ spec: first.unescaped.value, relative: node.name === 'require_relative' });
-    } else if (ASSOCIATIONS.has(node.name)) {
-      const kw = keywords(node);
-      if (first instanceof P.SymbolNode && !kw.has('polymorphic')) {
-        const className = kw.has('class_name') ? text(kw.get('class_name')) : null;
-        // class_name: given as something else than a string (Foo.name): the constant walk below finds it
-        if (className !== null || !kw.has('class_name')) {
-          facts.associations.push({ macro: node.name, name: first.unescaped.value, className, scopes: scopes() });
-        }
-      }
-    } else if (node.name === 'render') {
-      const target = keywords(node).get('inertia');
-      if (target instanceof P.StringNode) facts.renders.push({ component: target.unescaped.value, action });
-      else if (target instanceof P.HashNode || target instanceof P.TrueNode) facts.renders.push({ component: null, action });
-    } else if (node.name === 'inertia') {
-      // routes: `inertia 'dashboard' => 'Dashboard'`, or `inertia 'about'` (component named like the path)
-      if (first instanceof P.KeywordHashNode) {
-        const el = first.elements[0];
-        if (el instanceof P.AssocNode && text(el.key) !== null && el.value instanceof P.StringNode) facts.routes.push(el.value.unescaped.value);
-      } else if (text(first) !== null) facts.routes.push(text(first));
+    if (first instanceof prism.StringNode) facts.requires.push({ spec: first.unescaped.value, relative: node.name === 'require_relative' });
+  };
+
+  const addAssociation = (node) => {
+    const [first] = args(node);
+    const keywordArgs = keywords(node);
+    if (!(first instanceof prism.SymbolNode) || keywordArgs.has('polymorphic')) return;
+    const className = keywordArgs.has('class_name') ? text(keywordArgs.get('class_name')) : null;
+    // class_name: given as something else than a string (Foo.name): the constant walk below finds it
+    if (className !== null || !keywordArgs.has('class_name')) {
+      facts.associations.push({ macro: node.name, name: first.unescaped.value, className, scopes: scopes() });
     }
   };
+
+  const addRender = (node) => {
+    const target = keywords(node).get('inertia');
+    if (target instanceof prism.StringNode) facts.renders.push({ component: target.unescaped.value, action });
+    else if (target instanceof prism.HashNode || target instanceof prism.TrueNode) facts.renders.push({ component: null, action });
+  };
+
+  const addRoute = (node) => {
+    const [first] = args(node);
+    // routes: `inertia 'dashboard' => 'Dashboard'`, or `inertia 'about'` (component named like the path)
+    if (first instanceof prism.KeywordHashNode) {
+      const element = first.elements[0];
+      if (element instanceof prism.AssocNode && text(element.key) !== null && element.value instanceof prism.StringNode) facts.routes.push(element.value.unescaped.value);
+    } else if (text(first) !== null) facts.routes.push(text(first));
+  };
+
+  /** @type {Map<string, (node: any) => void>} method name -> what the call means */
+  const callHandlers = new Map([
+    ['require_relative', addRequire],
+    ['require', addRequire],
+    ...[...ASSOCIATIONS].map((macro) => [macro, addAssociation]),
+    ['render', addRender],
+    ['inertia', addRoute],
+  ]);
+
+  const handleCall = (node) => callHandlers.get(node.name)?.(node);
 
   const children = (node) => {
     for (const child of node.compactChildNodes()) walk(child);
   };
 
+  /** `class X < Y` and `module X`: a definition, then its body inside it. */
+  const walkDefinition = (node) => {
+    if (node.superclass) walk(node.superclass);
+    const constant = constPath(node.constantPath);
+    if (!constant) return walk(node.body);
+    const full = qualify(constant);
+    facts.defs.push({ name: full, owner: !isWrapper(node) });
+    stack.push(full);
+    walk(node.body);
+    stack.pop();
+  };
+
+  /** A constant read or a path (`A::B`): a reference, recorded once per lexical scope and name. */
+  const walkConstant = (node) => {
+    const constant = constPath(node);
+    if (!constant) return children(node);
+    const reference = { path: constant.path, scopes: constant.absolute ? [] : scopes() };
+    const key = `${constant.absolute ? '::' : (reference.scopes[0] ?? '')}|${reference.path}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      facts.refs.push(reference);
+    }
+  };
+
+  const walkConstantWrite = (node) => {
+    facts.defs.push({ name: qualify({ path: node.name, absolute: false }), owner: true });
+    walk(node.value);
+  };
+
+  const walkConstantPathWrite = (node) => {
+    const constant = constPath(node.target);
+    if (constant) facts.defs.push({ name: qualify(constant), owner: true });
+    walk(node.value);
+  };
+
+  /** A method: calls inside it know its name (`action`), except singleton methods (`def self.x`). */
+  const walkDef = (node) => {
+    const outer = action;
+    action = node.receiver ? null : node.name;
+    children(node);
+    action = outer;
+  };
+
+  // Nodes that need more than their children walked, by Prism class. Checked in order with instanceof, as the
+  // classes are not compared by identity, so a subclass would still match.
+  const nodeHandlers = new Map([
+    [prism.ClassNode, walkDefinition],
+    [prism.ModuleNode, walkDefinition],
+    [prism.ConstantReadNode, walkConstant],
+    [prism.ConstantPathNode, walkConstant],
+    [prism.ConstantWriteNode, walkConstantWrite],
+    [prism.ConstantPathWriteNode, walkConstantPathWrite],
+    [prism.DefNode, walkDef],
+  ]);
+
   const walk = (node) => {
     if (!node) return;
-    if (node instanceof P.ClassNode || node instanceof P.ModuleNode) {
-      if (node.superclass) walk(node.superclass);
-      const p = constPath(node.constantPath);
-      if (!p) return walk(node.body);
-      const full = qualify(p);
-      facts.defs.push({ name: full, owner: !isWrapper(node) });
-      stack.push(full);
-      walk(node.body);
-      stack.pop();
-    } else if (node instanceof P.ConstantReadNode || node instanceof P.ConstantPathNode) {
-      const p = constPath(node);
-      if (!p) return children(node);
-      const ref = { path: p.path, scopes: p.absolute ? [] : scopes() };
-      const key = `${p.absolute ? '::' : (ref.scopes[0] ?? '')}|${ref.path}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        facts.refs.push(ref);
-      }
-    } else if (node instanceof P.ConstantWriteNode) {
-      facts.defs.push({ name: qualify({ path: node.name, absolute: false }), owner: true });
-      walk(node.value);
-    } else if (node instanceof P.ConstantPathWriteNode) {
-      const p = constPath(node.target);
-      if (p) facts.defs.push({ name: qualify(p), owner: true });
-      walk(node.value);
-    } else if (node instanceof P.DefNode) {
-      const outer = action;
-      action = node.receiver ? null : node.name;
-      children(node);
-      action = outer;
-    } else {
-      if (node instanceof P.CallNode && !node.receiver) call(node);
-      children(node);
+    for (const [nodeClass, handler] of nodeHandlers) {
+      if (node instanceof nodeClass) return handler(node);
     }
+    if (node instanceof prism.CallNode && !node.receiver) handleCall(node);
+    children(node);
   };
 
   walk(result.value);

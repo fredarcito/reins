@@ -26,6 +26,8 @@ Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pag
 - 2026-11-10: presets are JS modules, not YAML (replaces 2026-11-04 "presets are YAML data"): the same layout in every adapter, the shared fields visible as `...CONVENTIONS`, and no `yaml` dependency. See `docs/DECISIONS.md`. `next-server-client` is opt-in, and `'use server'` files are allowed targets.
 - 2026-11-08: `prepareCheckout` recreates workspace links (target inside the repo, not under `node_modules`) with their relative target so they resolve to the worktree's copy, and links everything else by absolute path to the main install. Whole-folder links would give the base the head's packages. Yarn PnP only warns.
 
+- 2026-11-14: code style pass (descriptive names everywhere, no single letters), no behavior change. The character state machines (`stripComments`, `parseJsonc`) stay as `if` chains: each branch does different work, a table would read worse.
+
 ## Traps
 - Silent edge loss is the main risk: an unresolved alias or missing TS just removes edges and `check` passes. Keep the loud failure and the unresolved-import warning.
 - Import nothing from core except `@agentreins/core/contract`.

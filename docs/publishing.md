@@ -8,6 +8,7 @@ Four packages, published together with the same version:
 | `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of the CLI |
 | `@agentreins/adapter-js` | JavaScript/TypeScript adapter. Peer of `@agentreins/core` |
 | `@agentreins/adapter-rails` | Ruby on Rails adapter (since 0.14.0). Peer of `@agentreins/core` |
+| `@agentreins/adapter-rust` | Rust adapter (unreleased). Peer of `@agentreins/core` |
 
 Users install them with:
 
@@ -43,7 +44,7 @@ Tag after publishing, not before: if the publish fails and you fix something, th
 
 `pnpm -r publish`:
 
-- publishes in dependency order: `@agentreins/core`, the adapters (`adapter-js`, `adapter-rails`), then `@agentreins/cli`;
+- publishes in dependency order: `@agentreins/core`, the adapters (`adapter-js`, `adapter-rails`, `adapter-rust`), then `@agentreins/cli`;
 - replaces every `workspace:^` with the real version;
 - runs each package's `prepack`, which copies `LICENSE` (and, for the CLI, `templates/`) into the package;
 - requires a clean working tree on `main`.

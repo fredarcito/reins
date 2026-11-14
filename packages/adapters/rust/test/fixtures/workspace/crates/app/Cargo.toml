@@ -1,0 +1,6 @@
+[package]
+name = "app"
+edition.workspace = true
+
+[dependencies]
+core-lib = { path = "../core-lib" }

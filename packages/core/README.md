@@ -28,7 +28,7 @@ See [@agentreins/cli](https://www.npmjs.com/package/@agentreins/cli) for the qui
 - **Audit backlog**: the local findings file behind `reins audit` — parsing, rendering, status changes.
 - **Glob matching**: its own matcher (`*`, `**`, `?`, `{a,b}`) for layers, domains and public APIs. No glob dependency.
 
-The core never reads source files and knows no framework: it only sees `{ from, to, kind }` import edges, computed by a language adapter. Everything framework- or language-specific (TypeScript, Vite, Next, Rails) lives in adapters: [@agentreins/adapter-js](https://www.npmjs.com/package/@agentreins/adapter-js) and [@agentreins/adapter-rails](https://www.npmjs.com/package/@agentreins/adapter-rails).
+The core never reads source files and knows no framework: it only sees `{ from, to, kind }` import edges, computed by a language adapter. Everything framework- or language-specific (TypeScript, Vite, Next, Rails, Rust) lives in adapters: [@agentreins/adapter-js](https://www.npmjs.com/package/@agentreins/adapter-js), [@agentreins/adapter-rails](https://www.npmjs.com/package/@agentreins/adapter-rails) and [@agentreins/adapter-rust](https://www.npmjs.com/package/@agentreins/adapter-rust).
 
 ## Writing an adapter
 

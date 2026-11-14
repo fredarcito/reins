@@ -21,6 +21,7 @@
     "@agentreins/adapter-js": "workspace:*",
     "@agentreins/cli": "workspace:*",
     "husky": "^9.1.7",
-    "@agentreins/adapter-rails": "workspace:*"
+    "@agentreins/adapter-rails": "workspace:*",
+    "@agentreins/adapter-rust": "workspace:*"
   }
 }

@@ -67,8 +67,8 @@ test('several adapters: an adapter may not declare a core rule', async () => {
 
 test('init redrafts a plan that lists several adapters, and needs every one of them installed', async () => {
   const dir = exampleRepo('vite-react');
-  writeFileSync(path.join(dir, '.reins/architecture.yml'), 'version: 1\nadapters: [js, rust]\n');
+  writeFileSync(path.join(dir, '.reins/architecture.yml'), 'version: 1\nadapters: [js, cobol]\n');
   const r = await cli(dir, ['init', '--force']);
   assert.equal(r.code, 2);
-  assert.match(r.stderr, /Adapter "rust" is not installed/);
+  assert.match(r.stderr, /Adapter "cobol" is not installed/);
 });

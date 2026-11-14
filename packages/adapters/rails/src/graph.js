@@ -23,17 +23,17 @@ const CORE = new Set([
 
 /** Every Ruby file of the repo, relative, POSIX, sorted. */
 function rubyFiles(root, ignored) {
-  const out = [];
+  const found = [];
   const walk = (dir, rel) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const next = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         if (!IGNORED_DIRS.includes(entry.name)) walk(path.join(dir, entry.name), next);
-      } else if (RUBY_FILE.test(entry.name) && !ignored(next)) out.push(next);
+      } else if (RUBY_FILE.test(entry.name) && !ignored(next)) found.push(next);
     }
   };
   walk(root, '');
-  return out.sort();
+  return found.sort();
 }
 
 /**
@@ -71,19 +71,19 @@ const some = (list, max = 5) => list.slice(0, max).join(', ') + (list.length > m
 export async function graph(repoPath, config = {}) {
   const root = realpathSync(path.resolve(repoPath));
   const ignore = config.ignore ?? [];
-  const ignored = (f) => ignore.length > 0 && matchesAny(f, ignore);
+  const ignored = (file) => ignore.length > 0 && matchesAny(file, ignore);
   const files = rubyFiles(root, ignored);
   const fileSet = new Set(files);
   const warnings = [];
 
   const parser = await loadParser();
   /** @type {Map<string, import('./ruby.js').FileFacts>} */
-  const facts = new Map();
+  const factsByFile = new Map();
   const broken = [];
   for (const file of files) {
-    const f = readRuby(parser, readFileSync(path.join(root, file)));
-    facts.set(file, f);
-    if (f.syntaxErrors) broken.push(file);
+    const fileFacts = readRuby(parser, readFileSync(path.join(root, file)));
+    factsByFile.set(file, fileFacts);
+    if (fileFacts.syntaxErrors) broken.push(file);
   }
   if (broken.length) {
     warnings.push(`${broken.length} Ruby file(s) have syntax errors, so some of their dependencies may be missing: ${some(broken)}.`);
@@ -93,8 +93,8 @@ export async function graph(repoPath, config = {}) {
   const known = new Set();
   /** @type {Map<string, Set<string>>} */
   const owners = new Map();
-  for (const [file, f] of facts) {
-    for (const def of f.defs) {
+  for (const [file, fileFacts] of factsByFile) {
+    for (const def of fileFacts.defs) {
       known.add(def.name);
       if (!def.owner || CORE.has(def.name)) continue;
       if (!owners.has(def.name)) owners.set(def.name, new Set());
@@ -121,26 +121,26 @@ export async function graph(repoPath, config = {}) {
     else missingPages.push(`'${component}' in ${file}`);
   };
 
-  for (const [file, f] of facts) {
-    for (const ref of f.refs) {
+  for (const [file, fileFacts] of factsByFile) {
+    for (const ref of fileFacts.refs) {
       for (const to of resolveConstant(ref.path, ref.scopes, known, owners) ?? []) add(file, to, 'static');
     }
 
-    for (const req of f.requires) {
+    for (const req of fileFacts.requires) {
       const base = req.relative ? path.posix.join(path.posix.dirname(file), req.spec) : path.posix.join('lib', req.spec);
       const to = [base, `${base}.rb`].find((candidate) => fileSet.has(candidate));
       if (to) add(file, to, 'static');
     }
 
-    for (const assoc of f.associations) {
+    for (const assoc of fileFacts.associations) {
       const plural = assoc.macro === 'has_many' || assoc.macro === 'has_and_belongs_to_many';
       const names = assoc.className !== null
         ? [assoc.className.replace(/^::/, '')]
-        : (plural ? singulars(assoc.name, inflections) : [assoc.name]).map((n) => camelize(n, inflections));
+        : (plural ? singulars(assoc.name, inflections) : [assoc.name]).map((candidate) => camelize(candidate, inflections));
       // Rails looks an association's class up in every namespace of the model, whatever the lexical nesting:
       // `class Billing::LineItem; belongs_to :invoice` finds Billing::Invoice
       const model = assoc.scopes[0] ?? '';
-      const scopes = assoc.className?.startsWith('::') ? [] : model.split('::').map((_, i, parts) => parts.slice(0, parts.length - i).join('::')).filter(Boolean);
+      const scopes = assoc.className?.startsWith('::') ? [] : model.split('::').map((_, index, parts) => parts.slice(0, parts.length - index).join('::')).filter(Boolean);
       for (const name of names) {
         const targets = resolveConstant(name, scopes, known, owners);
         if (!targets) continue;
@@ -150,7 +150,7 @@ export async function graph(repoPath, config = {}) {
     }
 
     if (!inertia) continue;
-    for (const render of f.renders) {
+    for (const render of fileFacts.renders) {
       if (render.component !== null) page(file, render.component);
       else if (inertia.customResolver) inferredSkipped++;
       else {
@@ -159,10 +159,10 @@ export async function graph(repoPath, config = {}) {
       }
     }
     // `inertia 'path' => 'Component'` only means a page inside the routes
-    if (/^config\/routes(\.rb$|\/)/.test(file)) for (const component of f.routes) page(file, component);
+    if (/^config\/routes(\.rb$|\/)/.test(file)) for (const component of fileFacts.routes) page(file, component);
   }
 
-  if (inertia && !inertia.roots.length && [...facts.values()].some((f) => f.renders.length || f.routes.length)) {
+  if (inertia && !inertia.roots.length && [...factsByFile.values()].some((fileFacts) => fileFacts.renders.length || fileFacts.routes.length)) {
     warnings.push('This app renders Inertia pages, but no pages folder was found (looked for app/frontend/pages and app/javascript/pages): controller -> page dependencies are not checked.');
   } else if (missingPages.length) {
     warnings.push(`${missingPages.length} Inertia page(s) rendered from Ruby were not found under ${inertia?.roots.join(', ')}, so they are not checked: ${some(missingPages)}.`);
@@ -172,6 +172,6 @@ export async function graph(repoPath, config = {}) {
   }
 
   const entryGlobs = loadPreset(config.preset ?? 'rails').entries;
-  const entries = files.filter((f) => matchesAny(f, entryGlobs));
+  const entries = files.filter((file) => matchesAny(file, entryGlobs));
   return { edges: [...edges.values()], files, entries, warnings };
 }

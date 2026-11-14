@@ -30,7 +30,8 @@
   },
   "devDependencies": {
     "@agentreins/adapter-js": "workspace:^",
-    "@agentreins/adapter-rails": "workspace:^"
+    "@agentreins/adapter-rails": "workspace:^",
+    "@agentreins/adapter-rust": "workspace:^"
   },
   "repository": {
     "type": "git",

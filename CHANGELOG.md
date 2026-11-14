@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Rust adapter: `@agentreins/adapter-rust`.** `reins check`, `init` and `impact` now work on Rust: a crate, a Cargo workspace, or the Rust half of a Tauri app. Rust imports modules, so the adapter builds each crate's module tree from `mod` declarations and follows every `use` and path (`crate::`, `super::`, a module a `use` brought in, another crate of the repo by its name) to the file of the module it names. Rust does not need to be installed. In a Tauri app, install it next to `adapter-js` and `reins init` drafts `adapters: [js, rust]`, one plan for the frontend and the crate. The drafted rules ignore `mod` declarations (`ignore_kinds: [mod]`): they only build the module tree. Experimental: [what it reads and what it can't see](packages/adapters/rust/README.md).
+
 ## 0.17.0 · 2026-11-12
 
 Module notes reach the agent before it explores the code, not just before it edits.

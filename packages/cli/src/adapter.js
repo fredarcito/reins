@@ -70,14 +70,25 @@ export async function resolveAdapter(repoRoot, name, opts = {}) {
 }
 
 /**
+ * Marker files of each language, in order: the first adapter found is the repo's main language. A Tauri app keeps
+ * its Rust crate in src-tauri/ and its web frontend at the root, so there `js` comes first and `rust` second.
+ * @type {{ name: string, files: string[] }[]} `files`: all of them must exist
+ */
+const LANGUAGE_MARKERS = [
+  { name: 'rails', files: ['Gemfile', 'config/application.rb'] },
+  { name: 'rust', files: ['Cargo.toml'] },
+  { name: 'js', files: ['package.json'] },
+  { name: 'rust', files: ['src-tauri/Cargo.toml'] },
+];
+
+/**
  * Cheap guess of which adapters a repo needs, before any adapter is installed. Only looks at marker files.
  * The first one is the repo's main language; `init` adds the others when they are installed and recognize the repo
- * (a Rails app with a Vite frontend is `rails` + `js`; a Rails API whose package.json only holds tooling is `rails`).
+ * (a Rails app with a Vite frontend is `rails` + `js`; a Rails API whose package.json only holds tooling is `rails`;
+ * a Tauri app is `js` + `rust`).
  * @returns {string[]}
  */
 export function guessAdapterNames(repoRoot) {
-  const names = [];
-  if (existsSync(path.join(repoRoot, 'Gemfile')) && existsSync(path.join(repoRoot, 'config/application.rb'))) names.push('rails');
-  if (existsSync(path.join(repoRoot, 'package.json'))) names.push('js');
-  return names;
+  const found = LANGUAGE_MARKERS.filter((marker) => marker.files.every((file) => existsSync(path.join(repoRoot, file))));
+  return [...new Set(found.map((marker) => marker.name))];
 }

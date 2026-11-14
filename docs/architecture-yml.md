@@ -8,8 +8,8 @@ Location in a consumer repo: `.reins/architecture.yml`.
 
 ```yaml
 version: 1            # required, always 1 for now
-adapters: [js]        # required: the language adapters that compute the graph (Rails + React: [js, rails])
-preset: next-app      # optional: vite-react | next-app | next-pages | inertia-react | rails (adapter presets)
+adapters: [js]        # required: the language adapters that compute the graph (Rails + React: [js, rails]; Tauri: [js, rust])
+preset: next-app      # optional: vite-react | next-app | next-pages | inertia-react | rails | cargo | tauri (adapter presets)
 base: origin/staging  # optional: the branch tasks start from, when it is not main
 ignore: ["src/generated/**"]   # optional: files left out of the analysis
 
@@ -68,7 +68,7 @@ layers:
 - Layers, domains and `allow` are paths, so they apply to every language the same way.
 - Each adapter runs its own rules on its own graph. Two adapters may not declare the same rule id.
 - Languages usually talk through strings (a Tauri `invoke("name")`, an HTTP route), not imports, so no edge crosses from one language to the other: a rule between a JS layer and a Rust layer never fires. The exception is Inertia, below.
-- `reins init` drafts one plan for every adapter the repo needs: each adapter brings its preset (its layers and what `init` must know about the language) and `init` joins them. A Rails app with a Vite frontend gets `adapters: [rails, js]` when both adapters are installed. With several adapters the draft has no `preset:` line: each adapter detects its own.
+- `reins init` drafts one plan for every adapter the repo needs: each adapter brings its preset (its layers and what `init` must know about the language) and `init` joins them. A Rails app with a Vite frontend gets `adapters: [rails, js]` when both adapters are installed, and a Tauri app `adapters: [js, rust]`. With several adapters the draft has no `preset:` line: each adapter detects its own.
 
 ### Rails + Inertia + React
 

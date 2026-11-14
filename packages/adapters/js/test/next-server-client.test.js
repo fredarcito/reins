@@ -36,9 +36,9 @@ test('stripComments: keeps strings and template literals, drops line and block c
 
 function repo(files) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reins-nsc-'));
-  for (const [f, c] of Object.entries(files)) {
-    mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
-    writeFileSync(path.join(dir, f), c);
+  for (const [relativePath, content] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(dir, relativePath)), { recursive: true });
+    writeFileSync(path.join(dir, relativePath), content);
   }
   return dir;
 }
@@ -62,16 +62,16 @@ const cfg = (severity) => ({ rules: { 'next-server-client': { severity } } });
 
 test('reports the nearest server-only module, ignores type-only imports and server components', () => {
   const out = run(repo(files), cfg('warn'), { edges, files: Object.keys(files) });
-  assert.deepEqual(out.map((v) => [v.key, v.severity, v.files.join(' > ')]), [
+  assert.deepEqual(out.map((violation) => [violation.key, violation.severity, violation.files.join(' > ')]), [
     ['next-server-client|client.tsx|secret.ts', 'warn', 'client.tsx > a.ts > secret.ts'],
   ]);
 });
 
 test('a client component that imports a server-only module itself is reported', () => {
   const dir = repo({ 'c.tsx': "'use client';\nimport { cookies } from 'next/headers';" });
-  const [v] = run(dir, cfg('error'), { edges: [], files: ['c.tsx'] }); // no local imports at all
-  assert.equal(v.key, 'next-server-client|c.tsx|c.tsx');
-  assert.equal(v.to, undefined);
+  const [violation] = run(dir, cfg('error'), { edges: [], files: ['c.tsx'] }); // no local imports at all
+  assert.equal(violation.key, 'next-server-client|c.tsx|c.tsx');
+  assert.equal(violation.to, undefined);
 });
 
 test('the rule is off unless architecture.yml enables it', () => {

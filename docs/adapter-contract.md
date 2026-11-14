@@ -152,6 +152,10 @@ Version 1 grew without breaking: in phase 3 `graph()` may return an object inste
 
 Ruby files don't import each other, so the adapter builds the edges itself: it parses every file with Prism (WebAssembly, no Ruby needed), indexes which file defines each constant, and resolves each constant reference the way Ruby does. It uses its own edge kinds next to `static`: `association` (`has_many :orders`) and `inertia` (a controller renders a page component, an edge into the frontend files that `adapter-js` owns). It has a preset and no adapter rules, and needs no `prepareCheckout`. See its [README](../packages/adapters/rails/README.md).
 
+## Modules instead of files: `@agentreins/adapter-rust`
+
+Rust imports modules, not files, so the adapter first builds each crate's module tree from Cargo's crate roots and the `mod` declarations, then resolves every `use` and path to the deepest module it names. It reads Rust with its own small tokenizer (no dependency, no Rust toolchain). Its edge kinds are `static` (uses) and `mod` (declarations, which its presets propose to ignore in the rules). Presets `cargo` and `tauri`, no adapter rules, no `prepareCheckout`. Fit in contract 1 unchanged. See its [README](../packages/adapters/rust/README.md).
+
 ## Reference implementation: `@agentreins/adapter-js`
 
 | Piece | What it does |

@@ -4,7 +4,7 @@
 
 Hold the reins of your coding agents: they respect your architecture and remember your project. reins is not a framework for building agents: it shapes how the agents you already use (Claude Code, Codex, Cursor or any other) work on your codebase.
 
-Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js) · [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails)
+Project site: **[fredarcito.github.io/reins](https://fredarcito.github.io/reins/)** · npm: [`@agentreins/cli`](https://www.npmjs.com/package/@agentreins/cli) · [`@agentreins/core`](https://www.npmjs.com/package/@agentreins/core) · [`@agentreins/adapter-js`](https://www.npmjs.com/package/@agentreins/adapter-js) · [`@agentreins/adapter-rails`](https://www.npmjs.com/package/@agentreins/adapter-rails) · [`@agentreins/adapter-rust`](https://www.npmjs.com/package/@agentreins/adapter-rust)
 
 Coding agents write code fast, but they forget, in two ways:
 
@@ -60,6 +60,7 @@ In the root of your project (Node 22 or newer):
 - `/reins-arch` and `/reins-notes` are Claude Code commands. With other agents, ask: *"review .reins/init-report.md and propose changes to .reins/architecture.yml"*, then *"fill in the TODO lines of the notes in .reins/notes/"*.
 - For a provider-neutral setup, use `npx reins install --skip-claude`.
 - Ruby on Rails: install `@agentreins/adapter-rails` instead; with Inertia + React, install both adapters and `init` drafts one plan for the two.
+- Rust: install `@agentreins/adapter-rust` instead; for a Tauri app, install it next to `adapter-js` and `init` drafts one plan for the frontend and the crate.
 
 Nothing of yours is overwritten: `install` and `init` only add files or ask first. With pnpm, `pnpm add -D`. More: [Installation](#installation) · [Updating](#updating) · a full tour with real output in [`docs/walkthrough.md`](docs/walkthrough.md).
 
@@ -266,6 +267,7 @@ The packages are on npm under `@agentreins`. Without a registry (offline, or a v
 # 1. Install the CLI and the JavaScript/TypeScript adapter (pnpm: pnpm add -D …)
 npm install -D @agentreins/cli @agentreins/adapter-js
 #    Ruby on Rails: @agentreins/adapter-rails (with Inertia + React, install both adapters)
+#    Rust: @agentreins/adapter-rust (Tauri: install it with adapter-js)
 
 # 2. Wire it: .reins/ sources, .gitignore, pre-commit hook (Husky or lefthook), CI workflow, AGENTS.md
 npx reins install --skip-claude    # omit optional Claude Code files for a provider-neutral setup
@@ -297,6 +299,7 @@ Everything below is built and tested. **Stable** pieces are enforced by tools. *
 | `adapter-js`: Vite + React and Next, JS or TS, `@/` aliases | stable | ✅ tested on [`examples/`](examples/) |
 | `next-server-client` rule | stable (optional) | ✅ |
 | `adapter-rails`: Ruby on Rails, with [Inertia](https://inertia-rails.dev) pages | experimental | ✅ reads Ruby without needing Ruby installed; tried on a Rails app of 4,400 files in 1.5 s |
+| `adapter-rust`: Cargo crates and workspaces, the Rust half of a [Tauri](https://tauri.app) app | experimental | ✅ reads Rust without needing Rust installed; tried on a Tauri app with `adapters: [js, rust]` |
 | Several languages in one repo (`adapters: [rails, js]`) | experimental | ✅ one plan and one baseline for every language; `init` drafts it for all of them; a Rails controller is linked to the React page it renders |
 | Git hook (Husky, lefthook) + CI job | stable | ✅ blocks bad commits and PRs end to end |
 | `reins install`, `reins update` | experimental | ✅ install tested with npm and pnpm; update package-manager selection tested in dry-run; shared `AGENTS.md` workflow does not require Claude Code |

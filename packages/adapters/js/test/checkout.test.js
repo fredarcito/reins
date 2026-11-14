@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import adapter, { prepareCheckout } from '../src/index.js';
 
-const mk = (...p) => mkdirSync(path.join(...p), { recursive: true });
+const mk = (...segments) => mkdirSync(path.join(...segments), { recursive: true });
 const tmp = () => realpathSync(mkdtempSync(path.join(tmpdir(), 'reins-checkout-')));
 
 /** A pnpm-like monorepo (main checkout) and a bare checkout of another commit with the same folders. */
@@ -27,11 +27,11 @@ function setup() {
   mk(main, 'packages/a/node_modules/@ext');
   mk(main, 'packages/a/node_modules/.bin');
   mk(outside, 'lib');
-  const a = path.join(main, 'packages/a/node_modules');
-  symlinkSync('../../../node_modules/.pnpm/dep@1/node_modules/dep', path.join(a, 'dep')); // into the store
-  symlinkSync('../../../b', path.join(a, '@t/b')); // pnpm workspace link: relative
-  symlinkSync(path.join(main, 'packages/b'), path.join(a, '@t/abs')); // workspace link written as absolute
-  symlinkSync(path.join(outside, 'lib'), path.join(a, '@ext/lib')); // outside the repo (npm link)
+  const packageModules = path.join(main, 'packages/a/node_modules');
+  symlinkSync('../../../node_modules/.pnpm/dep@1/node_modules/dep', path.join(packageModules, 'dep')); // into the store
+  symlinkSync('../../../b', path.join(packageModules, '@t/b')); // pnpm workspace link: relative
+  symlinkSync(path.join(main, 'packages/b'), path.join(packageModules, '@t/abs')); // workspace link written as absolute
+  symlinkSync(path.join(outside, 'lib'), path.join(packageModules, '@ext/lib')); // outside the repo (npm link)
   symlinkSync(path.join(main, 'packages/b'), path.join(main, 'node_modules/b-root')); // root node_modules
   return { main, checkout, outside };
 }
@@ -40,18 +40,18 @@ test('prepareCheckout: workspace links resolve to the checkout (base version), e
   const { main, checkout, outside } = setup();
   const { warnings } = prepareCheckout(checkout, main);
   assert.deepEqual(warnings, []);
-  const a = path.join(checkout, 'packages/a/node_modules');
+  const packageModules = path.join(checkout, 'packages/a/node_modules');
 
   // pnpm relative workspace link: recreated with the same relative target → the checkout's own package
-  assert.equal(readlinkSync(path.join(a, '@t/b')), '../../../b');
-  assert.equal(realpathSync(path.join(a, '@t/b')), path.join(checkout, 'packages/b'));
+  assert.equal(readlinkSync(path.join(packageModules, '@t/b')), '../../../b');
+  assert.equal(realpathSync(path.join(packageModules, '@t/b')), path.join(checkout, 'packages/b'));
   // absolute workspace link: pointed at the checkout's copy, not at the main checkout
-  assert.equal(realpathSync(path.join(a, '@t/abs')), path.join(checkout, 'packages/b'));
+  assert.equal(realpathSync(path.join(packageModules, '@t/abs')), path.join(checkout, 'packages/b'));
   // root node_modules is mirrored too
   assert.equal(realpathSync(path.join(checkout, 'node_modules/b-root')), path.join(checkout, 'packages/b'));
   // a link into the pnpm store (inside the repo but under node_modules) and one outside the repo: absolute, main's install
-  assert.equal(realpathSync(path.join(a, 'dep')), path.join(main, 'node_modules/.pnpm/dep@1/node_modules/dep'));
-  assert.equal(realpathSync(path.join(a, '@ext/lib')), path.join(outside, 'lib'));
+  assert.equal(realpathSync(path.join(packageModules, 'dep')), path.join(main, 'node_modules/.pnpm/dep@1/node_modules/dep'));
+  assert.equal(realpathSync(path.join(packageModules, '@ext/lib')), path.join(outside, 'lib'));
   // a real folder (npm layout) and the pnpm store itself: absolute links to the main checkout
   assert.equal(realpathSync(path.join(checkout, 'packages/c/node_modules/plain')), path.join(main, 'packages/c/node_modules/plain'));
   assert.equal(realpathSync(path.join(checkout, 'node_modules/.pnpm')), path.join(main, 'node_modules/.pnpm'));
@@ -60,9 +60,9 @@ test('prepareCheckout: workspace links resolve to the checkout (base version), e
 test('prepareCheckout: @scope folders and node_modules are real directories, whole folders are never linked', () => {
   const { main, checkout } = setup();
   prepareCheckout(checkout, main);
-  for (const d of ['packages/a/node_modules', 'packages/a/node_modules/@t', 'packages/a/node_modules/@ext', 'node_modules']) {
-    const st = lstatSync(path.join(checkout, d));
-    assert.ok(st.isDirectory() && !st.isSymbolicLink(), `${d} is a real directory`);
+  for (const dir of ['packages/a/node_modules', 'packages/a/node_modules/@t', 'packages/a/node_modules/@ext', 'node_modules']) {
+    const stats = lstatSync(path.join(checkout, dir));
+    assert.ok(stats.isDirectory() && !stats.isSymbolicLink(), `${dir} is a real directory`);
   }
 });
 

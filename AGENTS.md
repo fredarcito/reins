@@ -29,9 +29,8 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - `core` knows no framework: anything specific to JS, Vite or Next lives in `packages/adapters/js`.
 - Don't run tests per subtask: run `pnpm lint && pnpm test && pnpm self-check` once at the end and say what was verified and what wasn't.
 - No per-folder `AGENTS.md`/`CLAUDE.md`. This file stays at 45 lines or fewer.
-- New dependency -> justify it in `docs/DECISIONS.md`.
+- New dependency -> justify it in `docs/DECISIONS.md`. Stable vs experimental status of each piece -> `docs/STATUS.md`.
 - Assumption about Claude Code, hooks, permissions or skills you haven't tested -> record it in `docs/VERIFIED.md` as unverified.
-- Stable vs experimental status of each piece -> `docs/STATUS.md`.
 - `README.md` is the team's short documentation (~350 lines): update it whenever a phase changes what exists, and put the detail and diagrams in `docs/` (commands, how-it-works, context-between-sessions, updating).
 - Renaming the npm scope -> `pnpm rename-scope <@scope>`; never edit package names by hand.
 
@@ -40,6 +39,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands). By path:
 - `packages/adapters/js/**` → `.reins/notes/adapter-js.md` — Language adapter for JavaScript/TypeScript repos (Vite + React, Next app and pages router): turns the repo…
 - `packages/adapters/rails/**` → `.reins/notes/adapter-rails.md` — Language adapter for Ruby on Rails apps, with or without an Inertia frontend: turns the repo into dependency…
+- `packages/adapters/rust/**` → `.reins/notes/adapter-rust.md` — Language adapter for Rust (a Cargo package or workspace, or the `src-tauri/` half of a Tauri app): turns the…
 - `packages/cli/**` → `.reins/notes/cli.md` — The `reins` command line: wires the provider-neutral core and language adapter to a consumer repo's files…
 - `packages/core/src/**` → `.reins/notes/core.md` — Framework-agnostic engine of reins: validates `architecture.yml`, runs `check` (rules + baseline +…
 <!-- reins:notes:end -->

@@ -22,10 +22,10 @@ export function prepareCheckout(checkoutDir, repoRoot) {
     return { warnings };
   }
   let failed = 0;
-  for (const rel of findNodeModules(root, root, [], () => failed++)) {
-    const parent = path.join(checkout, path.dirname(rel));
+  for (const relativeDir of findNodeModules(root, root, [], () => failed++)) {
+    const parent = path.join(checkout, path.dirname(relativeDir));
     if (!existsSync(parent)) continue; // the package does not exist at that commit
-    mirror(path.join(root, rel), path.join(checkout, rel), root, checkout, () => failed++);
+    mirror(path.join(root, relativeDir), path.join(checkout, relativeDir), root, checkout, () => failed++);
   }
   if (failed) warnings.push(`${failed} node_modules entries could not be read or linked: imports through them may look new.`);
   return { warnings };
@@ -40,15 +40,15 @@ function findNodeModules(root, dir, out, onError) {
     onError();
     return out;
   }
-  for (const e of entries) {
-    if (e.name === 'node_modules') {
+  for (const entry of entries) {
+    if (entry.name === 'node_modules') {
       // a root node_modules may itself be a link to a folder elsewhere: follow it
-      let isDir = e.isDirectory();
-      if (e.isSymbolicLink()) {
-        try { isDir = statSync(path.join(dir, e.name)).isDirectory(); } catch { isDir = false; }
+      let isDir = entry.isDirectory();
+      if (entry.isSymbolicLink()) {
+        try { isDir = statSync(path.join(dir, entry.name)).isDirectory(); } catch { isDir = false; }
       }
-      if (isDir) out.push(path.relative(root, path.join(dir, e.name)));
-    } else if (e.isDirectory() && !SKIP_DIRS.has(e.name)) findNodeModules(root, path.join(dir, e.name), out, onError);
+      if (isDir) out.push(path.relative(root, path.join(dir, entry.name)));
+    } else if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) findNodeModules(root, path.join(dir, entry.name), out, onError);
   }
   return out;
 }
@@ -67,16 +67,16 @@ function mirror(src, dest, root, checkout, onError) {
     const to = path.join(dest, name);
     if (existsSync(to) || name === '.bin') continue;
     try {
-      const st = lstatSync(from);
-      if (st.isSymbolicLink()) {
+      const stats = lstatSync(from);
+      if (stats.isSymbolicLink()) {
         let target;
         try { target = realpathSync(from); } catch { continue; } // dangling link
-        const rel = path.relative(root, target);
-        const inRepo = !rel.startsWith('..') && !path.isAbsolute(rel);
-        const workspace = inRepo && !rel.split(path.sep).includes('node_modules');
+        const relative = path.relative(root, target);
+        const inRepo = !relative.startsWith('..') && !path.isAbsolute(relative);
+        const workspace = inRepo && !relative.split(path.sep).includes('node_modules');
         // a workspace link points at the checkout's copy, relative like pnpm writes it
-        symlinkSync(workspace ? path.relative(path.dirname(to), path.join(checkout, rel)) : target, to);
-      } else if (st.isDirectory() && name.startsWith('@')) mirror(from, to, root, checkout, onError);
+        symlinkSync(workspace ? path.relative(path.dirname(to), path.join(checkout, relative)) : target, to);
+      } else if (stats.isDirectory() && name.startsWith('@')) mirror(from, to, root, checkout, onError);
       else symlinkSync(from, to); // real dir or file (npm/hoisted layout, pnpm's .pnpm store)
     } catch {
       onError();

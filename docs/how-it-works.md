@@ -91,6 +91,16 @@ flowchart LR
     edges --> core["core rules"]
 ```
 
+A Rust crate imports modules, not files: `adapter-rust` builds the module tree from `mod` declarations and resolves each `use` and path to the file of the module it names. In a Tauri app it reads `src-tauri/` while `adapter-js` reads the frontend:
+
+```mermaid
+flowchart LR
+    rs["Rust files<br/>.rs + Cargo.toml"] --> rust["adapter-rust<br/>(module tree)"]
+    rust -- "use crate::chat::store" --> edges["[{ from, to, kind }]"]
+    fe["src/<br/>.jsx .tsx"] --> js["adapter-js"] --> edges
+    edges --> core["core rules"]
+```
+
 Rules:
 
 | Rule | Fails when | Example |

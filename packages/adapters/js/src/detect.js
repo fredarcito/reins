@@ -15,7 +15,7 @@ const NEXT_CONFIGS = ['next.config.js', 'next.config.mjs', 'next.config.cjs', 'n
  * @returns {Detection | null}
  */
 export function detectFramework(repoPath) {
-  const has = (f) => existsSync(path.join(repoPath, f));
+  const has = (name) => existsSync(path.join(repoPath, name));
   const next = NEXT_CONFIGS.find(has);
   if (next) {
     const app = has('app') || has('src/app');

@@ -10,11 +10,11 @@ import { loadPreset } from './presets.js';
 
 /** Folders never scanned. */
 export const IGNORED_DIRS = ['node_modules', '.git', '.next', '.reins', 'dist', 'build', 'out', 'coverage', '.turbo', '.vercel', '.cache', 'storybook-static'];
-const EXCLUDE = `(^|/)(${IGNORED_DIRS.map((d) => d.replace(/\./g, '\\.')).join('|')})(/|$)`;
+const EXCLUDE = `(^|/)(${IGNORED_DIRS.map((dirName) => dirName.replace(/\./g, '\\.')).join('|')})(/|$)`;
 const TS_FILE = /\.(ts|tsx|mts|cts)$/;
 
-/** @param {string} p */
-const toPosix = (p) => p.split(path.sep).join('/');
+/** @param {string} filePath */
+const toPosix = (filePath) => filePath.split(path.sep).join('/');
 
 /** True if the repo has TypeScript sources (stops at the first one). */
 function hasTypeScript(dir, depth = 0) {
@@ -33,7 +33,7 @@ function hasTypeScript(dir, depth = 0) {
  * without looking at them. Fail loudly instead.
  */
 function assertTypeScriptAvailable(repoPath) {
-  const problem = typeScriptProblem(repoPath, Boolean(getAvailableTranspilers().find((t) => t.name === 'typescript')?.available));
+  const problem = typeScriptProblem(repoPath, Boolean(getAvailableTranspilers().find((transpiler) => transpiler.name === 'typescript')?.available));
   if (problem) throw new Error(problem);
 }
 
@@ -54,7 +54,7 @@ export function typeScriptProblem(repoPath, available) {
 function looksLocal(specifier, aliasNames) {
   if (/^[./]/.test(specifier)) return true;
   if (/^[~#]/.test(specifier) || specifier.startsWith('@/')) return true;
-  return aliasNames.some((a) => specifier === a || specifier.startsWith(`${a}/`));
+  return aliasNames.some((alias) => specifier === alias || specifier.startsWith(`${alias}/`));
 }
 
 /** @param {string[]} dependencyTypes */
@@ -75,7 +75,7 @@ export async function graph(repoPath, config = {}) {
   assertTypeScriptAvailable(root);
   const aliases = readAliases(root);
   const warnings = [...aliases.warnings];
-  const aliasNames = Object.keys(aliases.alias).map((a) => a.replace(/\$$/, ''));
+  const aliasNames = Object.keys(aliases.alias).map((alias) => alias.replace(/\$$/, ''));
 
   const result = await cruise(
     ['.'],
@@ -93,26 +93,28 @@ export async function graph(repoPath, config = {}) {
   const output = /** @type {import('dependency-cruiser').ICruiseResult} */ (result.output);
 
   const ignore = config.ignore ?? [];
-  const ignored = (f) => ignore.length > 0 && matchesAny(f, ignore);
-  const isLocalFile = (m) => !m.coreModule && !m.couldNotResolve && !/(^|\/)node_modules\//.test(m.source) && !ignored(toPosix(m.source));
-  const files = output.modules.filter(isLocalFile).map((m) => toPosix(m.source)).sort();
+  const ignored = (file) => ignore.length > 0 && matchesAny(file, ignore);
+  const isLocalFile = (cruised) => !cruised.coreModule && !cruised.couldNotResolve && !/(^|\/)node_modules\//.test(cruised.source) && !ignored(toPosix(cruised.source));
+  const files = output.modules.filter(isLocalFile).map((cruised) => toPosix(cruised.source)).sort();
   const edges = [];
   const unresolved = [];
   /** @type {Map<string, Map<string, string>>} per file: import specifier -> local file it resolves to */
   const specs = new Map();
-  for (const m of output.modules) {
-    if (!isLocalFile(m)) continue;
-    for (const d of m.dependencies) {
-      if (d.coreModule) continue;
-      if (d.couldNotResolve) {
-        if (looksLocal(d.module, aliasNames)) unresolved.push(`'${d.module}' in ${toPosix(m.source)}`);
+  for (const cruised of output.modules) {
+    if (!isLocalFile(cruised)) continue;
+    const from = toPosix(cruised.source);
+    for (const dependency of cruised.dependencies) {
+      if (dependency.coreModule) continue;
+      if (dependency.couldNotResolve) {
+        if (looksLocal(dependency.module, aliasNames)) unresolved.push(`'${dependency.module}' in ${from}`);
         continue;
       }
-      if (/(^|\/)node_modules\//.test(d.resolved)) continue;
-      if (ignored(toPosix(d.resolved))) continue;
-      edges.push({ from: toPosix(m.source), to: toPosix(d.resolved), kind: kindOf(d.dependencyTypes) });
-      if (!specs.has(toPosix(m.source))) specs.set(toPosix(m.source), new Map());
-      /** @type {Map<string, string>} */ (specs.get(toPosix(m.source))).set(d.module, toPosix(d.resolved));
+      if (/(^|\/)node_modules\//.test(dependency.resolved)) continue;
+      if (ignored(toPosix(dependency.resolved))) continue;
+      const to = toPosix(dependency.resolved);
+      edges.push({ from, to, kind: kindOf(dependency.dependencyTypes) });
+      if (!specs.has(from)) specs.set(from, new Map());
+      /** @type {Map<string, string>} */ (specs.get(from)).set(dependency.module, to);
     }
   }
   if (unresolved.length) {
@@ -125,7 +127,7 @@ export async function graph(repoPath, config = {}) {
 
   const presetName = config.preset ?? detectFramework(root)?.suggestedPreset;
   const entryGlobs = presetName ? loadPreset(presetName).entries : [];
-  const entries = files.filter((f) => matchesAny(f, entryGlobs));
+  const entries = files.filter((file) => matchesAny(file, entryGlobs));
   // what each importer really uses through re-export files, for reins init and impact (the rules keep the real edges)
   const { barrels, uses } = resolveBarrels(root, edges, specs);
   return { edges, files, entries, warnings, barrels, uses };

@@ -12,10 +12,10 @@ const examples = fileURLToPath(new URL('../../../../examples/', import.meta.url)
 /** Aliases with absolute paths turned into repo-relative ones. */
 function relAliases(repo) {
   const info = readAliases(repo);
-  const rel = (p) => path.relative(repo, p).split(path.sep).join('/');
+  const toRepoRelative = (absolutePath) => path.relative(repo, absolutePath).split(path.sep).join('/');
   return {
-    alias: Object.fromEntries(Object.entries(info.alias).map(([k, v]) => [k, v.map(rel)])),
-    modules: info.modules.map(rel),
+    alias: Object.fromEntries(Object.entries(info.alias).map(([name, targets]) => [name, targets.map(toRepoRelative)])),
+    modules: info.modules.map(toRepoRelative),
     sources: info.sources,
     warnings: info.warnings,
   };
@@ -23,9 +23,9 @@ function relAliases(repo) {
 
 function tempRepo(files) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reins-adapter-'));
-  for (const [f, content] of Object.entries(files)) {
-    mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
-    writeFileSync(path.join(dir, f), content);
+  for (const [relativePath, content] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(dir, relativePath)), { recursive: true });
+    writeFileSync(path.join(dir, relativePath), content);
   }
   return dir;
 }
@@ -55,10 +55,10 @@ test('aliases: Vite TS template follows references and extends, exact keys, and 
 });
 
 test('aliases: vite.config array form, "/src" means the project root, regex finds are reported', () => {
-  const r = relAliases(path.join(fixtures, 'vite-alias-array'));
-  assert.deepEqual(r.alias, { '@': ['src'], '#root': ['src'] });
-  assert.equal(r.warnings.length, 1);
-  assert.match(r.warnings[0], /regular expression in "find"/);
+  const result = relAliases(path.join(fixtures, 'vite-alias-array'));
+  assert.deepEqual(result.alias, { '@': ['src'], '#root': ['src'] });
+  assert.equal(result.warnings.length, 1);
+  assert.match(result.warnings[0], /regular expression in "find"/);
 });
 
 test('aliases: baseUrl alone becomes a module folder (pages router fixture)', () => {
@@ -90,8 +90,8 @@ test('detectFramework: vite, next app, next pages, both routers, nothing', () =>
 
 test('presets: every preset loads with layers and entries', () => {
   for (const name of PRESETS) {
-    const p = loadPreset(name);
-    assert.ok(p.description && p.layers.length >= 3 && p.entries.length >= 3, name);
+    const preset = loadPreset(name);
+    assert.ok(preset.description && preset.layers.length >= 3 && preset.entries.length >= 3, name);
   }
   assert.throws(() => loadPreset('remix'), /unknown preset "remix"/);
 });
@@ -108,9 +108,9 @@ test('detect: Vite inside a Rails app suggests the inertia-react preset', () => 
 
 test('presets: every preset declares what init needs to know about JS; inertia-react has no index files', () => {
   for (const name of PRESETS) {
-    const p = loadPreset(name);
-    assert.ok(p.sources.length && p.tests.length && p.orphans_ignore.length && p.layers.length && p.entries.length, name);
-    assert.equal(p.ignore_kinds[0].kind, 'type', name);
+    const preset = loadPreset(name);
+    assert.ok(preset.sources.length && preset.tests.length && preset.orphans_ignore.length && preset.layers.length && preset.entries.length, name);
+    assert.equal(preset.ignore_kinds[0].kind, 'type', name);
   }
   assert.ok(loadPreset('vite-react').index_files.includes('index.ts'));
   assert.deepEqual(loadPreset('inertia-react').index_files, []);

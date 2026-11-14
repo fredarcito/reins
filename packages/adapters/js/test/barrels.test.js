@@ -35,9 +35,9 @@ test('declaredExports: declarations, export lists and default', () => {
 
 function repo(files) {
   const dir = mkdtempSync(path.join(tmpdir(), 'reins-barrels-'));
-  for (const [f, c] of Object.entries(files)) {
-    mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
-    writeFileSync(path.join(dir, f), c);
+  for (const [relativePath, content] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(dir, relativePath)), { recursive: true });
+    writeFileSync(path.join(dir, relativePath), content);
   }
   return dir;
 }
@@ -57,9 +57,9 @@ test('graph: what each importer really uses through barrels, nested and with exp
     'src/routes/profile/Profile.jsx': "import { Rating } from '@/components';\nexport const Profile = Rating;\n",
     'src/routes/admin/Admin.jsx': "import * as UI from '@/components';\nexport const Admin = UI;\n",
   });
-  const r = await graph(dir, { preset: 'vite-react' });
-  assert.deepEqual(r.barrels, ['src/components/JobBoard/index.js', 'src/components/index.js', 'src/components/widgets/index.js']);
-  const uses = r.uses.map((u) => `${u.from} -> ${u.to}`);
+  const result = await graph(dir, { preset: 'vite-react' });
+  assert.deepEqual(result.barrels, ['src/components/JobBoard/index.js', 'src/components/index.js', 'src/components/widgets/index.js']);
+  const uses = result.uses.map((use) => `${use.from} -> ${use.to}`);
   assert.deepEqual(uses, [
     'src/routes/admin/Admin.jsx -> src/components/Button.jsx',
     'src/routes/admin/Admin.jsx -> src/components/JobBoard/JobBoard.jsx',
@@ -68,5 +68,5 @@ test('graph: what each importer really uses through barrels, nested and with exp
     'src/routes/jobs/Jobs.jsx -> src/components/JobBoard/JobBoard.jsx',
     'src/routes/profile/Profile.jsx -> src/components/widgets/Rating.jsx',
   ]);
-  assert.ok(r.edges.some((e) => e.from === 'src/routes/jobs/Jobs.jsx' && e.to === 'src/components/index.js'), 'the real edges are untouched');
+  assert.ok(result.edges.some((edge) => edge.from === 'src/routes/jobs/Jobs.jsx' && edge.to === 'src/components/index.js'), 'the real edges are untouched');
 });

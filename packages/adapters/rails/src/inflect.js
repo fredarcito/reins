@@ -20,8 +20,8 @@ export function readInflections(root) {
   const file = path.join(root, 'config/initializers/inflections.rb');
   if (existsSync(file)) {
     const source = readFileSync(file, 'utf8').replace(/^\s*#.*$/gm, '');
-    for (const m of source.matchAll(/\.acronym\s*\(?\s*['"](\w+)['"]/g)) acronyms.set(m[1].toLowerCase(), m[1]);
-    for (const m of source.matchAll(/\.irregular\s*\(?\s*['"](\w+)['"]\s*,\s*['"](\w+)['"]/g)) irregulars.set(m[2].toLowerCase(), m[1].toLowerCase());
+    for (const match of source.matchAll(/\.acronym\s*\(?\s*['"](\w+)['"]/g)) acronyms.set(match[1].toLowerCase(), match[1]);
+    for (const match of source.matchAll(/\.irregular\s*\(?\s*['"](\w+)['"]\s*,\s*['"](\w+)['"]/g)) irregulars.set(match[2].toLowerCase(), match[1].toLowerCase());
   }
   return { acronyms, irregulars };
 }
@@ -34,7 +34,7 @@ export function readInflections(root) {
 export function camelize(name, inflections) {
   return name
     .split('/')
-    .map((segment) => segment.split('_').filter(Boolean).map((w) => inflections.acronyms.get(w) ?? w[0].toUpperCase() + w.slice(1)).join(''))
+    .map((segment) => segment.split('_').filter(Boolean).map((part) => inflections.acronyms.get(part) ?? part[0].toUpperCase() + part.slice(1)).join(''))
     .join('::');
 }
 
@@ -56,5 +56,5 @@ export function singulars(name, inflections) {
   if (/ses$/.test(word)) out.push(word.replace(/es$/, ''), word.replace(/s$/, ''));
   if (/s$/.test(word) && !/ss$/.test(word)) out.push(word.replace(/s$/, ''));
   out.push(word);
-  return [...new Set(out)].map((w) => head + w);
+  return [...new Set(out)].map((form) => head + form);
 }

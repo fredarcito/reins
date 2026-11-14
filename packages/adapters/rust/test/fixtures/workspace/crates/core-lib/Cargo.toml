@@ -1,0 +1,3 @@
+[package]
+name = "core-lib" # the crate is core_lib
+edition = "2021"

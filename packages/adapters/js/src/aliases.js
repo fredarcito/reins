@@ -24,29 +24,29 @@ import { VITE_CONFIGS } from './detect.js';
  */
 export function parseJsonc(text) {
   let out = '';
-  let i = 0;
-  while (i < text.length) {
-    const c = text[i];
-    if (c === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== '"') j += text[j] === '\\' ? 2 : 1;
-      out += text.slice(i, j + 1);
-      i = j + 1;
-    } else if (c === '/' && text[i + 1] === '/') {
-      while (i < text.length && text[i] !== '\n') i++;
-    } else if (c === '/' && text[i + 1] === '*') {
-      const end = text.indexOf('*/', i + 2);
-      i = end === -1 ? text.length : end + 2;
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === '"') {
+      let close = index + 1;
+      while (close < text.length && text[close] !== '"') close += text[close] === '\\' ? 2 : 1;
+      out += text.slice(index, close + 1);
+      index = close + 1;
+    } else if (char === '/' && text[index + 1] === '/') {
+      while (index < text.length && text[index] !== '\n') index++;
+    } else if (char === '/' && text[index + 1] === '*') {
+      const end = text.indexOf('*/', index + 2);
+      index = end === -1 ? text.length : end + 2;
     } else {
-      out += c;
-      i++;
+      out += char;
+      index++;
     }
   }
   return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1'));
 }
 
-/** @param {string} p */
-const toPosix = (p) => p.split(path.sep).join('/');
+/** @param {string} filePath */
+const toPosix = (filePath) => filePath.split(path.sep).join('/');
 
 /**
  * Loads a tsconfig-like file following `extends`, returning merged compilerOptions with
@@ -59,8 +59,8 @@ function loadTsconfig(file, warnings, seen = new Set()) {
   let json;
   try {
     json = parseJsonc(readFileSync(file, 'utf8'));
-  } catch (e) {
-    warnings.push(`${path.basename(file)}: could not be parsed (${e.message}); its aliases are ignored.`);
+  } catch (error) {
+    warnings.push(`${path.basename(file)}: could not be parsed (${error.message}); its aliases are ignored.`);
     return null;
   }
   const dir = path.dirname(file);
@@ -74,15 +74,15 @@ function loadTsconfig(file, warnings, seen = new Set()) {
     const parent = loadTsconfig(target, warnings, seen);
     if (parent) merged = { ...merged, ...parent, references: merged.references, chain: [...merged.chain, ...parent.chain] };
   }
-  const co = json.compilerOptions ?? {};
-  if (co.baseUrl !== undefined) merged.baseUrl = path.resolve(dir, co.baseUrl);
-  if (co.paths !== undefined) {
-    merged.paths = co.paths;
+  const options = json.compilerOptions ?? {};
+  if (options.baseUrl !== undefined) merged.baseUrl = path.resolve(dir, options.baseUrl);
+  if (options.paths !== undefined) {
+    merged.paths = options.paths;
     merged.pathsBase = dir;
   }
-  for (const ref of json.references ?? []) {
-    if (!ref || typeof ref.path !== 'string') continue;
-    let target = path.resolve(dir, ref.path);
+  for (const reference of json.references ?? []) {
+    if (!reference || typeof reference.path !== 'string') continue;
+    let target = path.resolve(dir, reference.path);
     if (existsSync(target) && statSync(target).isDirectory()) target = path.join(target, 'tsconfig.json');
     merged.references.push(target);
   }
@@ -98,9 +98,9 @@ function pathsToAlias(paths, base, alias, warnings, source) {
     if (!Array.isArray(targets)) continue;
     const star = key.indexOf('*');
     if (star === -1) {
-      add(alias, `${key}$`, targets.map((t) => path.resolve(base, t)));
+      add(alias, `${key}$`, targets.map((target) => path.resolve(base, target)));
     } else if (key.endsWith('/*') && star === key.length - 1) {
-      const dirs = targets.filter((t) => t.endsWith('/*')).map((t) => path.resolve(base, t.slice(0, -2)));
+      const dirs = targets.filter((target) => target.endsWith('/*')).map((target) => path.resolve(base, target.slice(0, -2)));
       if (dirs.length) add(alias, key.slice(0, -2), dirs);
       else warnings.push(`${source}: paths "${key}" maps to targets without "/*"; not supported, ignored.`);
     } else {
@@ -111,23 +111,23 @@ function pathsToAlias(paths, base, alias, warnings, source) {
 
 function add(alias, name, targets) {
   const list = (alias[name] ??= []);
-  for (const t of targets) if (!list.includes(t)) list.push(t);
+  for (const target of targets) if (!list.includes(target)) list.push(target);
 }
 
 /** Finds the matching closing bracket for text[open]. String-aware. */
 function closing(text, open) {
   const pairs = { '{': '}', '[': ']', '(': ')' };
   const stack = [pairs[text[open]]];
-  for (let i = open + 1; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"' || c === "'" || c === '`') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== c) j += text[j] === '\\' ? 2 : 1;
-      i = j;
-    } else if (pairs[c]) stack.push(pairs[c]);
-    else if (c === stack[stack.length - 1]) {
+  for (let index = open + 1; index < text.length; index++) {
+    const char = text[index];
+    if (char === '"' || char === "'" || char === '`') {
+      let close = index + 1;
+      while (close < text.length && text[close] !== char) close += text[close] === '\\' ? 2 : 1;
+      index = close;
+    } else if (pairs[char]) stack.push(pairs[char]);
+    else if (char === stack[stack.length - 1]) {
       stack.pop();
-      if (!stack.length) return i;
+      if (!stack.length) return index;
     }
   }
   return -1;
@@ -139,27 +139,27 @@ function splitTop(body) {
   let depth = 0;
   let start = 0;
   let quote = null;
-  for (let i = 0; i < body.length; i++) {
-    const c = body[i];
+  for (let index = 0; index < body.length; index++) {
+    const char = body[index];
     if (quote) {
-      if (c === '\\') i++;
-      else if (c === quote) quote = null;
-    } else if (c === '"' || c === "'" || c === '`') quote = c;
-    else if ('{[('.includes(c)) depth++;
-    else if ('}])'.includes(c)) depth--;
-    else if (c === ',' && depth === 0) {
-      parts.push(body.slice(start, i));
-      start = i + 1;
+      if (char === '\\') index++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'" || char === '`') quote = char;
+    else if ('{[('.includes(char)) depth++;
+    else if ('}])'.includes(char)) depth--;
+    else if (char === ',' && depth === 0) {
+      parts.push(body.slice(start, index));
+      start = index + 1;
     }
   }
   parts.push(body.slice(start));
-  return parts.map((s) => s.trim()).filter(Boolean);
+  return parts.map((part) => part.trim()).filter(Boolean);
 }
 
 /** The last string literal of an expression that looks like a path: `path.resolve(__dirname, './src')` -> './src'. */
 function pathLiteral(expr) {
-  const strings = [...expr.matchAll(/(['"`])((?:\\.|(?!\1).)*)\1/g)].map((m) => m[2]);
-  return strings.reverse().find((s) => s.startsWith('.') || s.startsWith('/') || /^[\w@-]+(\/|$)/.test(s));
+  const strings = [...expr.matchAll(/(['"`])((?:\\.|(?!\1).)*)\1/g)].map((match) => match[2]);
+  return strings.reverse().find((candidate) => candidate.startsWith('.') || candidate.startsWith('/') || /^[\w@-]+(\/|$)/.test(candidate));
 }
 
 /**
@@ -167,12 +167,12 @@ function pathLiteral(expr) {
  * (`{ '@': path.resolve(__dirname, './src') }`) and the array form (`[{ find: '@', replacement: … }]`).
  */
 function viteAliases(repoPath, alias, warnings, sources) {
-  const file = VITE_CONFIGS.find((f) => existsSync(path.join(repoPath, f)));
+  const file = VITE_CONFIGS.find((configFile) => existsSync(path.join(repoPath, configFile)));
   if (!file) return;
   const text = readFileSync(path.join(repoPath, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-  const m = /\balias\s*:\s*/.exec(text);
-  if (!m) return;
-  const open = m.index + m[0].length;
+  const match = /\balias\s*:\s*/.exec(text);
+  if (!match) return;
+  const open = match.index + match[0].length;
   if (text[open] !== '{' && text[open] !== '[') {
     warnings.push(`${file}: resolve.alias is not a literal object or array; set the same aliases in jsconfig.json/tsconfig.json "paths" so reins can read them.`);
     return;
@@ -189,19 +189,19 @@ function viteAliases(repoPath, alias, warnings, sources) {
     let key;
     let value;
     if (text[open] === '{') {
-      const km = /^(?:(['"`])((?:\\.|(?!\1).)*)\1|([\w$@~#-]+))\s*:\s*([\s\S]*)$/.exec(entry);
-      if (!km) continue;
-      key = km[2] ?? km[3];
-      value = km[4];
+      const keyMatch = /^(?:(['"`])((?:\\.|(?!\1).)*)\1|([\w$@~#-]+))\s*:\s*([\s\S]*)$/.exec(entry);
+      if (!keyMatch) continue;
+      key = keyMatch[2] ?? keyMatch[3];
+      value = keyMatch[4];
     } else {
-      const find = /\bfind\s*:\s*(['"`])((?:\\.|(?!\1).)*)\1/.exec(entry);
-      const repl = /\breplacement\s*:\s*([\s\S]*)$/.exec(entry);
-      if (!find) {
+      const findMatch = /\bfind\s*:\s*(['"`])((?:\\.|(?!\1).)*)\1/.exec(entry);
+      const replacement = /\breplacement\s*:\s*([\s\S]*)$/.exec(entry);
+      if (!findMatch) {
         warnings.push(`${file}: an alias uses a regular expression in "find"; set it in jsconfig.json/tsconfig.json "paths" instead.`);
         continue;
       }
-      key = find[2];
-      value = repl?.[1] ?? '';
+      key = findMatch[2];
+      value = replacement?.[1] ?? '';
     }
     const target = toTarget(pathLiteral(value));
     if (!key || !target) {
@@ -221,24 +221,24 @@ function viteAliases(repoPath, alias, warnings, sources) {
 export function readAliases(repoPath) {
   /** @type {AliasInfo} */
   const info = { alias: {}, modules: [], sources: [], warnings: [] };
-  const queue = ['tsconfig.json', 'jsconfig.json'].map((f) => path.join(repoPath, f));
+  const queue = ['tsconfig.json', 'jsconfig.json'].map((name) => path.join(repoPath, name));
   const visited = new Set();
   while (queue.length) {
     const file = queue.shift();
     if (visited.has(file)) continue;
     visited.add(file);
-    const cfg = loadTsconfig(file, info.warnings);
-    if (!cfg) continue;
-    const rel = toPosix(path.relative(repoPath, file));
-    if (cfg.paths) {
-      pathsToAlias(cfg.paths, cfg.baseUrl ?? cfg.pathsBase, info.alias, info.warnings, rel);
-      info.sources.push(rel);
+    const config = loadTsconfig(file, info.warnings);
+    if (!config) continue;
+    const relativeFile = toPosix(path.relative(repoPath, file));
+    if (config.paths) {
+      pathsToAlias(config.paths, config.baseUrl ?? config.pathsBase, info.alias, info.warnings, relativeFile);
+      info.sources.push(relativeFile);
     }
-    if (cfg.baseUrl && !info.modules.includes(cfg.baseUrl)) {
-      info.modules.push(cfg.baseUrl);
-      if (!info.sources.includes(rel)) info.sources.push(rel);
+    if (config.baseUrl && !info.modules.includes(config.baseUrl)) {
+      info.modules.push(config.baseUrl);
+      if (!info.sources.includes(relativeFile)) info.sources.push(relativeFile);
     }
-    queue.push(...cfg.references);
+    queue.push(...config.references);
   }
   viteAliases(repoPath, info.alias, info.warnings, info.sources);
   return info;

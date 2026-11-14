@@ -29,13 +29,13 @@ export function isClientComponent(source) {
 export function serverOnlyImport(source) {
   const code = stripComments(source);
   for (const mod of SERVER_ONLY_IMPORTS) {
-    const re = new RegExp(`(?:from\\s*|import\\s*\\(?\\s*|require\\(\\s*)(['"])${mod.replace('/', '\\/')}\\1`);
-    if (re.test(code)) return mod;
+    const pattern = new RegExp(`(?:from\\s*|import\\s*\\(?\\s*|require\\(\\s*)(['"])${mod.replace('/', '\\/')}\\1`);
+    if (pattern.test(code)) return mod;
   }
   return null;
 }
 
-const render = (t, vars) => t.replace(/\{([a-z_]+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+const render = (template, vars) => template.replace(/\{([a-z_]+)\}/g, (match, key) => (key in vars ? vars[key] : match));
 
 /**
  * @param {string} repoPath
@@ -48,26 +48,26 @@ export function run(repoPath, config, graph) {
   if (!rule || rule.severity === 'off') return [];
 
   const { edges } = graph;
-  const files = new Set([...(graph.files ?? []), ...edges.flatMap((e) => [e.from, e.to])]);
+  const files = new Set([...(graph.files ?? []), ...edges.flatMap((edge) => [edge.from, edge.to])]);
   /** @type {Map<string, string>} */
   const text = new Map();
-  const read = (f) => {
-    if (!text.has(f)) {
+  const read = (file) => {
+    if (!text.has(file)) {
       try {
-        text.set(f, readFileSync(path.join(repoPath, f), 'utf8'));
+        text.set(file, readFileSync(path.join(repoPath, file), 'utf8'));
       } catch {
-        text.set(f, '');
+        text.set(file, '');
       }
     }
-    return text.get(f);
+    return text.get(file);
   };
 
   /** @type {Map<string, string[]>} runtime imports only: type-only imports don't ship to the browser */
   const adj = new Map();
-  for (const e of edges) {
-    if (e.kind === 'type') continue;
-    if (!adj.has(e.from)) adj.set(e.from, []);
-    adj.get(e.from).push(e.to);
+  for (const edge of edges) {
+    if (edge.kind === 'type') continue;
+    if (!adj.has(edge.from)) adj.set(edge.from, []);
+    adj.get(edge.from).push(edge.to);
   }
 
   const out = [];
@@ -77,27 +77,27 @@ export function run(repoPath, config, graph) {
     const prev = new Map([[client, null]]);
     const queue = [client];
     for (let head = 0; head < queue.length; head++) {
-      const f = queue[head];
-      const reason = serverOnlyImport(read(f));
+      const current = queue[head];
+      const reason = serverOnlyImport(read(current));
       if (reason) {
         const chain = [];
-        for (let n = f; n !== null; n = prev.get(n)) chain.unshift(n);
-        const vars = { from: client, to: f, reason: `imports '${reason}'`, chain: chain.join(' → ') };
+        for (let node = current; node !== null; node = prev.get(node)) chain.unshift(node);
+        const vars = { from: client, to: current, reason: `imports '${reason}'`, chain: chain.join(' → ') };
         out.push({
           rule: id,
           severity: /** @type {'error'|'warn'} */ (rule.severity),
-          key: `${id}|${client}|${f}`,
+          key: `${id}|${client}|${current}`,
           from: client,
-          ...(f !== client ? { to: f } : {}),
+          ...(current !== client ? { to: current } : {}),
           files: chain,
           message: render(rule.message ?? DEFAULTS.message, vars),
           fix: render(rule.fix ?? DEFAULTS.fix, vars),
         });
         continue; // don't look past a server-only module
       }
-      for (const next of adj.get(f) ?? []) {
+      for (const next of adj.get(current) ?? []) {
         if (prev.has(next)) continue;
-        prev.set(next, f);
+        prev.set(next, current);
         queue.push(next);
       }
     }

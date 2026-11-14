@@ -74,7 +74,7 @@ export async function init(ctx) {
   const existing = path.join(root, ARCHITECTURE_FILE);
   const declared = existsSync(existing) ? declaredAdapters(readFileSync(existing, 'utf8')) : [];
   const names = declared.length ? declared : guessAdapterNames(root);
-  if (!names.length) throw new CliError('Could not tell which adapter this repo needs (no package.json, and no Gemfile with config/application.rb). JavaScript/TypeScript and Ruby on Rails repos are supported.');
+  if (!names.length) throw new CliError('Could not tell which adapter this repo needs (no package.json, no Cargo.toml, and no Gemfile with config/application.rb). JavaScript/TypeScript, Ruby on Rails and Rust repos are supported.');
   /** @type {{ name: string, adapter: import('@agentreins/core/contract').Adapter, packageName: string }[]} */
   const loaded = [];
   const hints = [];

@@ -17,9 +17,9 @@ const MAX_DEPTH = 4;
  * @returns {[string, string][]}
  */
 function clauseNames(body) {
-  return body.split(',').map((x) => x.trim().replace(/^type\s+/, '')).filter(Boolean).map((x) => {
-    const m = /^([\w$]+)(?:\s+as\s+([\w$]+))?$/.exec(x);
-    return m ? /** @type {[string, string]} */ ([m[2] ?? m[1], m[1]]) : /** @type {[string, string]} */ ([x, x]);
+  return body.split(',').map((item) => item.trim().replace(/^type\s+/, '')).filter(Boolean).map((item) => {
+    const match = /^([\w$]+)(?:\s+as\s+([\w$]+))?$/.exec(item);
+    return match ? /** @type {[string, string]} */ ([match[2] ?? match[1], match[1]]) : /** @type {[string, string]} */ ([item, item]);
   });
 }
 
@@ -32,7 +32,7 @@ function clauseNames(body) {
 export function parseBarrel(source) {
   const code = stripComments(source).replace(DIRECTIVE, '');
   const entries = [];
-  const rest = code.replace(REEXPORT, (_m, clause, _q, spec) => {
+  const rest = code.replace(REEXPORT, (_match, clause, _quote, spec) => {
     if (clause.startsWith('*')) {
       const ns = /as\s+([\w$]+)/.exec(clause)?.[1];
       entries.push(ns ? { star: false, names: [[ns, '*']], spec } : { star: true, names: [], spec });
@@ -55,9 +55,9 @@ export function importedNames(source, spec) {
   const esc = spec.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const names = [];
   let found = false;
-  for (const m of code.matchAll(new RegExp(`(?:import|export)\\s+(?:type\\s+)?([^;'"\`]*?)\\s+from\\s*(['"])${esc}\\2`, 'g'))) {
+  for (const match of code.matchAll(new RegExp(`(?:import|export)\\s+(?:type\\s+)?([^;'"\`]*?)\\s+from\\s*(['"])${esc}\\2`, 'g'))) {
     found = true;
-    const braces = /^\{([^}]*)\}$/.exec(m[1].trim());
+    const braces = /^\{([^}]*)\}$/.exec(match[1].trim());
     if (!braces) return null;
     names.push(...clauseNames(braces[1]).map(([, original]) => original));
   }
@@ -69,8 +69,8 @@ export function importedNames(source, spec) {
 export function declaredExports(source) {
   const code = stripComments(source);
   const names = new Set();
-  for (const m of code.matchAll(/export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\*?|class|const|let|var|type|interface|enum)\s+([\w$]+)/g)) names.add(m[1]);
-  for (const m of code.matchAll(/export\s*\{([^}]*)\}(?!\s*from)/g)) for (const [exported] of clauseNames(m[1])) names.add(exported);
+  for (const match of code.matchAll(/export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?(?:abstract\s+)?(?:function\*?|class|const|let|var|type|interface|enum)\s+([\w$]+)/g)) names.add(match[1]);
+  for (const match of code.matchAll(/export\s*\{([^}]*)\}(?!\s*from)/g)) for (const [exported] of clauseNames(match[1])) names.add(exported);
   if (/export\s+default\b/.test(code)) names.add('default');
   return names;
 }
@@ -86,72 +86,72 @@ export function declaredExports(source) {
 export function resolveBarrels(root, edges, specs) {
   /** @type {Map<string, string>} */
   const text = new Map();
-  const read = (f) => {
-    if (!text.has(f)) {
+  const read = (file) => {
+    if (!text.has(file)) {
       try {
-        text.set(f, readFileSync(path.join(root, f), 'utf8'));
+        text.set(file, readFileSync(path.join(root, file), 'utf8'));
       } catch {
-        text.set(f, '');
+        text.set(file, '');
       }
     }
-    return /** @type {string} */ (text.get(f));
+    return /** @type {string} */ (text.get(file));
   };
   /** @type {Map<string, { star: boolean, names: [string, string][], target: string | null }[]>} */
   const barrels = new Map();
-  for (const f of new Set(edges.map((e) => e.to))) {
-    if (!INDEX.test(f)) continue;
-    const entries = parseBarrel(read(f));
-    if (entries) barrels.set(f, entries.map((x) => ({ star: x.star, names: x.names, target: specs.get(f)?.get(x.spec) ?? null })));
+  for (const file of new Set(edges.map((edge) => edge.to))) {
+    if (!INDEX.test(file)) continue;
+    const entries = parseBarrel(read(file));
+    if (entries) barrels.set(file, entries.map((entry) => ({ star: entry.star, names: entry.names, target: specs.get(file)?.get(entry.spec) ?? null })));
   }
 
   /** Every file a barrel re-exports from, through nested barrels. */
-  const allTargets = (b, depth = 0) => {
+  const allTargets = (barrel, depth = 0) => {
     const out = new Set();
-    for (const x of barrels.get(b) ?? []) {
-      if (!x.target) continue;
-      if (barrels.has(x.target) && depth < MAX_DEPTH) for (const t of allTargets(x.target, depth + 1)) out.add(t);
-      else out.add(x.target);
+    for (const entry of barrels.get(barrel) ?? []) {
+      if (!entry.target) continue;
+      if (barrels.has(entry.target) && depth < MAX_DEPTH) for (const reached of allTargets(entry.target, depth + 1)) out.add(reached);
+      else out.add(entry.target);
     }
     return out;
   };
-  /** The file that defines `name` exported by barrel `b`, or null. */
-  const resolveName = (b, name, depth = 0) => {
+  /** The file that defines `name` exported by barrel `barrel`, or null. */
+  const resolveName = (barrel, name, depth = 0) => {
     if (depth > MAX_DEPTH) return null;
-    for (const x of barrels.get(b) ?? []) {
-      const pair = x.names.find(([exported]) => exported === name);
-      if (!pair || !x.target) continue;
+    for (const entry of barrels.get(barrel) ?? []) {
+      const pair = entry.names.find(([exported]) => exported === name);
+      if (!pair || !entry.target) continue;
       if (pair[1] === '*') return null; // `export * as ns`: the namespace stands for the whole target
-      return barrels.has(x.target) ? resolveName(x.target, pair[1], depth + 1) : x.target;
+      return barrels.has(entry.target) ? resolveName(entry.target, pair[1], depth + 1) : entry.target;
     }
-    for (const x of barrels.get(b) ?? []) {
-      if (!x.star || !x.target) continue;
-      if (barrels.has(x.target)) {
-        const t = resolveName(x.target, name, depth + 1);
-        if (t) return t;
-      } else if (declaredExports(read(x.target)).has(name)) return x.target;
+    for (const entry of barrels.get(barrel) ?? []) {
+      if (!entry.star || !entry.target) continue;
+      if (barrels.has(entry.target)) {
+        const reached = resolveName(entry.target, name, depth + 1);
+        if (reached) return reached;
+      } else if (declaredExports(read(entry.target)).has(name)) return entry.target;
     }
     return null;
   };
 
   const uses = new Set();
-  for (const e of edges) {
-    if (!barrels.has(e.to) || barrels.has(e.from)) continue;
-    const viaSpecs = [...(specs.get(e.from) ?? [])].filter(([, to]) => to === e.to).map(([spec]) => spec);
+  for (const edge of edges) {
+    if (!barrels.has(edge.to) || barrels.has(edge.from)) continue;
+    const viaSpecs = [...(specs.get(edge.from) ?? [])].filter(([, target]) => target === edge.to).map(([spec]) => spec);
     const used = new Set();
     for (const spec of viaSpecs) {
-      const names = importedNames(read(e.from), spec);
-      const targets = names?.map((n) => resolveName(e.to, n));
-      if (!targets || targets.some((t) => !t)) {
-        for (const t of allTargets(e.to)) used.add(t);
-      } else for (const t of targets) used.add(/** @type {string} */ (t));
+      const names = importedNames(read(edge.from), spec);
+      const targets = names?.map((name) => resolveName(edge.to, name));
+      if (!targets || targets.some((target) => !target)) {
+        for (const target of allTargets(edge.to)) used.add(target);
+      } else for (const target of targets) used.add(/** @type {string} */ (target));
     }
-    if (!viaSpecs.length) for (const t of allTargets(e.to)) used.add(t);
-    for (const t of used) uses.add(`${e.from}\n${t}`);
+    if (!viaSpecs.length) for (const target of allTargets(edge.to)) used.add(target);
+    for (const target of used) uses.add(`${edge.from}\n${target}`);
   }
   return {
     barrels: [...barrels.keys()].sort(),
-    uses: [...uses].sort().map((k) => {
-      const [from, to] = k.split('\n');
+    uses: [...uses].sort().map((key) => {
+      const [from, to] = key.split('\n');
       return { from, to };
     }),
   };

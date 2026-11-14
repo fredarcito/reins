@@ -34,7 +34,7 @@ export function readInertia(root) {
   const folded = new Map();
   for (const sourceDir of new Set(sourceDirs)) {
     // names as they are on disk: on a case-insensitive file system `pages` and `Pages` are the same folder
-    for (const name of list(path.join(root, sourceDir)).filter((e) => e.isDirectory() && /^pages$/i.test(e.name)).map((e) => e.name)) {
+    for (const name of list(path.join(root, sourceDir)).filter((entry) => entry.isDirectory() && /^pages$/i.test(entry.name)).map((entry) => entry.name)) {
       const pagesRoot = `${sourceDir}/${name}`;
       roots.push(pagesRoot);
       walk(path.join(root, pagesRoot), '', (rel) => {
@@ -75,8 +75,8 @@ function usesCustomResolver(root) {
  * @returns {string | null}
  */
 export function inferredComponent(file, action) {
-  const m = /(?:^|\/)controllers\/(.+)_controller\.rb$/.exec(file);
-  return m ? `${m[1]}/${action}` : null;
+  const match = /(?:^|\/)controllers\/(.+)_controller\.rb$/.exec(file);
+  return match ? `${match[1]}/${action}` : null;
 }
 
 function list(dir) {

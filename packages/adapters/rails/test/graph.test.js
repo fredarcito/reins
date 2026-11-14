@@ -9,8 +9,8 @@ import { inferredComponent } from '../src/inertia.js';
 
 const fixture = (name) => fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 const app = fixture('inertia-app');
-const g = await adapter.graph(app, {});
-const targets = (from, kind) => g.edges.filter((e) => e.from === from && (!kind || e.kind === kind)).map((e) => e.to).sort();
+const appGraph = await adapter.graph(app, {});
+const targets = (from, kind) => appGraph.edges.filter((edge) => edge.from === from && (!kind || edge.kind === kind)).map((edge) => edge.to).sort();
 
 test('detect: a Gemfile and config/application.rb', () => {
   assert.equal(adapter.detect(app), true);
@@ -20,12 +20,12 @@ test('detect: a Gemfile and config/application.rb', () => {
 });
 
 test('graph: valid edges, Ruby files only, vendor skipped, entries from the preset', () => {
-  assert.deepEqual(validateEdges(g.edges), []);
-  assert.ok(g.files.includes('lib/tasks/billing.rake'));
-  assert.ok(g.files.every((f) => /\.(rb|rake)$/.test(f)));
-  assert.ok(!g.files.some((f) => f.startsWith('vendor/')));
-  assert.ok(g.entries.includes('app/controllers/users_controller.rb') && g.entries.includes('config/routes.rb'));
-  assert.ok(!g.entries.includes('app/models/user.rb'));
+  assert.deepEqual(validateEdges(appGraph.edges), []);
+  assert.ok(appGraph.files.includes('lib/tasks/billing.rake'));
+  assert.ok(appGraph.files.every((file) => /\.(rb|rake)$/.test(file)));
+  assert.ok(!appGraph.files.some((file) => file.startsWith('vendor/')));
+  assert.ok(appGraph.entries.includes('app/controllers/users_controller.rb') && appGraph.entries.includes('config/routes.rb'));
+  assert.ok(!appGraph.entries.includes('app/models/user.rb'));
 });
 
 test('constants: superclass, include, nested constant, absolute and lexical lookups', () => {
@@ -44,7 +44,7 @@ test('constants: superclass, include, nested constant, absolute and lexical look
 });
 
 test('constants: a reopened Ruby class is not a dependency; require and require_relative are', () => {
-  assert.ok(!g.edges.some((e) => e.to === 'lib/core_ext/string.rb' && e.from.startsWith('app/')));
+  assert.ok(!appGraph.edges.some((edge) => edge.to === 'lib/core_ext/string.rb' && edge.from.startsWith('app/')));
   assert.deepEqual(targets('config/application.rb'), ['config/boot.rb', 'lib/core_ext/string.rb']);
 });
 
@@ -61,32 +61,32 @@ test('inertia: named, inferred and route components become edges to the page fil
 });
 
 test('inertia: a page that does not exist is a warning, never a silent gap', () => {
-  assert.equal(g.warnings.length, 1);
-  assert.match(g.warnings[0], /2 Inertia page\(s\) rendered from Ruby were not found under app\/frontend\/pages/);
-  assert.match(g.warnings[0], /'users\/gone' in app\/controllers\/users_controller\.rb/);
-  assert.match(g.warnings[0], /'Nowhere' in config\/routes\.rb/);
+  assert.equal(appGraph.warnings.length, 1);
+  assert.match(appGraph.warnings[0], /2 Inertia page\(s\) rendered from Ruby were not found under app\/frontend\/pages/);
+  assert.match(appGraph.warnings[0], /'users\/gone' in app\/controllers\/users_controller\.rb/);
+  assert.match(appGraph.warnings[0], /'Nowhere' in config\/routes\.rb/);
 });
 
 test('ignore globs drop files and the edges that reach them', async () => {
-  const r = await adapter.graph(app, { ignore: ['app/models/billing/**'] });
-  assert.ok(!r.files.includes('app/models/billing/invoice.rb'));
-  assert.ok(!r.edges.some((e) => e.to.startsWith('app/models/billing/')));
+  const ignoringBilling = await adapter.graph(app, { ignore: ['app/models/billing/**'] });
+  assert.ok(!ignoringBilling.files.includes('app/models/billing/invoice.rb'));
+  assert.ok(!ignoringBilling.edges.some((edge) => edge.to.startsWith('app/models/billing/')));
 });
 
 test('a file with syntax errors is reported', async () => {
-  const r = await adapter.graph(fixture('broken'), {});
-  assert.match(r.warnings[0], /1 Ruby file\(s\) have syntax errors.*config\/application\.rb/);
+  const brokenGraph = await adapter.graph(fixture('broken'), {});
+  assert.match(brokenGraph.warnings[0], /1 Ruby file\(s\) have syntax errors.*config\/application\.rb/);
 });
 
 test('resolveConstant: innermost scope first, longest owned name, namespaces without a file', () => {
   const known = new Set(['A', 'A::B', 'A::B::C', 'C', 'A::X']);
   const owners = new Map([['A::B::C', new Set(['abc.rb'])], ['C', new Set(['c.rb'])], ['A::X', new Set(['ax.rb'])]]);
-  const one = (...a) => [...(resolveConstant(...a, known, owners) ?? [])];
-  assert.deepEqual(one('C', ['A::B', 'A']), ['abc.rb']);
-  assert.deepEqual(one('C', []), ['c.rb']);
-  assert.deepEqual(one('X::DEFAULT', ['A::B', 'A']), ['ax.rb']);
-  assert.deepEqual(one('B', ['A']), []); // A::B is only a namespace
-  assert.deepEqual(one('Gem::Thing', ['A']), []);
+  const resolve = (...parameters) => [...(resolveConstant(...parameters, known, owners) ?? [])];
+  assert.deepEqual(resolve('C', ['A::B', 'A']), ['abc.rb']);
+  assert.deepEqual(resolve('C', []), ['c.rb']);
+  assert.deepEqual(resolve('X::DEFAULT', ['A::B', 'A']), ['ax.rb']);
+  assert.deepEqual(resolve('B', ['A']), []); // A::B is only a namespace
+  assert.deepEqual(resolve('Gem::Thing', ['A']), []);
 });
 
 test('inflector and inferred component names', () => {

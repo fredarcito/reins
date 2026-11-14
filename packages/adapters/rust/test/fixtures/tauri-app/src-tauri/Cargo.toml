@@ -1,0 +1,6 @@
+[package]
+name = "t"
+edition = "2021"
+
+[lib]
+name = "t_lib"
