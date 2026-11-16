@@ -9,12 +9,15 @@ export const options = {
   local: { type: 'boolean' },
   claude: { type: 'boolean' },
   'skip-claude': { type: 'boolean' },
+  codex: { type: 'boolean' },
+  'skip-codex': { type: 'boolean' },
 };
 
-export const help = `Usage: reins sync [--check | --local] [--claude | --skip-claude]
+export const help = `Usage: reins sync [--check | --local] [--claude | --skip-claude] [--codex | --skip-codex]
 
 Syncs provider-neutral .reins/core/ sources and managed rules/notes blocks in AGENTS.md.
-Generates the optional Claude Code adapter (.claude/ and CLAUDE.md) by default; its preference is saved.
+Generates the optional Claude Code adapter (.claude/ and CLAUDE.md) by default, and the Codex hooks
+(.codex/hooks.json) when the repo has a .codex/ folder; both preferences are saved.
 Only touches what it generated (listed in ${MANIFEST_FILE}); never other skills, agents or settings.
 
 Options:
@@ -23,15 +26,18 @@ Options:
   --local         Write only the generated files the repo gitignores, never a committed file; silent when nothing
                   changes and never fails (package.json's "prepare", or "postinstall" with yarn, runs it on install)
   --skip-claude   Disable Claude Code files and save that preference
-  --claude        Enable Claude Code files and save that preference`;
+  --claude        Enable Claude Code files and save that preference
+  --skip-codex    Disable the Codex hooks and save that preference
+  --codex         Enable the Codex hooks (.codex/hooks.json) and save that preference; trust them once in Codex (/hooks)`;
 
 /** @param {{ root: string, values: Record<string, any>, out: (s: string) => void }} ctx */
 export async function sync(ctx) {
   const { root, values, out } = ctx;
   if (values.claude && values['skip-claude']) throw new CliError('Use either --claude or --skip-claude, not both.');
-  if (values.local && (values.check || values.claude || values['skip-claude'])) throw new CliError('--local goes alone: it follows the Claude Code choice saved by the last `reins sync`.');
+  if (values.codex && values['skip-codex']) throw new CliError('Use either --codex or --skip-codex, not both.');
+  if (values.local && (values.check || values.claude || values['skip-claude'] || values.codex || values['skip-codex'])) throw new CliError('--local goes alone: it follows the Claude Code choice saved by the last `reins sync`.');
   if (values.local) return syncLocal(ctx);
-  const r = runSync(root, { check: values.check, claude: values.claude, skipClaude: values['skip-claude'] });
+  const r = runSync(root, { check: values.check, claude: values.claude, skipClaude: values['skip-claude'], codex: values.codex, skipCodex: values['skip-codex'] });
   for (const w of r.warnings) out(`! warning  ${w}`);
   if (values.check) {
     if (!r.divergences.length) {

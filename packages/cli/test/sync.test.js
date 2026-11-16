@@ -4,9 +4,9 @@ import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, write
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cli, exampleRepo, git } from './helpers.js';
-import { CURSOR_HOOKS, fitNotesIndex, installScript, PREPARE_STEP, withLocalSync, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
+import { CODEX_HOOKS, CURSOR_HOOKS, fitNotesIndex, mergeCodexHooks, installScript, PREPARE_STEP, withLocalSync, mergeCursorHooks, mergeSettings, migrateAdapterKey, renderNotesIndex, SETTINGS } from '../src/sync/index.js';
 
-const HOW = '- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands)';
+const HOW = '- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook brings them when you read, search or edit, shell commands included)';
 const templates = fileURLToPath(new URL('../../../templates/', import.meta.url));
 const read = (dir, f) => readFileSync(path.join(dir, f), 'utf8');
 const write = (dir, f, text) => {
@@ -119,7 +119,7 @@ test('generated content: prefixed names, Claude frontmatter, notes index, CLAUDE
   assert.equal(read(dir, 'CLAUDE.md'), '@AGENTS.md\n');
   const settings = JSON.parse(read(dir, '.claude/settings.json'));
   assert.deepEqual(settings.permissions.deny, SETTINGS.deny);
-  assert.equal(settings.hooks.PreToolUse[0].matcher, 'Read|Edit|Write|MultiEdit|Grep|Glob');
+  assert.equal(settings.hooks.PreToolUse[0].matcher, 'Read|Edit|Write|MultiEdit|Grep|Glob|Bash|Shell');
   assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /reins notes --hook$/);
   assert.equal(settings.hooks.SessionStart[0].matcher, 'startup|compact|clear');
   assert.match(settings.hooks.SessionStart[0].hooks[0].command, /reins resume --hook$/);
@@ -173,7 +173,7 @@ test('existing AGENTS.md and CLAUDE.md belong to the repo: only the notes block 
   assert.equal(read(dir, 'CLAUDE.md'), 'my own CLAUDE.md\n');
   write(dir, 'AGENTS.md', '# mine\n<!-- reins:notes:start -->\nstale\n<!-- reins:notes:end -->\nafter\n');
   await cli(dir, ['sync']);
-  assert.equal(read(dir, 'AGENTS.md'), '# mine\n<!-- reins:notes:start -->\n- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook misses shell commands). By path:\n- `src/features/cart/**` → `.reins/notes/cart.md`\n<!-- reins:notes:end -->\nafter\n');
+  assert.equal(read(dir, 'AGENTS.md'), '# mine\n<!-- reins:notes:start -->\n- Before reading or searching the code of an area, get its notes: `npx reins triage "<reason>"` finds them from the task, `npx reins notes <path…>` from a path (the hook brings them when you read, search or edit, shell commands included). By path:\n- `src/features/cart/**` → `.reins/notes/cart.md`\n<!-- reins:notes:end -->\nafter\n');
 });
 
 test('--check detects hand edits, stale sources, new notes and removed settings; sync repairs them', async () => {
@@ -269,7 +269,7 @@ test('mergeSettings: removes entries reins no longer wants, keeps everything els
   const r = mergeSettings(current, previous);
   const s = JSON.parse(r.text);
   assert.deepEqual(s.permissions.deny, ['A', 'Bash(git commit:*)', 'B', 'Bash(git push:*)']);
-  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit|Grep|Glob']);
+  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['X', 'Read|Edit|Write|MultiEdit|Grep|Glob|Bash|Shell']);
   assert.deepEqual(r.owned.deny, SETTINGS.deny);
   assert.equal(mergeSettings(r.text, r.owned).changed, false);
 });
@@ -286,6 +286,41 @@ test('mergeCursorHooks: adds the session start trigger next to the team\'s hooks
   assert.deepEqual(r.owned.hooks, [...CURSOR_HOOKS]);
   assert.equal(mergeCursorHooks(r.text, r.owned).changed, false);
   assert.match(mergeCursorHooks('{ nope', { hooks: [] }).problem ?? '', /\.cursor\/hooks\.json is not valid JSON.*not touched/);
+});
+
+test('codex: hooks in .codex/hooks.json when the repo has a .codex/ folder; --skip-codex turns them off and is saved', async () => {
+  const plain = repo();
+  await cli(plain, ['sync']);
+  assert.equal(existsSync(path.join(plain, '.codex/hooks.json')), false, 'no .codex/ folder: no Codex hooks');
+
+  const dir = repo();
+  write(dir, '.codex/hooks.json', JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'mine' }] }] } }));
+  const first = await cli(dir, ['sync']);
+  assert.match(first.stdout, /updated \.codex\/hooks\.json \(notes hook and session start for Codex; trust them once in Codex with \/hooks\)/);
+  const hooks = JSON.parse(read(dir, '.codex/hooks.json')).hooks;
+  assert.deepEqual(Object.keys(hooks), ['Stop', 'PreToolUse', 'SessionStart'], "the team's hooks stay first");
+  assert.equal(hooks.PreToolUse[0].matcher, 'Bash|apply_patch');
+  assert.match(hooks.PreToolUse[0].hooks[0].command, /^"\$\(git rev-parse --show-toplevel\)"\/node_modules\/\.bin\/reins notes --hook$/);
+  assert.match((await cli(dir, ['sync'])).stdout, /nothing to do/);
+  assert.equal((await cli(dir, ['sync', '--check'])).code, 0);
+
+  write(dir, '.codex/hooks.json', JSON.stringify({ hooks: { Stop: hooks.Stop } }));
+  assert.match((await cli(dir, ['sync', '--check'])).stdout, /\.codex\/hooks\.json: reins hooks missing or out of date/);
+
+  await cli(dir, ['sync', '--skip-codex']);
+  assert.equal((await cli(dir, ['sync', '--check'])).code, 0, 'off, and the choice is saved');
+  await cli(plain, ['sync', '--codex']);
+  assert.ok(existsSync(path.join(plain, '.codex/hooks.json')), '--codex turns them on without the folder');
+  assert.match((await cli(plain, ['sync', '--codex', '--skip-codex'])).stderr, /Use either --codex or --skip-codex/);
+});
+
+test('mergeCodexHooks: invalid JSON is reported and not touched; an older matcher is upgraded in place', () => {
+  assert.match(mergeCodexHooks('{', { hooks: [] }).problem ?? '', /\.codex\/hooks\.json is not valid JSON/);
+  const [notesHook] = CODEX_HOOKS;
+  const older = { ...notesHook, matcher: 'Bash' };
+  const current = JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: notesHook.command }] }, { matcher: 'Mine', hooks: [] }] } });
+  const merged = mergeCodexHooks(current, { hooks: [older] });
+  assert.deepEqual(JSON.parse(merged.text ?? '{}').hooks.PreToolUse.map((entry) => entry.matcher), ['Bash|apply_patch', 'Mine']);
 });
 
 test('notes index: parts of a module go on its line, so AGENTS.md does not grow a line per part', () => {
@@ -342,8 +377,8 @@ test('upgrading: the notes hook installed by an older reins (Read|Edit|Write|Mul
   const r = mergeSettings(current2, { deny: [], hooks: [old] });
   const s = JSON.parse(r.text ?? '{}');
   assert.deepEqual(Object.keys(s.hooks), ['PreToolUse', 'SessionStart'], 'events keep their order');
-  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['Read|Edit|Write|MultiEdit|Grep|Glob', 'Mine'], 'changed in place, not moved to the end');
-  assert.ok(r.owned.hooks.some((h) => h.matcher === 'Read|Edit|Write|MultiEdit|Grep|Glob'), 'still owned by reins');
+  assert.deepEqual(s.hooks.PreToolUse.map((e) => e.matcher), ['Read|Edit|Write|MultiEdit|Grep|Glob|Bash|Shell', 'Mine'], 'changed in place, not moved to the end');
+  assert.ok(r.owned.hooks.some((h) => h.matcher === 'Read|Edit|Write|MultiEdit|Grep|Glob|Bash|Shell'), 'still owned by reins');
   assert.equal(mergeSettings(r.text, r.owned).changed, false);
 });
 

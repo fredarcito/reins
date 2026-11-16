@@ -1,7 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.18.0 · 2026-11-16
 
+Rust support, and reins is harder to skip: notes reach agents that read code from the shell, and an untriaged edit gets a reminder.
+
+```bash
+npx reins update
+```
+
+For a Rust or Tauri repo, add the adapter: `npm install -D @agentreins/adapter-rust`.
+
+- **Codex gets reins' hooks (experimental, not yet tried with Codex).** In a repo with a `.codex/` folder, `reins sync` writes `.codex/hooks.json`: module notes when Codex reads code through the shell or edits with `apply_patch`, the reminder to triage before the first edit, and the task notebook at session start. Open `/hooks` in Codex once to trust them. `reins sync --codex` turns them on without the folder, `--skip-codex` off.
+- **The notes hook also reads shell commands.** Agents often read code with `cat`, `grep` or `sed` instead of the Read tool, and the notes never arrived. Now the hook runs on `Bash` (Claude Code) and `Shell` (Cursor) too and delivers the notes of the paths a command names. git commands that only stage, commit or switch (`git add`, `git commit`, `git checkout`…) bring none. `reins update` changes the hook in `.claude/settings.json`.
+- **A reminder before the first edit of an untriaged task.** If the session has not measured its task's level (`reins triage --files`), its first edit gets one reminder to do it, whatever the file, new files included. A level another session recorded on the same branch no longer counts for this one: `reins triage` now writes the session on its line. `reins progress new` warns the same way, and `reins triage` without files ends with the next step.
 - **Rust adapter: `@agentreins/adapter-rust`.** `reins check`, `init` and `impact` now work on Rust: a crate, a Cargo workspace, or the Rust half of a Tauri app. Rust imports modules, so the adapter builds each crate's module tree from `mod` declarations and follows every `use` and path (`crate::`, `super::`, a module a `use` brought in, another crate of the repo by its name) to the file of the module it names. Rust does not need to be installed. In a Tauri app, install it next to `adapter-js` and `reins init` drafts `adapters: [js, rust]`, one plan for the frontend and the crate. The drafted rules ignore `mod` declarations (`ignore_kinds: [mod]`): they only build the module tree. Experimental: [what it reads and what it can't see](packages/adapters/rust/README.md).
 
 ## 0.17.0 · 2026-11-12

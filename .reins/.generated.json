@@ -35,10 +35,11 @@
   },
   "blocks": {
     "AGENTS.md#rules": "b9f2c0893c4ac8631258f6d78ed7d2b592bccdc76cbed97294b232416d3dbf54",
-    "AGENTS.md#notes": "fe0567d84706cdf256f93bd46bf719ead55b277c87e1047db775b100d727d4ee"
+    "AGENTS.md#notes": "b08e7cf5e183b4c655fc5f74962e6fad0a4c38a06a79f5dbbcc057846cf8d017"
   },
   "adapters": {
-    "claude": true
+    "claude": true,
+    "codex": false
   },
   "settings": {
     "deny": [
@@ -48,7 +49,7 @@
     "hooks": [
       {
         "event": "PreToolUse",
-        "matcher": "Read|Edit|Write|MultiEdit|Grep|Glob",
+        "matcher": "Read|Edit|Write|MultiEdit|Grep|Glob|Bash|Shell",
         "command": "\"$CLAUDE_PROJECT_DIR\"/node_modules/.bin/reins notes --hook"
       },
       {
@@ -65,5 +66,8 @@
         "command": "echo '{}' # reins: makes Cursor run the SessionStart hooks of .claude/settings.json"
       }
     ]
+  },
+  "codex": {
+    "hooks": []
   }
 }

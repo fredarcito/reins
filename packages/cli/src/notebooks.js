@@ -12,12 +12,12 @@ import { liveBranches, listNotebooks } from './project.js';
 /**
  * The session running this command: the hook payload's id, else the id the agent's shell gets from its client
  * (`CLAUDE_CODE_SESSION_ID` in Claude Code, `CURSOR_CONVERSATION_ID` in Cursor: both equal the hooks' `session_id`,
- * VERIFIED P11 and P12), else `REINS_SESSION` (any other agent). Null when none is known.
+ * VERIFIED P11 and P12; `CODEX_THREAD_ID` in Codex, from its source, not verified), else `REINS_SESSION` (any other agent). Null when none is known.
  * @param {NodeJS.ProcessEnv} env
  * @param {string | null} [hookSession]
  */
 export const sessionId = (env, hookSession = null) =>
-  hookSession || env.CLAUDE_CODE_SESSION_ID || env.CURSOR_CONVERSATION_ID || env.REINS_SESSION || null;
+  hookSession || env.CLAUDE_CODE_SESSION_ID || env.CURSOR_CONVERSATION_ID || env.CODEX_THREAD_ID || env.REINS_SESSION || null;
 
 /** The task asked for explicitly: `--task <name>` or `REINS_TASK`. */
 export const explicitTask = (values, env) => values?.task || env.REINS_TASK || null;

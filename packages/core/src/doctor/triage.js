@@ -1,16 +1,17 @@
 // Triage: the agent declares a task level (small | medium | large) in .reins/progress/triage.log,
 // one line per task: `YYYY-MM-DD | branch | level | reason`, optionally followed by `| commit:<sha>` (the commit the
-// task started from, written by `reins triage`) and `| task:<name>`. With a commit, the doctor compares the current
+// task started from, written by `reins triage`), `| task:<name>` and `| session:<id>` (the agent session that
+// measured it: the notes hook reminds a session that edits code before measuring its task). With a commit, the doctor compares the current
 // task's level with the diff since that commit; without one, the highest level declared on the branch with the
 // branch diff.
 import { matchesAny } from '../glob.js';
 
 export const LEVELS = Object.freeze(['small', 'medium', 'large']);
 const rank = (level) => LEVELS.indexOf(level);
-const FIELD_RE = /^(commit|task):([^\s|]+)$/;
+const FIELD_RE = /^(commit|task|session):([^\s|]+)$/;
 
 /**
- * @typedef {{ line: number, date: string, branch: string, level: string, reason: string, commit: string | null, task: string | null }} TriageEntry
+ * @typedef {{ line: number, date: string, branch: string, level: string, reason: string, commit: string | null, task: string | null, session: string | null }} TriageEntry
  */
 
 /**
@@ -35,7 +36,7 @@ export function parseTriageLog(text) {
     if (parts.length < 4 || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !branch || !LEVELS.includes(level) || !reason) {
       malformed.push({ line: i + 1, text: line });
     } else {
-      entries.push({ line: i + 1, date, branch, level, reason, commit: fields.commit ?? null, task: fields.task ?? null });
+      entries.push({ line: i + 1, date, branch, level, reason, commit: fields.commit ?? null, task: fields.task ?? null, session: fields.session ?? null });
     }
   });
   return { entries, malformed };
@@ -43,10 +44,11 @@ export function parseTriageLog(text) {
 
 /**
  * One triage.log line.
- * @param {{ date: string, branch: string, level: string, reason: string, commit?: string | null, task?: string | null }} e
+ * @param {{ date: string, branch: string, level: string, reason: string, commit?: string | null, task?: string | null, session?: string | null }} entry
  */
-export function formatTriageLine({ date, branch, level, reason, commit = null, task = null }) {
-  return [date, branch, level, reason.replace(/\s+/g, ' ').trim(), commit && `commit:${commit}`, task && `task:${task}`].filter(Boolean).join(' | ');
+export function formatTriageLine({ date, branch, level, reason, commit = null, task = null, session = null }) {
+  const fields = [commit && `commit:${commit}`, task && `task:${task}`, session && `session:${session}`];
+  return [date, branch, level, reason.replace(/\s+/g, ' ').trim(), ...fields].filter(Boolean).join(' | ');
 }
 
 /**

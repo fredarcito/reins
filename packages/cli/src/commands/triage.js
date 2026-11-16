@@ -97,6 +97,7 @@ export async function triage(ctx) {
     reason,
     commit: tryGit(root, ['rev-parse', '--short=12', 'HEAD']), // null before the first commit
     task,
+    session: sessionId(env), // lets the notes hook tell this session's level from other sessions' on the branch
   });
   const file = path.join(root, TRIAGE_LOG);
   withFileLock(file, () => {
@@ -169,6 +170,6 @@ function suggest(ctx, reason, env) {
   if (fresh.length) out(`\nRead these notes before exploring (${START_FROM}):\n\n${fresh.map((n) => `Note ${n.file} (applies to ${n.paths.join(', ')}):\n${n.body}`).join('\n\n')}`);
   const old = best.filter((n) => !unseen.has(n.file)).map((n) => n.file);
   if (old.length) out(`\nAlready delivered this session: ${old.join(', ')}.`);
-  out(`\nNothing measured or recorded yet. Once you know the files, run \`${measure}\`.`);
+  out(`\nLevel NOT measured: nothing was recorded. Next step, before editing any file: once you know the files, run \`${measure}\`. reins measures the level; state it in one line, and give one yourself only to raise it.`);
   return 0;
 }

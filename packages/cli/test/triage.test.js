@@ -168,7 +168,7 @@ test('triage without files: suggests the likely notes before exploring, records 
   assert.doesNotMatch(r.stdout, /billing/);
   assert.match(r.stdout, /Read these notes before exploring \(start from them; the code wins if they disagree, and say so\)/);
   assert.match(r.stdout, /Source Talent search page/);
-  assert.match(r.stdout, /Nothing measured or recorded yet\. Once you know the files, run `npx reins triage "add a Company filter to Job Matches" --files/);
+  assert.match(r.stdout, /Level NOT measured: nothing was recorded\. Next step, before editing any file: once you know the files, run `npx reins triage "add a Company filter to Job Matches" --files/);
   assert.equal(existsSync(path.join(dir, LOG)), false);
   // once per session, shared with the notes hook
   const again = await cli(dir, ['triage', 'job matches again'], { env });

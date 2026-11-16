@@ -1,6 +1,6 @@
 # Publishing to npm
 
-Four packages, published together with the same version:
+Five packages, published together with the same version:
 
 | Package | What it is |
 | --- | --- |
@@ -8,7 +8,7 @@ Four packages, published together with the same version:
 | `@agentreins/core` | Rules, config, reports, adapter contract. A dependency of the CLI |
 | `@agentreins/adapter-js` | JavaScript/TypeScript adapter. Peer of `@agentreins/core` |
 | `@agentreins/adapter-rails` | Ruby on Rails adapter (since 0.14.0). Peer of `@agentreins/core` |
-| `@agentreins/adapter-rust` | Rust adapter (unreleased). Peer of `@agentreins/core` |
+| `@agentreins/adapter-rust` | Rust adapter (since 0.18.0). Peer of `@agentreins/core` |
 
 Users install them with:
 

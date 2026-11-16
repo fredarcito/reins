@@ -139,7 +139,7 @@ Notebook format (`.reins/progress/<branch>/<task>/notebook.md`, local, outside g
 
 ## `reins sync`, `reins notes`, `reins scope`, `reins impact`, `reins resume`
 
-`sync` refreshes the provider-neutral core sources and managed `AGENTS.md` blocks. By default it also generates the optional Claude Code adapter; `--skip-claude` updates only the shared files and leaves existing Claude files untouched. It only touches generated files recorded in `.reins/.generated.json`. `--local` writes only the generated files the repo gitignores ([below](#gitignored-generated-files)).
+`sync` refreshes the provider-neutral core sources and managed `AGENTS.md` blocks. By default it also generates the optional Claude Code adapter; `--skip-claude` updates only the shared files and leaves existing Claude files untouched. It also writes Codex's hooks (`.codex/hooks.json`) when the repo has a `.codex/` folder; `--codex` / `--skip-codex` choose, and the choice is saved. It only touches generated files recorded in `.reins/.generated.json`. `--local` writes only the generated files the repo gitignores ([below](#gitignored-generated-files)).
 
 ```mermaid
 flowchart LR
@@ -197,9 +197,13 @@ sequenceDiagram
 
 **The same hook guards shared files.** At session start reins builds an impact map in the background (who imports each file, and the minimum task level if a change breaks them). When the agent opens a shared file that needs a higher level than the one it declared, it gets told to stop, tell you, and re-plan before editing. It says it once per file, and stays quiet when the level already fits.
 
+**Shell commands too, and edits before triage.** Agents often read code with `cat`, `grep` or `sed` instead of the Read tool. The hook also runs on `Bash`: it takes the paths the command names that exist in the repo (after a `cd`, without quotes, flags or `:line`) and delivers their notes, the same once-per-session record as Read. And the first edit of a session that has not measured its task's level (no `reins triage --files` line with this session, or with the task it claimed) gets one reminder to triage first, new files included. A level another session declared on the same branch does not count. `reins progress new` warns the same way, and `reins triage` without files ends with the next step in capitals.
+
 **Cursor too.** Cursor runs the same hooks from `.claude/settings.json`, so notes, the task notebook and the impact warning reach Cursor's agent as well. `reins sync` adds a one-line `.cursor/hooks.json` that makes Cursor fire its session start; commit it with the rest.
 
-The `AGENTS.md` index line works with any agent (Codex, Cursor); the hook is the Claude Code fast path. Tested with Claude Code: the note arrives when the file is read, so the very first edit already follows it ([details](VERIFIED.md#phase-6-findings)).
+**Codex (experimental, not yet tried with Codex).** Codex reads hooks in the same format from its own file. When the repo has a `.codex/` folder (or with `reins sync --codex`), `sync` writes `.codex/hooks.json`: notes on shell commands and on `apply_patch` edits, the edit reminder, and the task notebook at session start and after a compaction. Codex runs a hook only after you trust it: open `/hooks` in Codex once, and again whenever reins changes the file. `--skip-codex` turns it off; the choice is saved.
+
+The `AGENTS.md` index line works with any agent; the hook is the fast path (Claude Code, Cursor, Codex). Tested with Claude Code: the note arrives when the file is read, so the very first edit already follows it ([details](VERIFIED.md#phase-6-findings)).
 
 `scope` goes **path → domain**: the files a task will touch. `impact` goes the other way, **file → consuming domains**, and answers the question an agent has before touching a shared file: *who else imports this?*
 

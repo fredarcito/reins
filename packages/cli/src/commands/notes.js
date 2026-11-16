@@ -5,7 +5,7 @@ import { existsSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { matchesAny, notesFor, NOTES_DIR, rankStaleNotes } from '@agentreins/core';
 import { CliError, hookEventName, isGitRepo, toRepoPath } from '../context.js';
-import { impactHint } from '../impact-map.js';
+import { impactHint, untriagedHint } from '../impact-map.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { dirtyFiles, loadNotes, readDomains, readHistory, walk } from '../project.js';
@@ -38,9 +38,10 @@ new     Drafts .reins/notes/<name>.md for a domain of architecture.yml or a fold
 stale   Lists the notes most behind their code: commits to a note's paths since the note last changed (from
         git history). A signal, not proof: review the top ones (in Claude Code: /reins-notes review).
         --limit shows the first <n> (default 10; 0 for all).
---hook  For the Claude Code PreToolUse hook that reins sync installs (Read, Edit, Write, Grep, Glob): reads the
-        tool call from stdin and returns the notes of its file or folder as additional context, once per note
-        and session.`;
+--hook  For the Claude Code PreToolUse hook that reins sync installs (Read, Edit, Write, Grep, Glob, Bash; Shell in Cursor): reads
+        the tool call from stdin and returns the notes of its file or folder (for Bash, of the paths the command
+        names) as additional context, once per note and session. The first edit of a session that has not
+        measured its task's level also gets a reminder to run reins triage --files.`;
 
 /** reins notes new <domain|folder> */
 async function newNote(ctx, target) {
@@ -139,6 +140,104 @@ async function readStdin() {
   return data;
 }
 
+/** Tools that change a file: the first one in a session without a measured level gets the triage reminder. */
+const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit', 'apply_patch']);
+/** Shell tools: Claude Code's `Bash`, Cursor's `Shell` (VERIFIED P12). Both send `tool_input.command`. */
+const SHELL_TOOLS = new Set(['Bash', 'Shell']);
+/** At most this many paths of one shell command get their notes: a long `find` or `ls` output is not the task. */
+export const MAX_SHELL_PATHS = 8;
+
+/**
+ * git subcommands that only move changes around (stage, commit, switch branches, stash…): they name paths without
+ * reading or changing the code in them, so their paths bring no notes. `git diff`, `git log`, `git show`, `git
+ * blame`, `git mv` and `git rm` are not here: they read or change code.
+ */
+const GIT_BOOKKEEPING = new Set(['add', 'commit', 'restore', 'checkout', 'switch', 'stash', 'reset', 'clean', 'push', 'pull', 'fetch', 'branch', 'tag']);
+/** git options before the subcommand that take a value (`git -C dir add x`). */
+const GIT_OPTIONS_WITH_VALUE = new Set(['-C', '-c']);
+
+/** Whether a command's words are a git command that only moves changes around (GIT_BOOKKEEPING). */
+function isGitBookkeeping(words) {
+  if (words[0] !== 'git') return false;
+  let index = 1;
+  while (words[index]?.startsWith('-')) index += GIT_OPTIONS_WITH_VALUE.has(words[index]) ? 2 : 1;
+  return GIT_BOOKKEEPING.has(words[index]);
+}
+
+/** Real path; for a file about to be created (it doesn't exist yet), its resolved path. */
+function realPath(target) {
+  try {
+    return realpathSync(target);
+  } catch {
+    return path.resolve(target);
+  }
+}
+
+/**
+ * The paths a shell command names that exist on disk, e.g. `sed -n 1,80p src/x.js`, `grep -rn foo packages/cli`
+ * or `cd packages/cli && cat src/a.js` (`src/a.js` resolved from `packages/cli`). Any command: what matters is
+ * which code the agent is about to read, and words that are not existing paths are dropped. Quotes, flags and a
+ * `:line` suffix are stripped. git commands that only stage, commit or switch (GIT_BOOKKEEPING) are skipped. Absolute, so the caller can keep the ones inside the repo.
+ * @param {string} command
+ * @param {string} cwd the shell's working directory
+ * @returns {string[]}
+ */
+export function shellPaths(command, cwd) {
+  const found = new Set();
+  let dir = cwd;
+  for (const segment of command.split(/&&|\|\||;|\||\n/)) {
+    const words = segment.trim().split(/\s+/).map((word) => word.replace(/^['"]+|['"]+$/g, '').replace(/:\d+(:\d+)?$/, ''));
+    for (const word of isGitBookkeeping(words) ? [] : words) {
+      if (!word || word.startsWith('-') || /[*?<>$`]/.test(word)) continue;
+      const absolute = path.resolve(dir, word);
+      if (existsSync(absolute)) found.add(absolute);
+    }
+    // `cd x && cat y`: y is read from x
+    if (words[0] === 'cd' && words[1] && existsSync(path.resolve(dir, words[1]))) dir = path.resolve(dir, words[1]);
+  }
+  return [...found].slice(0, MAX_SHELL_PATHS);
+}
+
+/** The file lines of a Codex patch (`*** Update File: src/x.js`, `*** Add File:`, `*** Delete File:`, `*** Move to:`). */
+const PATCH_FILE_LINE = /^\*\*\* (?:Update File|Add File|Delete File|Move to): (.+)$/gm;
+
+/**
+ * The files a Codex `apply_patch` call changes, absolute. Codex sends the patch text as `tool_input.command`
+ * (docs/proposals/agent-adapters.md, 2c; not verified with Codex yet).
+ * @param {string} patch
+ * @param {string} cwd
+ * @returns {string[]}
+ */
+export function patchPaths(patch, cwd) {
+  return [...new Set([...patch.matchAll(PATCH_FILE_LINE)].map((match) => path.resolve(cwd, match[1].trim())))];
+}
+
+/**
+ * The folder a shell command runs in: the payload's `cwd`, else the tool's own `cwd`, else the project root.
+ * Cursor sends both as empty strings (VERIFIED P12): empty means the root, not the hook process's folder.
+ * @returns {string}
+ */
+function shellDir(input, realRoot) {
+  const candidates = [input?.cwd, input?.tool_input?.cwd];
+  return candidates.find((candidate) => typeof candidate === 'string' && candidate !== '') ?? realRoot;
+}
+
+/**
+ * A tool's target as the notes see it: a repo-relative file, or a folder with a trailing slash (Grep, Glob and
+ * shell commands search folders). Null outside the repo and for the repo root, which says nothing.
+ * @param {string} realRoot
+ * @param {string} target
+ */
+function repoTarget(realRoot, target) {
+  // real paths on both sides: the project may be opened through a symlink (e.g. macOS /var -> /private/var)
+  const realTarget = existsSync(target) ? realPath(target) : path.join(realPath(path.dirname(target)), path.basename(target));
+  const file = toRepoPath(realRoot, realRoot, realTarget);
+  if (file.startsWith('..') || path.isAbsolute(file)) return null;
+  const folder = existsSync(realTarget) && statSync(realTarget).isDirectory();
+  if (folder && (!file || file === '.')) return null;
+  return folder ? { file: `${file.replace(/\/$/, '')}/`, folder } : { file, folder };
+}
+
 /**
  * The hook. Exported for tests; `input` is the parsed hook JSON.
  * @param {string} root
@@ -146,38 +245,61 @@ async function readStdin() {
  * @returns {string | null} JSON to print, or null for "nothing to add"
  */
 export function hookResponse(root, input) {
-  const target = input?.tool_input?.file_path ?? input?.tool_input?.notebook_path ?? input?.tool_input?.path;
-  if (typeof target !== 'string' || !target) return null;
-  // real paths on both sides: the project may be opened through a symlink (e.g. macOS /var -> /private/var)
-  const real = (p) => {
-    try {
-      return realpathSync(p);
-    } catch {
-      return path.resolve(p); // a file about to be created doesn't exist yet
-    }
+  const toolName = typeof input?.tool_name === 'string' ? input.tool_name : null;
+  const toolInput = input?.tool_input ?? {};
+  const isShell = toolName !== null && SHELL_TOOLS.has(toolName);
+  const realRoot = realPath(root);
+  const command = typeof toolInput.command === 'string' ? toolInput.command : '';
+  /** @type {Record<string, () => string[]>} where each kind of tool names its files */
+  const targetsByKind = {
+    shell: () => shellPaths(command, shellDir(input, realRoot)),
+    patch: () => patchPaths(command, shellDir(input, realRoot)),
+    file: () => [toolInput.file_path ?? toolInput.notebook_path ?? toolInput.path].filter((target) => typeof target === 'string' && target),
   };
-  const realRoot = real(root);
-  const realTarget = existsSync(target) ? real(target) : path.join(real(path.dirname(target)), path.basename(target));
-  let file = toRepoPath(realRoot, realRoot, realTarget);
-  if (file.startsWith('..') || path.isAbsolute(file)) return null;
-  // Grep and Glob search a folder: its notes are the ones of a file inside it. The repo root says nothing.
-  const folder = existsSync(realTarget) && statSync(realTarget).isDirectory();
-  if (folder && (!file || file === '.')) return null;
-  if (folder) file = `${file.replace(/\/$/, '')}/`;
+  const kind = isShell ? 'shell' : toolName === 'apply_patch' ? 'patch' : 'file';
+  const rawTargets = targetsByKind[kind]();
+  const targets = rawTargets.map((target) => repoTarget(realRoot, target)).filter((target) => target !== null);
+  if (!targets.length) return null;
   const session = typeof input.session_id === 'string' ? input.session_id : null;
   const parts = [];
-  // a shared file touched under a lower declared level, or with no level declared (impactHint says how often)
-  let hint = null;
-  try {
-    hint = impactHint(root, file);
-  } catch {
-    /* unreadable map: say nothing about impact */
+  const [first] = targets;
+  // the first edit of a session that measured nothing: triage before changing code (once per session)
+  let reminded = false;
+  if (toolName && EDIT_TOOLS.has(toolName)) {
+    let untriaged = null;
+    try {
+      untriaged = untriagedHint(root, session, first.file);
+    } catch {
+      /* unreadable log: say nothing */
+    }
+    if (untriaged && takeUnseen(root, session, [{ file: untriaged.key }]).length) {
+      parts.push(untriaged.text);
+      reminded = true;
+    }
   }
-  if (hint && takeUnseen(root, session, [{ file: hint.key }]).length) parts.push(hint.text);
-  const notes = notesFor(folder ? `${file}x` : file, loadNotes(root).notes);
-  // once per note and session
-  const unseen = notes.length ? takeUnseen(root, session, notes) : [];
-  if (unseen.length) parts.push(`Module notes for ${file} (from .reins/notes; start from them; the code wins if they disagree, and say so):\n\n${render(file, unseen)}`);
+  // a shared file touched under a lower declared level, or with no level declared (impactHint says how often).
+  // A shell command only reads: no word about impact
+  if (!isShell && !reminded) {
+    let hint = null;
+    try {
+      hint = impactHint(root, first.file, session);
+    } catch {
+      /* unreadable map: say nothing about impact */
+    }
+    if (hint && takeUnseen(root, session, [{ file: hint.key }]).length) parts.push(hint.text);
+  }
+  // once per note and session; a note that applies to several targets is shown for the first one
+  const { notes: all } = loadNotes(root);
+  const byNote = new Map();
+  for (const target of targets) {
+    for (const note of notesFor(target.folder ? `${target.file}x` : target.file, all)) if (!byNote.has(note.file)) byNote.set(note.file, { note, target: target.file });
+  }
+  const unseen = byNote.size ? new Set(takeUnseen(root, session, [...byNote.values()].map((entry) => entry.note)).map((note) => note.file)) : new Set();
+  const fresh = [...byNote.values()].filter((entry) => unseen.has(entry.note.file));
+  if (fresh.length) {
+    const where = [...new Set(fresh.map((entry) => entry.target))].join(', ');
+    parts.push(`Module notes for ${where} (from .reins/notes; start from them; the code wins if they disagree, and say so):\n\n${fresh.map((entry) => render(entry.target, [entry.note])).join('\n\n')}`);
+  }
   if (!parts.length) return null;
   return JSON.stringify({
     hookSpecificOutput: {

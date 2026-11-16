@@ -53,6 +53,19 @@ Cursor 3.29.9 loads `.claude/settings.json` hooks and honors `additionalContext`
 
 Fixes 1 and 2 were built on 2026-11-08, and reins' real hooks were verified in this repo opened in Cursor (P12). One more fix came out of it: Cursor only fires session start when a native hook defines it, so `sync` writes a no-op `sessionStart` into `.cursor/hooks.json` (with the Claude Code adapter; merged like `.claude/settings.json`). Codex is the only agent left to verify.
 
+## 2c. Codex, from its docs (2026-11-15, not tested: Codex is not installed here)
+
+From the official hooks page ([learn.chatgpt.com/docs/hooks](https://learn.chatgpt.com/docs/hooks)):
+
+- **Same format as Claude Code.** `<repo>/.codex/hooks.json` (or `[hooks]` in `.codex/config.toml`) with `{"hooks": {"PreToolUse": [{"matcher": "…", "hooks": [{"type": "command", "command": "…"}]}]}}`; `matcher` is a regex on `tool_name`. Answers use `hookSpecificOutput.additionalContext`, supported for `PreToolUse` and `SessionStart` (sources `startup`, `resume`, `clear`, `compact`, `fork`), so notes, the notebook at session start and after compaction would all work.
+- **Tools.** Shell commands are `Bash` with `tool_input.command` (the same shape reins already reads). Edits are `apply_patch`, also reached by the matcher aliases `Edit`/`Write`, with the patch text in `tool_input.command`: reins would read the paths from its `*** Update File:` / `*** Add File:` lines. There is no Read tool: Codex reads through the shell, which the `Bash` support of 2026-11-14 already covers.
+- **Session.** Payload `session_id` (subagents get the parent's) and `cwd`. The shell gets `CODEX_THREAD_ID` (a Codex commit of 2026-02, not in the official env var page); whether it equals the hooks' `session_id` is unknown.
+- **Install friction.** Hooks run only after the person trusts them (`/hooks`), by hash: every change to the generated file asks again. Project hooks load only when the project's `.codex/` layer is trusted.
+
+So Codex needs a real adapter, unlike Cursor: `sync` writes `.codex/hooks.json`, the hook reads `apply_patch` paths, `sessionId` reads `CODEX_THREAD_ID`, and the docs tell the person to trust the hooks once. Backlog A7.
+
+**Built 2026-11-15, from the docs only:** `CODEX_HOOKS` in `packages/cli/src/sync/index.js` (`PreToolUse` `Bash|apply_patch` → `reins notes --hook`, `SessionStart` `startup|compact|clear` → `reins resume --hook`), merged with the code `.claude/settings.json` uses (`mergeHookEntries`); on when `.codex/` exists or with `--codex`, saved in the manifest. The command finds the root with `git rev-parse --show-toplevel` because Codex passes hooks no project folder variable. Still to verify on a machine with Codex: that the hooks fire with these matchers, that the command runs through a shell, the `apply_patch` payload, `CODEX_THREAD_ID` = `session_id`, and that `additionalContext` reaches the model.
+
 ## 3. Plan
 
 1. **Verify (no code).** On a machine with current Codex and Cursor: a probe hook that logs its payload and returns context, for each event in section 2. Record the results in `docs/VERIFIED.md` and fill the table. Scripts in `scripts/verify/`, like `cc-session-id.sh`. Also check that Cursor does not already run Claude Code hooks through its "third-party hooks" support, which would make a Cursor adapter partly redundant.

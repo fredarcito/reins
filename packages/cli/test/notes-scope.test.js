@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { cli, exampleRepo, git } from './helpers.js';
-import { hookResponse } from '../src/commands/notes.js';
+import { hookResponse, MAX_SHELL_PATHS, patchPaths, shellPaths } from '../src/commands/notes.js';
+import { sessionId } from '../src/notebooks.js';
 
 const write = (dir, f, text) => {
   mkdirSync(path.dirname(path.join(dir, f)), { recursive: true });
@@ -44,7 +45,11 @@ test('hook: returns additionalContext for Read/Edit of a noted path, once per no
   const first = JSON.parse(call('src/features/billing/tax.ts'));
   assert.equal(first.hookSpecificOutput.hookEventName, 'PreToolUse');
   assert.match(first.hookSpecificOutput.additionalContext, /^Module notes for src\/features\/billing\/tax\.ts \(from \.reins\/notes; start from them; the code wins if they disagree, and say so\):\n\nNote \.reins\/notes\/billing\.md/);
-  assert.equal(call('src/features/billing/Invoice.tsx', 's1', 'Edit'), null, 'same note, same session: not repeated');
+  // an edit in a session that measured nothing gets the triage reminder, but not the same note again
+  const edit = JSON.parse(call('src/features/billing/Invoice.tsx', 's1', 'Edit') ?? '{}').hookSpecificOutput?.additionalContext ?? '';
+  assert.match(edit, /^No level is measured for this task yet: before editing code, run `npx reins triage/);
+  assert.doesNotMatch(edit, /billing\.md/, 'same note, same session: not repeated');
+  assert.equal(call('src/features/billing/Invoice.tsx', 's1', 'Edit'), null, 'the reminder is once per session');
   assert.notEqual(call('src/lib/date.ts'), null, 'another note in the same session');
   assert.notEqual(call('src/features/billing/tax.ts', 's2'), null, 'a new session gets it again');
   const cursor = hookResponse(dir, { session_id: 'c1', hook_event_name: 'preToolUse', tool_name: 'Read', tool_input: { file_path: path.join(dir, 'src/features/billing/tax.ts') } });
@@ -57,6 +62,68 @@ test('hook: returns additionalContext for Read/Edit of a noted path, once per no
   assert.match(grep.hookSpecificOutput?.additionalContext ?? '', /^Module notes for src\/features\/billing\/ /);
   assert.equal(hookResponse(dir, { session_id: 's5', tool_name: 'Glob', tool_input: { pattern: '**/*.ts', path: dir } }), null, 'the repo root says nothing');
   assert.equal(hookResponse(dir, { session_id: 's5', tool_name: 'Grep', tool_input: { pattern: 'x' } }), null, 'no path: the whole repo');
+});
+
+test('shellPaths: the existing paths a command names, after cd, without quotes, flags or :line', () => {
+  const dir = repo();
+  const found = shellPaths(`cd src && sed -n 1,80p "lib/date.ts:12" | grep -rn tax features/billing; rg -l x --glob '*.ts' ../package.json nowhere.js`, dir);
+  assert.deepEqual(found.map((absolute) => path.relative(dir, absolute)), ['src', 'src/lib/date.ts', 'src/features/billing', 'package.json']);
+  const many = shellPaths(`cat ${Array.from({ length: 20 }, () => 'src/lib/date.ts src/app').join(' ')} src/features src/components`, dir);
+  assert.ok(many.length <= MAX_SHELL_PATHS);
+});
+
+test('shellPaths: git commands that only stage, commit or switch bring no paths; the ones that read code do', () => {
+  const dir = repo();
+  const relative = (command) => shellPaths(command, dir).map((absolute) => path.relative(dir, absolute));
+  assert.deepEqual(relative('git add src/lib/date.ts && git commit -m x src/app'), []);
+  assert.deepEqual(relative('git -C src checkout -- lib/date.ts; git stash push src/app'), []);
+  assert.deepEqual(relative('git add src/app && git diff src/lib/date.ts'), ['src/lib/date.ts']);
+  assert.deepEqual(relative('git log -p src/app'), ['src/app']);
+});
+
+test('hook on Bash: a shell command that reads code gets the notes of the paths it names, never an impact or triage word', () => {
+  const dir = repo();
+  const bash = (command, session = 'b1') => {
+    const response = hookResponse(dir, { session_id: session, hook_event_name: 'PreToolUse', tool_name: 'Bash', cwd: dir, tool_input: { command } });
+    return response ? JSON.parse(response).hookSpecificOutput.additionalContext : null;
+  };
+  const read = bash('sed -n 1,40p src/features/billing/tax.ts && grep -n UTC src/lib');
+  assert.match(read ?? '', /^Module notes for src\/features\/billing\/tax\.ts, src\/lib\/ \(from \.reins\/notes;/);
+  assert.match(read ?? '', /taxes are computed server side[\s\S]*dates are UTC/);
+  assert.equal(bash('cat src/features/billing/tax.ts'), null, 'once per note and session, shared with Read');
+  assert.equal(bash('pnpm test && git status'), null, 'no path: nothing');
+  assert.equal(bash('ls /etc'), null, 'outside the repo: nothing');
+  assert.doesNotMatch(bash('cat src/lib/date.ts', 'b2') ?? '', /No level is measured|Impact of/, 'reading is not editing');
+  // Cursor's shell tool is `Shell`, and it sends `cwd: ""` (VERIFIED P12): paths resolve from the project root
+  const cursor = hookResponse(dir, { session_id: 'c1', hook_event_name: 'preToolUse', tool_name: 'Shell', cwd: '', tool_input: { command: 'cat src/lib/date.ts', cwd: '' } });
+  assert.match(JSON.parse(cursor ?? '{}').hookSpecificOutput?.additionalContext ?? '', /^Module notes for src\/lib\/date\.ts/);
+});
+
+test('codex: apply_patch is an edit whose files come from the patch; the shell has CODEX_THREAD_ID', () => {
+  const dir = repo();
+  const patch = '*** Begin Patch\n*** Update File: src/features/billing/tax.ts\n@@\n-a\n+b\n*** Add File: src/lib/new.ts\n+x\n*** End Patch\n';
+  assert.deepEqual(patchPaths(patch, dir).map((absolute) => path.relative(dir, absolute)), ['src/features/billing/tax.ts', 'src/lib/new.ts']);
+  const response = hookResponse(dir, { session_id: 'x1', hook_event_name: 'PreToolUse', tool_name: 'apply_patch', cwd: dir, tool_input: { command: patch } });
+  const context = JSON.parse(response ?? '{}').hookSpecificOutput?.additionalContext ?? '';
+  assert.match(context, /^No level is measured for this task yet/, 'an edit before triage');
+  assert.match(context, /taxes are computed server side[\s\S]*dates are UTC/, 'the notes of every file in the patch');
+  assert.equal(sessionId({ CODEX_THREAD_ID: 'thread-1' }), 'thread-1');
+  assert.equal(sessionId({ CLAUDE_CODE_SESSION_ID: 'claude-1', CODEX_THREAD_ID: 'thread-1' }), 'claude-1');
+});
+
+test('hook: the triage reminder is per session, and stops once the session measured its level', async () => {
+  const dir = repo();
+  const edit = (session) => {
+    const response = hookResponse(dir, { session_id: session, hook_event_name: 'PreToolUse', tool_name: 'Write', tool_input: { file_path: path.join(dir, 'src/new-file.ts') } });
+    return response ? JSON.parse(response).hookSpecificOutput.additionalContext : null;
+  };
+  // another session measured its own task on this branch: that level is not this session's
+  await cli(dir, ['triage', 'its task', '--files', 'src/lib/date.ts'], { env: { CLAUDE_CODE_SESSION_ID: 'other' } });
+  assert.match(edit('t1') ?? '', /^No level is measured for this task yet/, 'a new file still gets the reminder');
+  assert.equal(edit('t1'), null, 'once per session');
+  await cli(dir, ['triage', 'my task', '--files', 'src/new-file.ts'], { env: { CLAUDE_CODE_SESSION_ID: 't2' } });
+  assert.equal(edit('t2'), null, 'measured: silence');
+  assert.equal(hookResponse(dir, { session_id: 't3', tool_name: 'Write', tool_input: { file_path: path.join(dir, '.reins/progress/x.md') } }), null, 'reins state: no reminder');
 });
 
 test('notes --hook never breaks the tool call: bad input prints nothing and exits 0', async () => {

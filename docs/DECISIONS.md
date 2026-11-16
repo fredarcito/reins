@@ -507,7 +507,7 @@ In DEV-8939 (repvue-employer, reins 0.15.0) the agent explored the code first (w
 | Purpose in the AGENTS.md index | Each line ends with the first sentence of the note's `## Purpose` | A task reaches a module by what it does, not only by its folder names; no per-domain aliases to maintain |
 | `note-uncovered` | Doctor warns when the task changed a sizeable direct subfolder of a module (≥ `notes.uncovered_min_files`, default 10) that its note never names | Delivering a note faster helps only if it covers the area; only folders the task touched, so the fix is cheap and the agent knows them |
 | Hook matcher | `Read\|Edit\|Write\|MultiEdit\|Grep\|Glob`; a folder gets the notes of the files inside it, the repo root none | Grep and Glob pass `path`; free to add |
-| Not done | A hook on Bash (extracting paths from shell commands) | A cost on every shell command and fragile parsing; revisit if agents still explore before `triage` in real sessions |
+| Not done | A hook on Bash (extracting paths from shell commands) | A cost on every shell command and fragile parsing; revisit if agents still explore before `triage` in real sessions. Done 2026-11-14, see "Guards against skipping reins" |
 
 
 ## Gitignored generated files (2026-11-13)
@@ -536,3 +536,18 @@ Asked by Lingora (Tauri: a React frontend and a Rust crate in `src-tauri/`), aft
 | Adapter order | `guessAdapterNames`: a root `Cargo.toml` makes `rust` the main language; `src-tauri/Cargo.toml` adds `rust` after `js` | The main language must be installed; the second joins only when installed and detected |
 | Not done | `#[cfg]` (every module counts), build-time generated modules, `pub use` of items, crates outside the repo | Need the compiler; listed in the adapter's README |
 
+## Guards against skipping reins (2026-11-14, backlog A6)
+
+In one session the agent explored with `cat`/`grep`/`sed` through Bash (the notes hook never fired), ran `triage` without `--files` (nothing measured), guessed the level, created a notebook and wrote new files (no note, no impact entry: no reminder). Twice. Same pattern as the DEV-8939 report.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Notes hook on Bash | Matcher gains `Bash`. Any command: the words that are existing paths inside the repo (after `cd`, quotes, flags and `:line` stripped), at most 8, get their notes, once per note and session (shared with Read). No impact or triage word for Bash | Agents read code through the shell, and some modes tell them to. Taking existing paths instead of parsing each command is robust and cheap (one `existsSync` per word); the cost is a Node start per shell command, against notes that never arrived |
+| Triage per session | `reins triage` writes `session:<id>` on its line. With a session, the hook and `progress new` only count lines of that session or of the task it claimed; a branch whose lines carry no `session:` keeps the branch-wide answer | On `main` there is always some other session's line, so "untriaged" was never true and the reminder never came |
+| Reminder before the first edit | `Edit`/`Write`/`MultiEdit`/`NotebookEdit` in a session with no measured level: one reminder to run `triage --files`, any file (new ones too), not for `.reins/` | The old reminder only came with a shared file of the impact map; new files and files without importers said nothing |
+| `progress new` | Warns when the session has not measured a level | A notebook is for medium or large: creating one before measuring means the level was guessed |
+| `triage` without files | Ends with "Level NOT measured: nothing was recorded. Next step, before editing any file: …" | The old last line ("Nothing measured or recorded yet") read as information, not as a step |
+| Other agents (2026-11-15) | Cursor's shell tool is `Shell` and it sends `cwd: ""` (read from its hook log): the matcher gains `Shell` and an empty `cwd` means the project root. Codex has Claude-format hooks but needs its own generated file and trust step: backlog A7, see `docs/proposals/agent-adapters.md` 2c | Cursor runs the hooks reins already writes; Codex does not read `.claude/` |
+| Codex adapter (2026-11-15, A7) | `sync` writes `.codex/hooks.json` with the hook merge `.claude/settings.json` uses (one function, `mergeHookEntries`); on when the repo has `.codex/`, or `--codex`; `--skip-codex` saved. `apply_patch` is an edit and its files come from the patch's `*** … File:` lines. `sessionId` reads `CODEX_THREAD_ID` | Codex reads Claude-format hooks from its own file; turning it on by the folder keeps the person from learning a flag, and repos without Codex get no file and no trust prompt. Built from the docs only: see VERIFIED |
+| Level per task (2026-11-15) | With a claimed task only its lines count; else the session's latest line if it names no task | Per session was not enough: after one task this session never got the reminder again for the next one |
+| Not done | Blocking the edit (exit 2) until triage | A hook that blocks turns a missed step into a stuck session; the reminder is enough to try first |

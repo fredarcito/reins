@@ -10,6 +10,7 @@ import {
   parseNotebook, formatProblems, TASK_RE,
 } from '@agentreins/core';
 import { CliError } from '../context.js';
+import { declaredLevel } from '../impact-map.js';
 import { branchTasks, explicitTask, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
@@ -105,6 +106,10 @@ export async function progress(ctx) {
     mkdirSync(path.dirname(abs), { recursive: true });
     writeFileSync(abs, text);
     out(`Created ${file}${values.hot ? '' : ' (mini)'}. Fill in the goal and the done criteria before editing code.`);
+    // a notebook is for a medium or large task: a level this session never measured is a guess
+    if (session && declaredLevel(root, session) === null) {
+      out(`! warning  This session has not measured the task's level: before editing code, run \`npx reins triage "<reason>" --task ${task} --files <paths you expect to touch>\`.`);
+    }
     if (values.hot) {
       const cold = path.join(root, taskFolder(branch, task));
       for (const f of ['decisions', 'verification', 'delivery']) {

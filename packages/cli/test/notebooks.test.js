@@ -42,7 +42,20 @@ test('tasks one after another: a new session never takes the open task silently,
   assert.match(read(dir, LOGIN), /- \[ \] fix the redirect/);
   assert.equal(read(dir, CSS), css, 'the other task is untouched');
   assert.match((await cli(dir, ['progress', 'show'], as('s1'))).stdout, /feat-checkout\/css\/notebook\.md/, 'each session finds its own task');
-  assert.match((await cli(dir, ['triage', 'small', 'one more', '--files', 'src/x.js'], as('s2'))).stdout, / \| task:login\n$/, 'the triage line carries the task name');
+  assert.match((await cli(dir, ['triage', 'small', 'one more', '--files', 'src/x.js'], as('s2'))).stdout, / \| task:login \| session:s2\n$/, 'the triage line carries the task name and the session');
+});
+
+test('progress new warns while this session has not measured the level, and not after', async () => {
+  const dir = exampleRepo('vite-react');
+  git(dir, 'switch', '-qc', 'feat/guess');
+  const before = await cli(dir, ['progress', 'new', 'guess'], as('g1'));
+  assert.match(before.stdout, /! warning {2}This session has not measured the task's level: before editing code, run `npx reins triage "<reason>" --task guess --files/);
+  await cli(dir, ['triage', 'measured', '--files', 'src/main.jsx'], as('g2'));
+  const after = await cli(dir, ['progress', 'new', 'measured'], as('g2'));
+  assert.doesNotMatch(after.stdout, /has not measured/, 'a triage before progress new counts');
+  await cli(dir, ['triage', 'measured', '--task', 'measured', '--files', 'src/main.jsx'], as('g2'));
+  const next = await cli(dir, ['progress', 'new', 'another'], as('g2'));
+  assert.match(next.stdout, /has not measured/, 'a level measured for an earlier task does not count for a new one');
 });
 
 test('the same task from a new session, after a compaction, and without a session id', async () => {

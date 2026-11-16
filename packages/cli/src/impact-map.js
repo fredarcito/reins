@@ -11,6 +11,7 @@ import { ARCHITECTURE_FILE, REINS_DIR } from './context.js';
 import { writeFileAtomic } from './local-state.js';
 import { readDoctorConfig, readText } from './project.js';
 import { TRIAGE_LOG } from './triage-log.js';
+import { branchTasks, resolveTask } from './notebooks.js';
 
 export const IMPACT_MAP = `${REINS_DIR}/progress/.impact-map.json`;
 
@@ -68,9 +69,16 @@ const rank = (level) => LEVELS.indexOf(level);
 /**
  * The level declared for the current task of the branch: the highest among the lines that share the latest
  * line's start commit (the same window doctor uses), or the latest line's when it has none. Null without a line.
+ * With a `session`, only that session's task counts: the lines that name the task it claimed (`task:`), else the
+ * session's latest line when it names no task (a triage just before `progress new`, or a small task with no
+ * notebook). So neither a level another session declared on the same branch nor one this session measured for an
+ * earlier task passes for this one. Null when
+ * the session has measured nothing yet. A branch whose lines carry no `session:` at all (written by an older
+ * reins, or by hand) keeps the branch-wide answer.
  * @param {string} root
+ * @param {string | null} [session]
  */
-export function declaredLevel(root) {
+export function declaredLevel(root, session = null) {
   const text = readText(root, TRIAGE_LOG);
   if (!text) return null;
   let branch;
@@ -79,11 +87,37 @@ export function declaredLevel(root) {
   } catch {
     return null;
   }
-  const mine = parseTriageLog(text).entries.filter((e) => e.branch === branch);
-  if (!mine.length) return null;
-  const anchor = taskAnchor(mine, branch);
-  const window = anchor ? mine.filter((e) => e.commit === anchor) : [mine[mine.length - 1]];
-  return window.reduce((best, e) => (rank(e.level) > rank(best) ? e.level : best), 'small');
+  const highest = (entries) => entries.reduce((best, entry) => (rank(entry.level) > rank(best) ? entry.level : best), 'small');
+  const onBranch = parseTriageLog(text).entries.filter((entry) => entry.branch === branch);
+  if (session && onBranch.some((entry) => entry.session)) {
+    const owned = resolveTask(branchTasks(root, branch), { session });
+    const task = owned.guessed ? null : owned.current?.task ?? null;
+    const ofTask = task === null ? [] : onBranch.filter((entry) => entry.task === task);
+    if (ofTask.length) return highest(ofTask);
+    const latest = onBranch.filter((entry) => entry.session === session).at(-1);
+    return latest && latest.task === null ? latest.level : null;
+  }
+  if (!onBranch.length) return null;
+  const anchor = taskAnchor(onBranch, branch);
+  return highest(anchor ? onBranch.filter((entry) => entry.commit === anchor) : [onBranch[onBranch.length - 1]]);
+}
+
+/**
+ * What the notes hook says before an edit when this session has not measured its task: once per session, so the
+ * agent runs `reins triage --files` before changing code, whatever file it starts with (new files included).
+ * Null when the level is known, the session is unknown, or the file is reins' own state.
+ * @param {string} root
+ * @param {string | null} session
+ * @param {string} file repo-relative
+ * @returns {{ text: string, key: string } | null}
+ */
+export function untriagedHint(root, session, file) {
+  if (!session || file.startsWith(`${REINS_DIR}/`)) return null;
+  if (declaredLevel(root, session) !== null) return null;
+  return {
+    text: 'No level is measured for this task yet: before editing code, run `npx reins triage "<reason>" --files <paths you expect to touch>`, then state the level reins measured and why, in one line. Don\'t give a level yourself, only raise it.',
+    key: 'untriaged:edit',
+  };
 }
 
 /**
@@ -93,15 +127,16 @@ export function declaredLevel(root) {
  * not repeated for every file but comes back when a file needs more.
  * @param {string} root
  * @param {string} file repo-relative
+ * @param {string | null} [session] the hook's session: its own task's level, see declaredLevel
  * @returns {{ text: string, key: string } | null}
  */
-export function impactHint(root, file) {
+export function impactHint(root, file, session = null) {
   const abs = path.join(root, IMPACT_MAP);
   if (!existsSync(abs)) return null;
   /** @type {ImpactEntry | undefined} */
   const entry = JSON.parse(readFileSync(abs, 'utf8')).files?.[file];
   if (!entry) return null;
-  const declared = declaredLevel(root);
+  const declared = declaredLevel(root, session);
   if (declared && rank(declared) >= rank(entry.level)) return null;
   const who = `imported by ${entry.consumers} file${entry.consumers === 1 ? '' : 's'}${entry.domains.length ? ` (domains: ${entry.domains.join(', ')})` : ''}`;
   const head = `Impact of changing ${file} (from reins impact): ${who}. Minimum level if the change breaks its importers: ${entry.level} (${entry.reasons.join('; ')}).`;
