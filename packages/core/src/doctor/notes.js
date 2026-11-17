@@ -20,12 +20,15 @@ const finding = (rule, from, message, fix) => ({ rule, severity: /** @type {cons
  * @param {string[] | null} [input.repoFiles] every file of the repo, repo-relative; null skips the dead-* rules
  * @param {boolean} [input.planChanged] architecture.yml changed: every domain without a note is flagged, at any level
  * @param {number} [input.uncoveredMinFiles] note-uncovered: smallest folder (in files) worth naming in its note; 0 turns it off
+ * @param {string[] | null} [input.seenNotes] note files this agent session received (hook, triage, resume, `reins
+ *   notes`); null when there is no session (CI, a person's terminal) skips note-unseen
  */
-export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null, planChanged = false, uncoveredMinFiles = 10 }) {
+export function checkNotes({ changedFiles, notes, domains, level, maxLines, repoFiles = null, planChanged = false, uncoveredMinFiles = 10, seenNotes = null }) {
   const code = changedFiles.filter((f) => !isReinsFile(f));
   const changed = new Set(changedFiles);
   const findings = [];
   const touching = notes.filter((n) => code.some((f) => matchesAny(f, n.paths)) || changed.has(n.file));
+  if (seenNotes) findings.push(...checkUnseen(notes, code, new Set(seenNotes)));
 
   if (level !== 'small') {
     for (const n of touching) {
@@ -90,6 +93,32 @@ export function checkNotes({ changedFiles, notes, domains, level, maxLines, repo
   if (repoFiles && level !== 'small' && uncoveredMinFiles > 0) findings.push(...checkUncovered(touching, code, notes, repoFiles, uncoveredMinFiles));
   if (repoFiles) findings.push(...checkDead(notes, repoFiles));
   return findings;
+}
+
+/**
+ * note-unseen: the task changed files of a module whose note this session never received. The hooks deliver notes
+ * before reads and edits, but an edit made by a script (`python3 fix.py`) names no file, and the change went in
+ * without the module's decisions and traps (repvue-employer, 2026-11-17). Every level: reading a note is cheap,
+ * and the diff is what catches what the hooks missed.
+ * @param {{ file: string, paths: string[] }[]} notes
+ * @param {string[]} code changed code files
+ * @param {Set<string>} seen
+ */
+function checkUnseen(notes, code, seen) {
+  const out = [];
+  for (const n of notes) {
+    if (seen.has(n.file)) continue;
+    const files = code.filter((f) => matchesAny(f, n.paths));
+    if (!files.length) continue;
+    out.push(
+      finding(
+        'note-unseen', n.file,
+        `This task changed ${files.length} file(s) of this module (${files.slice(0, 3).join(', ')}${files.length > 3 ? ', …' : ''}), but this session never received its note, so the change was made without its decisions and traps.`,
+        `Read it now (\`npx reins notes ${files[0]}\`) and check your change against its Decisions and Traps; fix the code, or the note where your change makes it wrong.`,
+      ),
+    );
+  }
+  return out;
 }
 
 /**

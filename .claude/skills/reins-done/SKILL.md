@@ -7,13 +7,15 @@ description: Close a coding task. Use it when the person says the task is done, 
 
 1. Run once: `npx reins check`, `npx reins doctor` and the tests related to the change.
 2. If the task has a notebook (`npx reins progress show`), mark what is done (`npx reins progress done <n>`) and check the done criteria one by one.
-3. Update the module notes, so the next session doesn't rediscover this module from the code. For medium and large tasks, for each module you touched (`npx reins scope <files>` lists their notes):
+3. Review the module notes, so the next session doesn't rediscover this module from the code. For medium and large tasks, for each module you touched (`npx reins scope <files>` lists their notes):
+   - reread the whole note and fix or remove what your change contradicts (a page replaced, a flow moved, a file no longer used). Adding lines next to an outdated one is not updating it: the note still says the old thing;
+   - code your change left in the repo but out of use goes under "Legacy";
    - add the decisions you took, each with its why, and the traps you found;
    - update "Map" and "How it works" if they changed;
    - a domain without a note: `npx reins notes new <domain>`, then fill in every TODO;
    - a module with parts (`.reins/notes/<module>/<part>.md`): what only concerns one part goes in that part's note, what every part shares goes in the module's note. A part with its own logic and no note: `npx reins notes new <folder>` drafts it in the module's folder;
    - nothing durable changed: leave the note as it is.
-   The doctor warns about `note-outdated`, `note-missing`, `note-draft`, `note-dead-paths`/`note-dead-refs` (a note pointing at files that no longer exist): fix those notes' paths and names; and `note-uncovered` (a folder you changed that the note never names): add it to the note's Map.
+   The doctor warns about `note-outdated`, `note-missing`, `note-draft`, `note-dead-paths`/`note-dead-refs` (a note pointing at files that no longer exist): fix those notes' paths and names; and `note-uncovered` (a folder you changed that the note never names): add it to the note's Map. `note-unseen` means you changed a module without ever getting its note (an edit by a script, say): read it (`npx reins notes <file>`) and check your change against its Decisions and Traps.
 4. Never commit, push or open a PR. Leave the changes uncommitted.
 5. Reply with:
    - what changed and the files touched, with why;

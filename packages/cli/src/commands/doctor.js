@@ -6,6 +6,8 @@ import { ARCHITECTURE_FILE, CliError, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, listNotebooks, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { TRIAGE_LOG, readTriage, taskFiles } from '../triage-log.js';
 import { baseBranch } from '../base.js';
+import { sessionId } from '../notebooks.js';
+import { seenBy } from '../notes-seen.js';
 
 export const options = {
   strict: { type: 'boolean' },
@@ -104,6 +106,8 @@ export function doctorResult(root, values, env) {
     notebooks: listNotebooks(root, branch).map((n) => ({ file: n.file, text: n.text })),
     notes: loadNotes(root).notes,
     repoFiles: listRepoFiles(root),
+    // the notes this agent session received; a person's terminal or CI has no session and skips note-unseen
+    seenNotes: seenBy(root, sessionId(env)),
   });
 
   return { result, notes };

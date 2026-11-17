@@ -14,6 +14,7 @@ A note is for someone who has never seen the module and has to change it safely 
    - **How it works:** the main flow in a few lines: where the data comes from, what changes it, who reads it.
    - **Decisions:** only what the code, its comments, the git history (`git log --follow <file>`) or the person confirm, each with its date and its why. **Never invent a reason.** If you can't tell why something is the way it is, write the question as `- ? <question>` for the person to answer.
    - **Traps:** what looks wrong but is intentional, and the invariants that must hold.
+   - **Legacy:** code that is still in the repo but not in use. A file existing doesn't mean it runs: check that the public API and the pages you describe are reached from the app (mounted in the router, imported by someone), not only that the files exist. A route that redirects elsewhere, or an export nobody imports, goes here with since when (`git log`) and a `?` for the decision. Never describe it as the module's current behavior.
    - A section with nothing true to say: delete its `TODO` line instead of writing generic text.
    - When no `TODO` is left, delete the `<!-- Drafted by reins notes new … -->` comment line.
    - **Modules with parts** (`<module>.md` plus `<module>/<part>.md`): fill the module's note first. It holds what every part shares (layout, data loading, conventions); each part's note holds only what is specific to it and never repeats the module's note.

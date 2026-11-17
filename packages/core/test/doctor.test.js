@@ -335,6 +335,22 @@ test('note-dead-paths and note-dead-refs: for every note, only when the repo fil
   assert.ok(DOCTOR_RULES.includes('note-dead-paths') && DOCTOR_RULES.includes('note-dead-refs'));
 });
 
+test('note-unseen: the task changed a module whose note this session never received; no session, no rule', () => {
+  const billing = note('.reins/notes/billing.md', ['src/features/billing/**']);
+  const search = note('.reins/notes/search.md', ['src/features/search/**']);
+  const changedFiles = ['src/features/billing/tax.js', 'src/features/billing/total.js', '.reins/notes/search.md'];
+  const unseen = (seenNotes) => doctor({ changedFiles, notes: [billing, search], seenNotes }).violations.filter((v) => v.rule === 'note-unseen');
+  const [v] = unseen(['.reins/notes/search.md', 'impact:src/x.js']);
+  assert.equal(v.from, '.reins/notes/billing.md');
+  assert.match(v.message, /^This task changed 2 file\(s\) of this module \(src\/features\/billing\/tax\.js, src\/features\/billing\/total\.js\), but this session never received its note/);
+  assert.match(v.fix, /npx reins notes src\/features\/billing\/tax\.js/);
+  assert.equal(unseen([]).length, 1, 'a note edited without code changes is not a module change');
+  assert.deepEqual(unseen(['.reins/notes/billing.md']), []);
+  assert.deepEqual(unseen(null), [], 'no session id (CI, a person): nothing is known');
+  assert.equal(doctor({ changedFiles: ['src/features/billing/tax.js'], notes: [billing], seenNotes: [] }).violations.filter((x) => x.rule === 'note-unseen').length, 1, 'every level');
+  assert.ok(DOCTOR_RULES.includes('note-unseen'));
+});
+
 test('note-uncovered: a sizeable folder the task changed that its note never names', () => {
   const base = 'src/pages/candidates';
   const jm = Array.from({ length: 12 }, (_, i) => `${base}/JobMatches/f${i}.jsx`);

@@ -110,6 +110,7 @@ The agent does not guess the level: once it knows the files, it runs `npx reins 
 | `note-dead-paths` | Any note: a glob in its `paths` matches no file, so the note may reach nobody (several notes: one warning) |
 | `note-dead-refs` | Any note: it names, in backticks, a repo file or folder that no longer exists (several notes: one warning) |
 | `note-uncovered` | A medium or large diff changed files in a direct subfolder of a note's `<dir>/**` with at least `notes.uncovered_min_files` files (default 10; 0 turns it off), and the note never names that folder nor does a part note cover it: the next agent would get the note and still explore that folder from scratch |
+| `note-unseen` | The task changed files of a module whose note this agent session never received (from the hook, `triage`, `resume`, `reins notes` or reading the note file). Any level; skipped without a session id (CI, a person's terminal). Catches edits the hooks can't see, such as a script that edits files (`python3 fix.py`). `progress close` refuses on it |
 
 Thresholds are starting values in `.reins/doctor.yml`; tune them to your team:
 

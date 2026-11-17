@@ -117,6 +117,10 @@ test('close refuses while the done steps are not finished: open items, then flag
   assert.equal(notes.code, 2);
   assert.match(notes.stderr, /Module notes the doctor flags[^]*note-outdated \.reins\/notes\/ui\.md/);
   assert.doesNotMatch(notes.stderr, /Items still open/);
+  // the session changed src/ui/ without ever receiving its note (an edit by a script); printing it counts as received
+  assert.match(notes.stderr, /note-unseen \.reins\/notes\/ui\.md: This task changed 4 file\(s\) of this module/);
+  assert.match((await cli(dir, ['notes', 'src/ui/Button.jsx'], as('s1'))).stdout, /Shared UI\./);
+  assert.doesNotMatch((await cli(dir, ['progress', 'close'], as('s1'))).stderr, /- note-unseen /);
 
   assert.match((await cli(dir, ['progress', 'close', '--notes-ok', ' '], as('s1'))).stderr, /--notes-ok needs the reason/);
   assert.match((await cli(dir, ['progress', 'close', '--notes-ok', 'only a placeholder component'], as('s1'))).stdout, /Closed css\./);

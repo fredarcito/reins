@@ -81,6 +81,29 @@ test('shellPaths: git commands that only stage, commit or switch bring no paths;
   assert.deepEqual(relative('git log -p src/app'), ['src/app']);
 });
 
+test('hook: a note read directly counts as received, so it is not delivered again', () => {
+  const dir = repo();
+  const hook = (tool_name, tool_input) => hookResponse(dir, { session_id: 'd1', hook_event_name: 'PreToolUse', tool_name, cwd: dir, tool_input });
+  assert.equal(hook('Read', { file_path: path.join(dir, '.reins/notes/lib.md') }), null);
+  assert.equal(hook('Read', { file_path: path.join(dir, 'src/lib/date.ts') }), null, 'already read by hand');
+  assert.match(JSON.parse(hook('Bash', { command: 'cat src/features/billing/tax.ts' }) ?? '{}').hookSpecificOutput?.additionalContext ?? '', /taxes are computed/);
+});
+
+test('shellPaths: shell edits name their files: inline code, glued redirections, new files', () => {
+  const dir = repo();
+  const relative = (command) => shellPaths(command, dir).map((absolute) => path.relative(dir, absolute));
+  // repvue-employer, 2026-11-17: an agent edited with python one-liners and never got the module notes
+  assert.deepEqual(relative(`python3 -c "p='src/lib/date.ts'; s=open(p).read(); open(p,'w').write(s)"`), ['src/lib/date.ts']);
+  assert.deepEqual(relative(`node -e "require('fs').writeFileSync('src/lib/date.ts', x)"`), ['src/lib/date.ts']);
+  assert.deepEqual(relative(`sed -i '' 's/a.ts/b.ts/' src/lib/date.ts`), ['src/lib/date.ts']);
+  assert.deepEqual(relative('cat >src/lib/date.ts <<EOF\nx\nEOF'), ['src/lib/date.ts']);
+  // a file about to be created: its folder exists
+  assert.deepEqual(relative("cat > src/features/billing/new.ts <<'EOF'\nx\nEOF"), ['src/features/billing/new.ts']);
+  assert.deepEqual(relative('cd src/lib && echo x > fresh.ts && touch other.ts'), ['src/lib', 'src/lib/fresh.ts', 'src/lib/other.ts']);
+  // not files: a word without a folder, a missing folder, a sed expression, a URL
+  assert.deepEqual(relative('echo nowhere.ts && cat src/missing/x.ts; curl http://localhost:3000/a.js'), []);
+});
+
 test('hook on Bash: a shell command that reads code gets the notes of the paths it names, never an impact or triage word', () => {
   const dir = repo();
   const bash = (command, session = 'b1') => {

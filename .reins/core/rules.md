@@ -1,7 +1,7 @@
 ## Always
 - Before reading or searching the code, run `npx reins triage "<reason>"` (the reason with the names the code uses): it prints the likely areas and their notes; start from them. Once you know the files, run it again with `--files <paths you expect to touch>`: reins measures the task level (small, medium, large). Then state that level and why in one line; give a level yourself only to raise it. See `.reins/core/policies/triage.md` (or `.reins/policies/triage.md`). A prompt starting with [quick] or [deep] decides the level; then don't announce it.
 - Before restructuring a domain or folder, or editing a file other code may import (component, util, type, barrel, public API), run `npx reins impact <file-or-folder>` and plan with its domains and level. Unsure if it's shared → run it. It is not exploring: every level.
-- Never commit, push or open a PR. Leave the changes uncommitted.
+- Never commit, push or open a PR. Leave the changes uncommitted. Edit files with your edit tool. When you do edit from the shell (a bulk `sed -i`, say), name the files in the command, never only inside a script, or reins can't bring their notes.
 - Never use `--no-verify`.
 - When closing, run `npx reins check` and `npx reins doctor` once, and say what you verified, which warnings remain and what you did not verify.
 - Stop only for an ambiguous decision with consequences, growing scope, an irreversible action or repeated failures.

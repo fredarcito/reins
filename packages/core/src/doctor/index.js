@@ -7,7 +7,7 @@ import { checkNotes } from './notes.js';
 import { checkNotebook, countLines } from './progress.js';
 
 export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 'agents-size', 'progress-hot-size', 'progress-format', 'progress-closed',
-  'note-missing', 'note-outdated', 'note-draft', 'note-size', 'note-layout', 'note-dead-paths', 'note-dead-refs', 'note-uncovered']);
+  'note-missing', 'note-outdated', 'note-draft', 'note-size', 'note-layout', 'note-dead-paths', 'note-dead-refs', 'note-uncovered', 'note-unseen']);
 
 /**
  * @param {object} input
@@ -23,9 +23,10 @@ export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 
  * @param {{ file: string, text: string }[]} input.notebooks hot notebooks to check (usually the current branch's)
  * @param {{ file: string, paths: string[], body: string }[]} [input.notes] module notes of the repo
  * @param {string[] | null} [input.repoFiles] every file of the repo; without it the note-dead-* rules are skipped
+ * @param {string[] | null} [input.seenNotes] note files this agent session received; null (no session) skips note-unseen
  * @returns {import('../check/index.js').CheckResult}
  */
-export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [], repoFiles = null, anchor = null }) {
+export function runDoctor({ config, branch, changedFiles, domains, architectureFile, triageLog, agentsMd, notebooks, notes = [], repoFiles = null, anchor = null, seenNotes = null }) {
   const findings = [];
   const signals = scopeSignals(changedFiles, domains, architectureFile, config.triage.not_counted);
 
@@ -53,7 +54,7 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
   }
 
   findings.push(
-    ...checkNotes({ changedFiles, notes, domains, planChanged: changedFiles.includes(architectureFile), level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines, uncoveredMinFiles: config.notes.uncovered_min_files, repoFiles }),
+    ...checkNotes({ changedFiles, notes, domains, planChanged: changedFiles.includes(architectureFile), level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines, uncoveredMinFiles: config.notes.uncovered_min_files, repoFiles, seenNotes }),
   );
 
   for (const nb of notebooks) findings.push(...checkNotebook({ file: nb.file, text: nb.text, maxLines: config.progress.hot_max_lines }));

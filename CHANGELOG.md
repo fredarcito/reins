@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.19.0 · 2026-11-17
+
+Module notes stay true: edits made from the shell no longer skip them, and closing a task asks to review the note, not just add to it.
+
+```bash
+npx reins update
+```
+
+- **Edits from the shell get the notes too.** The notes hook now finds the files a shell edit names inside inline code (`python3 -c "open('src/x.js','w')…"`, `node -e`), behind a glued redirection (`>src/x.js`), and files about to be created (`cat > src/new.js`, `tee`, `touch`). Before, an agent that edited with a Python one-liner never got the module's notes.
+- **`reins doctor` warns when a task changed a module whose note the session never received** (`note-unseen`). It catches what no hook can see, such as `python3 fix.py` editing files inside the script. `reins progress close` refuses until the note is read (`npx reins notes <file>`), or `--notes-ok "<why>"` says why not. Reading a note file directly, or printing it with `reins notes`, counts as received. Only in agent sessions: CI and a person's terminal skip it.
+- **A new rule in `AGENTS.md`:** edit files with the edit tool; when editing from the shell, name the files in the command, never only inside a script. `reins update` rewrites it for you.
+- **Closing a task reviews the notes.** The done skill now asks to reread the whole note and fix or remove what the change contradicts. Adding lines next to an outdated one used to count as updating it.
+- **Notes get an optional "Legacy" section** for code still in the repo but no longer in use (a route that redirects, an export nobody imports), with since when and the pending decision. `reins notes new` drafts it, and the notes skill now checks that the pages a note describes are actually mounted, not only that their files exist.
+
 ## 0.18.0 · 2026-11-16
 
 Rust support, and reins is harder to skip: notes reach agents that read code from the shell, and an untriaged edit gets a reminder.

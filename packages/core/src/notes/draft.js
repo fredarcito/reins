@@ -101,5 +101,8 @@ export function draftNote({ name, paths, publicApi, summary, date, submodules = 
     '## Traps',
     '- TODO: what looks wrong but is intentional, and the invariants that must hold.',
     '',
+    '## Legacy',
+    '- TODO: code still in the repo but no longer in use (a route that redirects or is not mounted, an export nobody imports), with since when and `?` for the pending decision (delete it, revive it). Delete this section if there is none.',
+    '',
   ].join('\n');
 }

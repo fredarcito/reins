@@ -32,6 +32,17 @@ function write(root, seen) {
 }
 
 /**
+ * The note files this session received (doctor's note-unseen); null without a session id, where nothing is known.
+ * The record also holds the hooks' once-per-session hint keys (`impact:…`, `untriaged`), which are not note files.
+ * @param {string} root
+ * @param {string | null} session
+ * @returns {string[] | null}
+ */
+export function seenBy(root, session) {
+  return session ? (read(root)[session] ?? []) : null;
+}
+
+/**
  * Keeps the notes this session has not received yet and records them as received.
  * @template {{ file: string }} T
  * @param {string} root

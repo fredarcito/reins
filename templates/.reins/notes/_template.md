@@ -20,3 +20,6 @@ The main flow in a few lines: where the data comes from, what changes it, who re
 
 ## Traps
 - What looks wrong but is intentional, and the invariants that must hold.
+
+## Legacy
+- Code still in the repo but no longer in use (a route that redirects or is not mounted, an export nobody imports), since when, and `?` for the pending decision. Delete this section if there is none.

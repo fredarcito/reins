@@ -196,7 +196,7 @@ export async function progress(ctx) {
   }
 }
 
-const NOTE_RULES = new Set(['note-missing', 'note-outdated', 'note-draft', 'note-dead-paths', 'note-dead-refs']);
+const NOTE_RULES = new Set(['note-missing', 'note-outdated', 'note-draft', 'note-dead-paths', 'note-dead-refs', 'note-unseen']);
 
 /**
  * What still stops a task from closing: items not done or dropped, and module notes the doctor flags (unless
@@ -219,7 +219,7 @@ function closeBlockers(root, text, values, env) {
       flagged = []; // the doctor could not run (no git…): don't block the close on it
     }
     if (flagged.length) {
-      blockers.push(['Module notes the doctor flags. Update them (decisions with their why, traps, Map), or, when nothing durable changed, close with `--notes-ok "<why>"`:',
+      blockers.push(['Module notes the doctor flags. Update them (decisions with their why, traps, Map); a note this session never received (note-unseen): read it and check your change against it. When nothing durable changed, close with `--notes-ok "<why>"`:',
         ...flagged.map((v) => `  - ${v.rule} ${v.from}: ${v.message}`)].join('\n'));
     }
   }

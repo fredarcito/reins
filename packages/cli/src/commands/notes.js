@@ -6,6 +6,7 @@ import path from 'node:path';
 import { matchesAny, notesFor, NOTES_DIR, rankStaleNotes } from '@agentreins/core';
 import { CliError, hookEventName, isGitRepo, toRepoPath } from '../context.js';
 import { impactHint, untriagedHint } from '../impact-map.js';
+import { sessionId } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
 import { writeNoteDraft } from '../notes-draft.js';
 import { dirtyFiles, loadNotes, readDomains, readHistory, walk } from '../project.js';
@@ -174,10 +175,24 @@ function realPath(target) {
 }
 
 /**
- * The paths a shell command names that exist on disk, e.g. `sed -n 1,80p src/x.js`, `grep -rn foo packages/cli`
- * or `cd packages/cli && cat src/a.js` (`src/a.js` resolved from `packages/cli`). Any command: what matters is
- * which code the agent is about to read, and words that are not existing paths are dropped. Quotes, flags and a
- * `:line` suffix are stripped. git commands that only stage, commit or switch (GIT_BOOKKEEPING) are skipped. Absolute, so the caller can keep the ones inside the repo.
+ * Where a shell command's words split into candidate paths: blanks, and the quotes, brackets, commas and `=` of
+ * code passed inline, so `python3 -c "open('src/x.js','w')"` or `--out=src/x.js` yield `src/x.js`.
+ */
+const SHELL_TOKEN_SEPARATORS = /[\s'"`()[\]{},;=]+/;
+/** A redirection, alone (`> f`) or glued to its target (`>f`, `2>>f`, `&>f`). */
+const REDIRECTION = /^(?:\d*>>?|&>)/;
+/** Commands whose arguments are files they write, even new ones. */
+const WRITING_COMMANDS = new Set(['tee', 'touch']);
+
+/**
+ * The paths a shell command names, e.g. `sed -n 1,80p src/x.js`, `grep -rn foo packages/cli`, `cd packages/cli &&
+ * cat src/a.js` (`src/a.js` resolved from `packages/cli`), `sed -i … src/x.js`, `python3 -c "open('src/x.js','w')…"`
+ * or `cat > src/new.js <<EOF`. Any command: what matters is which code the agent is about to read or change, and
+ * words that are not paths are dropped. A path must exist, except a file about to be created: a redirection or
+ * `tee`/`touch` target, or a word with a folder and an extension (`src/new.js`) whose folder exists. Quotes, flags
+ * and a `:line` suffix are stripped. git commands that only stage, commit or switch (GIT_BOOKKEEPING) are skipped.
+ * Absolute, so the caller can keep the ones inside the repo. A script that builds its paths inside (`python3 fix.py`)
+ * names nothing: doctor's note-unseen catches those edits at the end of the task.
  * @param {string} command
  * @param {string} cwd the shell's working directory
  * @returns {string[]}
@@ -186,11 +201,22 @@ export function shellPaths(command, cwd) {
   const found = new Set();
   let dir = cwd;
   for (const segment of command.split(/&&|\|\||;|\||\n/)) {
-    const words = segment.trim().split(/\s+/).map((word) => word.replace(/^['"]+|['"]+$/g, '').replace(/:\d+(:\d+)?$/, ''));
-    for (const word of isGitBookkeeping(words) ? [] : words) {
-      if (!word || word.startsWith('-') || /[*?<>$`]/.test(word)) continue;
+    const words = segment.trim().split(/\s+/).map((word) => word.replace(/^['"]+|['"]+$/g, ''));
+    if (isGitBookkeeping(words)) continue;
+    const writes = WRITING_COMMANDS.has(words[0]);
+    let afterRedirection = false;
+    for (const token of segment.split(SHELL_TOKEN_SEPARATORS)) {
+      if (REDIRECTION.test(token) && token.replace(REDIRECTION, '') === '') {
+        afterRedirection = true;
+        continue;
+      }
+      const created = writes || afterRedirection || REDIRECTION.test(token);
+      afterRedirection = false;
+      const word = token.replace(REDIRECTION, '').replace(/:\d+(:\d+)?$/, '');
+      if (!word || word.startsWith('-') || /[*?<>$\\]/.test(word)) continue;
       const absolute = path.resolve(dir, word);
       if (existsSync(absolute)) found.add(absolute);
+      else if ((created || word.includes('/')) && /\.\w+$/.test(word) && existsSync(path.dirname(absolute))) found.add(absolute);
     }
     // `cd x && cat y`: y is read from x
     if (words[0] === 'cd' && words[1] && existsSync(path.resolve(dir, words[1]))) dir = path.resolve(dir, words[1]);
@@ -290,6 +316,9 @@ export function hookResponse(root, input) {
   }
   // once per note and session; a note that applies to several targets is shown for the first one
   const { notes: all } = loadNotes(root);
+  // a note read directly (`Read .reins/notes/x.md`, `cat` it) counts as received: doctor's note-unseen asks no more
+  const readDirectly = all.filter((note) => targets.some((target) => target.file === note.file));
+  if (readDirectly.length) takeUnseen(root, session, readDirectly);
   const byNote = new Map();
   for (const target of targets) {
     for (const note of notesFor(target.folder ? `${target.file}x` : target.file, all)) if (!byNote.has(note.file)) byNote.set(note.file, { note, target: target.file });
@@ -345,6 +374,8 @@ export async function notes(ctx) {
     return 0;
   }
   for (const pr of problems) out(`! warning  ${pr}`);
+  // printed notes count as received by this session (doctor's note-unseen); the hooks won't repeat them
+  takeUnseen(root, sessionId(ctx.env ?? process.env), results.flatMap((r) => r.notes));
   out(results.map((r) => (r.notes.length ? render(r.file, r.notes) : `No notes for ${r.file}.`)).join('\n\n'));
   return 0;
 }
