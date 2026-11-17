@@ -18,7 +18,7 @@ Language adapter for Rust (a Cargo package or workspace, or the `src-tauri/` hal
 `graph()` reads every Cargo package, makes one root module per crate root, and follows `mod` declarations (`x.rs`, `x/mod.rs`, `#[path]` relative to the declaring file's folder, inline modules) into a tree. Then, in up to 5 passes, each `use` that names a whole module becomes an alias (or a glob) in its module. Finally every use and path is resolved: it starts at `crate`/`self`/`super`, a child module, an alias, a glob's child, a library crate of the repo by name, or (Rust 2015, `use` only) a child of the crate root; it walks child modules and stops at the deepest one; that module's file is the target. Edges: `mod` (declaration) and `static` (use); one per pair of files, `static` wins.
 
 ## Decisions
-- 2026-11-14: own tokenizer, no parser dependency (see `docs/DECISIONS.md`, "Rust adapter"). Items are never indexed: module paths are explicit, so the deepest module gives the file.
+- 2026-11-14: own tokenizer, no parser dependency (see `docs/decisions/2026-11-14-rust-adapter.md`). Items are never indexed: module paths are explicit, so the deepest module gives the file.
 - 2026-11-14: `mod` edges are kept but the presets propose `ignore_kinds: [mod]` (on Lingora, declarations made one 18-file cycle through `lib.rs`).
 - 2026-11-14: the `tauri` preset never uses `src/*` for domains: in a Tauri app `src/` is the web frontend.
 

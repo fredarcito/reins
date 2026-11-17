@@ -1,0 +1,17 @@
+# `reins impact`: the reverse of scope (2026-11-06)
+
+Proposed from a real working session: `scope` goes path → domain, but nothing went the other way (file → consuming domains), so every agent paid recursive greps and a mental join with `architecture.yml` before touching a shared file.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Contract | None added: the `Edge { from, to, kind }` contract and the adapter graphs are enough; `impact` is a pure core function (`impactOf`) over edges + domains | The proposal asked for an "edge provider contract" that already existed. A new adapter gets `impact` for free with the `graph()` it already needs for `check` |
+| Extraction | The adapter's own graph (dependency-cruiser in `adapter-js`); knip rejected as a second extractor | No new dependency to justify; aliases and barrels are already solved there |
+| Consumers | Files **outside** the target that import it; internal imports are not consumers; folder targets include everything inside | The blast radius of a change is who breaks outside, not who is already inside |
+| Import kinds | All kinds count, including `type` (unlike rules with `ignore_kinds`) | A type-only import still breaks when the type changes: impact is about breakage, rules about architecture legality |
+| Crossings | An import that reaches a domain's internals instead of its public API, before `allow`/`ignore_kinds` exceptions | Shows the leak even when `check` doesn't report it; the same shape `domain-boundary` would flag |
+| Existing violations | Reuses `runCheck` with the `--files` filter (target + importers, adapter rules included), baseline status shown | One code path for what a violation is; impact never invents its own rule semantics |
+| Level | `scopeSignals` + `suggestLevel` over the target plus its importers | Same thresholds as `scope` and `triage-mismatch`; the level of a breaking change, announced before the work |
+| Barrels | Importers that reach the target through a barrel count as consumers (kind `barrel`), from the adapter's existing `uses`; crossings stay on real edges | Without it, a util re-exported by `utils/index.ts` shows the barrel as its only consumer and the level comes out too low — confidently wrong. Going through a domain's public API barrel is the legal path, so it is never a crossing |
+| Symbols | File or folder, not `<file-or-export>`; `names[]` on edges rejected | Symbol questions stay a one-liner grep inside the domains impact lists; altitude stays at domains |
+| Making agents use it | The generated `AGENTS.md` carries an unconditional trigger (restructuring a domain/folder, or editing a file others may import; unsure → run it; every level) plus a short command index ending in `reins --help`; the triage policy, the explorer and the audit skill repeat it where they act | First real use (2026-11-07): on "restructure cloud-index, full optimization" the agent ran `scope` on two files and skipped `impact` because it "didn't propose changing a shared contract" — before having a plan. The instruction lived only in `triage.md`, which agents skip because `AGENTS.md` already summarizes it; it was conditional on judging a file "shared", and small said "don't explore". A hook that delivers impact on Edit (like notes) is the stronger fix: built on 2026-11-08, see "Impact through the notes hook" |
+| Cache | None: the graph is recomputed per run, exactly like `check` | Freshness is the property that makes the answer trustworthy; cache only if extraction cost becomes a measured problem |

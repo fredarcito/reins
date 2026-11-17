@@ -117,7 +117,7 @@ function taskLine(g) {
     return `## Task level: not measured\nThe changes on ${g.branch} look ${level} (${reasons.join('; ')}) and no task was measured on this branch. Before continuing, run \`npx reins triage "<reason>" --files <paths>\` and state the level.${plan}`;
   }
   if (g.task.closed) return `The last task on ${g.branch}${name} was closed on ${g.task.date}. A new request is a new task: measure it with \`npx reins triage "<reason>" --files <paths>\`.`;
-  if (g.task.level === 'small') return null;
+  if (g.task.level === 'small' || !g.measured) return null; // no counted change: nothing open to act on
   return `Task${name} is open (${g.task.level}) and has no notebook: create it with \`npx reins progress new <task>${g.task.level === 'large' ? ' --hot' : ''}\` and write its done criteria before continuing.`;
 }
 

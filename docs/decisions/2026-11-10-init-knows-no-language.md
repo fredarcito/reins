@@ -1,0 +1,16 @@
+# `init` knows no language (2026-11-10)
+
+The Rails adapter showed that `init` was written for JavaScript: file extensions, test patterns, `index.js` as a folder's public API and the TypeScript check lived in the CLI. Every new language would have meant editing `init`.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Where language knowledge lives | In the adapter's preset, as data: `sources`, `tests`, `index_files`, `orphans_ignore`, `ignore_kinds`. The CLI turns them into one `Conventions` object (`init/conventions.js`) that every inference function receives | The preset was already the channel from the adapter to `init`. Data, not callbacks: the CLI keeps the algorithms and nothing in the adapter runs during inference |
+| Contract version | Still 1: the fields are optional | An adapter without them still works: every file counts as source |
+| Older adapter with a newer CLI | `init` says the adapter is older and the draft rougher; no JS defaults are kept in the CLI | Keeping the old patterns as a fallback would keep the language in the CLI forever. `reins update` upgrades them together, and `init` runs once |
+| TypeScript's `ignore_kinds: [type]` | The JS presets declare it (`if_files`, `unless_files`, `reason`) | Detecting it from `type` edges changed the draft of TypeScript repos that have no `import type` yet (2 of 8 repos compared) |
+| A language without index files | A domain's public API is the files the rest of the code already imports, or the whole folder when nothing does | Proposing `index.js` in a Ruby pack was wrong; "what is used today" is the honest starting point, and a person narrows it |
+| `init` with several adapters | One preset per adapter, joined: layers in the adapters' order (the graph decides the final order), the union of the rest. The draft has no `preset:` line; each adapter detects its own | Replaces "`init` drafts for one adapter" from the several-adapters decision. A single `preset:` can't name two presets |
+| Which adapters `init` picks | The repo's main language first (Rails markers win), then any other guessed adapter that is installed and whose `detect` recognizes the repo | A Rails API with a `package.json` for tooling must not need the JS adapter; a missing one gets a one-line hint |
+| Inertia pages | Preset `inertia-react` in the JS adapter, suggested when `vite.config.*` sits in a Rails app; `index_files: []` | In a pages folder `index.tsx` is a page, not a barrel, and every page is rendered by name |
+| Route folders and `src/` | Also preset data: `route_segments` (`groups`, `params`, `skipped`, as regular expressions on a folder name) and `source_roots`. The three JS presets that already got those rules declare them; Rails declares `source_roots: [app]` | First left in `init/infer.js` because only Next used them; moved the same day: an `init` that still knew Next's folder names was not agnostic. Regular expressions, not globs, because the glob matcher has no character classes and `[slug]` vs `[...rest]` needs them |
+| Check that nothing changed | `init --dry-run` with the code before and after, on both examples and 8 real repos: identical output | The existing tests pin the examples; real repos pin the rest |

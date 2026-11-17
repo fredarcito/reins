@@ -1,0 +1,14 @@
+# Tasks anchored to their start commit (2026-11-08, backlog A2)
+
+`triage.log` only grew, and doctor compared the whole branch diff with the highest level ever declared on the branch. On long-lived branches (main, staging, epics) one old `large` line hid every `triage-mismatch` and any old line hid `triage-missing`; and the local base was `origin/main`, so on feature → staging flows the diff included other people's staging work.
+
+| Topic | Decision | Why |
+| --- | --- | --- |
+| Writing the line | The agent runs `reins triage <level> <reason> [--task <name>]`; reins adds the date, the branch and `commit:<HEAD>` (12 chars), and `task:` when given. The fields go at the end, so old lines and old reins versions still parse | The agent can't be trusted to copy a sha by hand; one command keeps the format valid |
+| What doctor compares | The diff since the commit on the branch's latest line (plus uncommitted changes), against the highest level among lines with that same commit | Agents don't commit, so tasks started at the same commit share the uncommitted diff and can't be told apart; tasks after a commit get a clean diff |
+| Fallback | Latest line without a commit, or a commit that is no longer an ancestor of HEAD (rebased): the branch diff against the base and the highest level of the branch, as before | Keeps hand-written lines and older installs working |
+| Cleanup | `resume` (hook and command) drops lines whose branch is gone (no local branch, no remote-tracking ref; the current branch always counts) and lines whose task has landed: commits exist since its commit and all of them are in the base. doctor applies the same filter without writing | The backlog's wording, "start commit already in the base", would drop every task that starts on `main` or right after branching, where the start commit is always in the base. Landing means the task's own commits reached the base; merging `main` into a feature does not count, since the feature's own commits are not in the base |
+| Shared helper | `liveBranches` in `cli/src/project.js` (local + remote-tracking refs), reused by the notebook cleanup of the multi-session proposal | One definition of "the branch exists" |
+| Not changed | `check` and `review` keep their base (`--base`, `REINS_BASE`, CI PR target, `origin/HEAD`) | They judge what enters git, not a task. Since 2026-11-11 they use the branch start too, never the triage line |
+| Rejected (reversed 2026-11-11) | Detecting the parent branch from the reflog | Reflogs are local, expire and say nothing about the flow the team uses. A team that cuts tasks from `staging` showed the cost of not doing it; see "Comparison base" below |
+| Known limit | On `main`, if the person commits and pushes in the middle of a task, the task's line is dropped and doctor asks for a new line (`triage-missing`) | Committing is the person's signal that the work is done; one extra `reins triage` line is cheap |

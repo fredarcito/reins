@@ -17,7 +17,7 @@ Run all three before opening a PR; CI runs them on Node 22 and 24.
 
 - **Dependency direction:** `cli` → `adapters` → `core`. `core` never imports the CLI or an adapter, and knows no framework (no `if (next)` in the core). Adapters import the core only through `@agentreins/core/contract`. `pnpm self-check` enforces it.
 - **Plain JavaScript with JSDoc types**, ESM, no build step. Tests use `node:test` and live in each package's `test/` (`*.test.js`; anything else there is a fixture).
-- **Every new dependency** is justified in [`docs/DECISIONS.md`](docs/DECISIONS.md). Heavy ones belong to an adapter, never to the core or the CLI.
+- **Every new dependency** is justified in [`docs/DECISIONS.md`](docs/DECISIONS.md); every design decision gets its own file in [`docs/decisions/`](docs/decisions/) and a row in that index. Heavy ones belong to an adapter, never to the core or the CLI.
 - **Everything in English**: code, comments, docs, templates, CLI messages.
 - **Error messages say the rule, why, and how to fix it**: agents read them.
 - **Anything assumed about external tools** (Claude Code hooks, permissions, package managers) that you haven't tested goes in [`docs/VERIFIED.md`](docs/VERIFIED.md) as unverified. Add a script to `scripts/verify/` when you test it.

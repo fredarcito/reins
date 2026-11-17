@@ -38,7 +38,8 @@ export const isAncestor = (root, commit, ref) => ok(root, ['merge-base', '--is-a
  * - or the task's work has landed: there are commits on the branch since the line's commit and all of them are
  *   already in the base. A task that has no commits yet is kept, even when its commit is in the base: that is
  *   where every task on main, or right after branching, starts.
- * Lines without a commit are only dropped with their branch. A rebased commit (no longer an ancestor) is kept.
+ * A line without a commit is dropped with its branch, or when a later line of its branch landed. A rebased commit
+ * (no longer an ancestor) is kept.
  * @param {string} root
  * @param {{ line: number, branch: string, commit: string | null }[]} entries parsed triage.log lines
  * @param {string | null} baseRef
@@ -57,9 +58,18 @@ export function staleLines(root, entries, baseRef) {
     return landed.get(key);
   };
   const drop = new Set();
+  /** @type {Map<string, number>} branch → last line of a landed task */
+  const lastLanded = new Map();
   for (const e of entries) {
-    if (!live.has(e.branch) || (e.commit && baseRef && isLanded(e.branch, e.commit))) drop.add(e.line);
+    if (!live.has(e.branch)) drop.add(e.line);
+    else if (e.commit && baseRef && isLanded(e.branch, e.commit)) {
+      drop.add(e.line);
+      lastLanded.set(e.branch, Math.max(lastLanded.get(e.branch) ?? 0, e.line));
+    }
   }
+  // a line without a commit (older reins) written before a task that landed is finished too: kept, it would read
+  // as the branch's open task once the newer lines are gone
+  for (const e of entries) if (!e.commit && e.line < (lastLanded.get(e.branch) ?? 0)) drop.add(e.line);
   return drop;
 }
 

@@ -63,6 +63,18 @@ test('doctor and check propose the close for a clean medium task; progress close
   assert.match((await cli(dir, ['progress', 'close'], { env })).stdout, /already closed on 2026-11-04/);
 });
 
+test('no "Ready to close" for a task with no change left (its work landed, or only reins files changed)', async () => {
+  const dir = await branch();
+  write(dir, LOG, '2026-11-01 | feat/status | medium | an older line without a commit\n');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-qm', 'work');
+  git(dir, 'switch', '-q', 'main');
+  git(dir, 'merge', '-q', '--ff-only', 'feat/status');
+  git(dir, 'switch', '-q', 'feat/status');
+  const doctor = await cli(dir, ['doctor'], { env: { REINS_BASE: 'main' } });
+  assert.doesNotMatch(doctor.stdout, /Ready to close/, doctor.stdout);
+});
+
 test('progress close with a notebook also writes the closed line', async () => {
   const dir = await branch();
   write(dir, LOG, `2026-11-04 | feat/status | medium | filter by status | commit:${git(dir, 'rev-parse', '--short=12', 'HEAD').trim()} | task:status\n`);
@@ -72,4 +84,17 @@ test('progress close with a notebook also writes the closed line', async () => {
   const r = await cli(dir, ['progress', 'close', '--task', 'status'], { env });
   assert.equal(r.code, 0, r.stderr);
   assert.match(readFileSync(path.join(dir, LOG), 'utf8'), /\| medium \| closed \| commit:\w+ \| task:status \| status:closed\n$/);
+});
+
+test('progress close: a task without a notebook closes even when other sessions have notebooks on the branch', async () => {
+  const dir = await branch();
+  const mine = { ...env, CLAUDE_CODE_SESSION_ID: 'me' };
+  assert.equal((await cli(dir, ['progress', 'new', 'theirs'], { env: { ...env, CLAUDE_CODE_SESSION_ID: 'other' } })).code, 0);
+  const commit = git(dir, 'rev-parse', '--short=12', 'HEAD').trim();
+  write(dir, LOG, `2026-11-04 | feat/status | medium | filter by status | commit:${commit} | session:me\n2026-11-04 | feat/status | small | their task | commit:${commit} | task:theirs | session:other\n`);
+  await cli(dir, ['notes', 'src/features/orders/status.ts'], { env: mine }); // the session received the module's note
+  const r = await cli(dir, ['progress', 'close'], { env: mine });
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /Closed the medium task on feat\/status \(no notebook\)/);
+  assert.match(readFileSync(path.join(dir, LOG), 'utf8'), /\| medium \| closed \| commit:\w+ \| session:me \| status:closed\n$/);
 });

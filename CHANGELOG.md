@@ -1,12 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.20.0 · 2026-11-17
 
 The agent sees the task's state in the output of the commands it already runs, instead of having to remember the rules (feedback from a real session that joined a task half-way).
 
+```bash
+npx reins update
+```
+
 - **`reins resume` measures before it speaks.** On a branch with changes and no measured task, it prints the level the changes look like (files, domains) and the command to run, and for a medium or large task, to keep a notebook. Before, it said "fine for a small task" without measuring anything. It also says when an open medium or large task has no notebook, and when the last task was closed.
 - **"Ready to close" at the right moment.** When `reins check` passes and `reins doctor` has nothing to flag on an open medium or large task, both end with one line: once the person confirms it works, propose closing. The done skill also recognises "it works", "listo", "lo probé" or "thanks" as that moment.
-- **`reins progress close` works without a notebook,** and every close is recorded in `triage.log`, so reins knows whether a task is open or closed.
+- **`reins progress close` works without a notebook,** also on a branch where other sessions have notebooks open, and every close is recorded in `triage.log`, so reins knows whether a task is open or closed. Old `triage.log` lines written before a task that already landed are now cleaned up too, so they no longer read as an open task.
 - **The PR map's arrows follow the change.** An arrow now goes from what changed to the code that uses it (`shared → talentData`), so the picture reads without the legend. Before, arrows followed the imports and the affected ones read backwards. Who imports whom is still written out in the list and in Details.
 - **A new feature folder left out of every domain is named.** When a task adds code to a folder no domain covers, while the folders next to it are each a domain, `reins scope` and `reins doctor` (`domain-uncovered`) say so, name the notes that already describe it, and point to adding it to a domain.
 

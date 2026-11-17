@@ -29,7 +29,7 @@ Commands: `pnpm install` · `pnpm lint` · `pnpm test` · `pnpm self-check`
 - `core` knows no framework: anything specific to JS, Vite or Next lives in `packages/adapters/js`.
 - Don't run tests per subtask: run `pnpm lint && pnpm test && pnpm self-check` once at the end and say what was verified and what wasn't.
 - No per-folder `AGENTS.md`/`CLAUDE.md`. This file stays at 45 lines or fewer.
-- New dependency -> justify it in `docs/DECISIONS.md`. Stable vs experimental status of each piece -> `docs/STATUS.md`.
+- New dependency -> justify it in `docs/DECISIONS.md`; a design decision -> a file in `docs/decisions/` plus its row in that index. Stable vs experimental status of each piece -> `docs/STATUS.md`.
 - Assumption about Claude Code, hooks, permissions or skills you haven't tested -> record it in `docs/VERIFIED.md` as unverified.
 - `README.md` is the team's short documentation (~350 lines): update it whenever a phase changes what exists, and put the detail and diagrams in `docs/` (commands, how-it-works, context-between-sessions, updating).
 - Renaming the npm scope -> `pnpm rename-scope <@scope>`; never edit package names by hand.

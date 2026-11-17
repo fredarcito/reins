@@ -1,7 +1,7 @@
 # Proposal: progress notebooks for several tasks and sessions on one branch
 
 - **Date:** 2026-11-07, rewritten 2026-11-08, trimmed 2026-11-08
-- **Status:** Phase 1 implemented on 2026-11-08 (summary in `docs/DECISIONS.md`); phase 2 waits for real use (section 9).
+- **Status:** Phase 1 implemented on 2026-11-08 (summary in `docs/decisions/2026-11-08-one-notebook-per-task.md`); phase 2 waits for real use (section 9).
 - **Scope:** `@agentreins/core` (notebook paths and parsing), `@agentreins/cli` (`progress`, `resume`, `doctor`), the progress and multiagent policies, the `done` skill.
 
 ## 1. Problem

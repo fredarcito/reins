@@ -19,7 +19,7 @@ Language adapter for Ruby on Rails apps, with or without an Inertia frontend: tu
 `graph()` parses every `.rb`/`.rake` outside the ignored folders. Pass 1 indexes definitions: `known` (every constant, namespaces included) and `owners` (constant → files that really define it). Pass 2 resolves each reference from the innermost lexical scope outwards; the first scope where the head of the path is known decides, and the longest prefix with an owner gives the target files. Edges: `static` (constants, requires), `association`, `inertia`; one edge per pair of files, `static` wins.
 
 ## Decisions
-- 2026-11-10: Prism as WebAssembly instead of wrapping Packwerk (the original design): no Ruby, no gem in the Gemfile, no booting the app; 4440 files in 1.5 s on the pilot. See `docs/DECISIONS.md`.
+- 2026-11-10: Prism as WebAssembly instead of wrapping Packwerk (the original design): no Ruby, no gem in the Gemfile, no booting the app; 4440 files in 1.5 s on the pilot. See `docs/decisions/2026-11-10-rails-adapter.md`.
 - 2026-11-10: the constant index comes from parsed definitions, not from Zeitwerk file names: no inflector needed for the index, and non-autoloaded files work.
 - 2026-11-10: a `module`/`class` (without superclass) whose body is only other modules and classes is a namespace wrapper, not an owner; otherwise every file under `module Billing` would own `Billing`.
 - 2026-11-10: Ruby's own classes (`CORE` in `graph.js`) never get an owner, so `lib/core_ext/string.rb` is not a dependency of every file that says `String`.

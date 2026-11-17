@@ -356,7 +356,7 @@ Packages: `packages/core` (framework-agnostic checks), `packages/cli` (the `rein
 | [`docs/publishing.md`](docs/publishing.md) | How to publish the three packages to npm |
 | [`docs/adapter-contract.md`](docs/adapter-contract.md) | What a language adapter must implement |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Full design (Spanish draft, source of truth) |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | What is decided, build defaults, dependencies, open questions |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Index of the decisions (one file each in `docs/decisions/`), dependencies, open questions |
 | [`docs/VERIFIED.md`](docs/VERIFIED.md) | What we tested about Claude Code, pnpm and dependency-cruiser, with evidence |
 | [`docs/STATUS.md`](docs/STATUS.md) | Stable vs. experimental, and what is built |
 | [`CHANGELOG.md`](CHANGELOG.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) | Versions; how to contribute |

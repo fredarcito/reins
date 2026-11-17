@@ -128,6 +128,7 @@ test('resume: drops the lines of gone branches and of tasks already in the base;
   const lines = [
     '# comment stays',
     '2026-11-01 | gone/branch | small | deleted branch',
+    '2026-10-30 | main | medium | older reins line, before a landed task',
     `2026-11-01 | main | small | landed on main | commit:${c0}`,
     `2026-11-01 | feat/merged | medium | merged feature | commit:${c0}`,
     `2026-11-01 | feat/fresh | medium | just branched | commit:${c0}`,
@@ -141,7 +142,7 @@ test('resume: drops the lines of gone branches and of tasks already in the base;
   assert.deepEqual(before.violations.map((v) => v.rule), ['triage-missing'], 'only the unreadable line');
 
   await cli(dir, ['resume']);
-  assert.deepEqual(readFileSync(path.join(dir, LOG), 'utf8').split('\n'), [lines[0], lines[4], lines[5], lines[6], lines[7], '']);
+  assert.deepEqual(readFileSync(path.join(dir, LOG), 'utf8').split('\n'), [lines[0], lines[5], lines[6], lines[7], lines[8], '']);
 });
 
 test('triage: files after a quoted reason, separated by spaces, are all measured', async () => {

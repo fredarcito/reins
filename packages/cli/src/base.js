@@ -1,5 +1,5 @@
 // What reins compares a branch with: one place for check, review, the PR map, doctor and resume.
-// Order (docs/DECISIONS.md): --base → the marks (the task's triage line, for task commands; the branch start that
+// Order (docs/decisions/2026-11-11-comparison-base-branch-start-and-base.md): --base → the marks (the task's triage line, for task commands; the branch start that
 // git records in its reflog) → REINS_BASE → GITHUB_BASE_REF → `base:` in architecture.yml → origin/HEAD, origin/main,
 // origin/master, main, master. The marks come first because they say where this branch really started; the rest
 // are guesses that are the same for every branch.

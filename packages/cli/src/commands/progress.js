@@ -125,7 +125,11 @@ export async function progress(ctx) {
 
   const tasks = branchTasks(root, branch);
   const { current, missing, others } = resolveTask(tasks, { task: explicitTask(values, env), session });
-  if (!current && action === 'close' && !missing && !others.length) return closeWithoutNotebook(root, branch, values, env, { session, date, out });
+  // a task without a notebook: the only one on the branch, or the one this session measured last (other sessions'
+  // notebooks on the branch must not stop it from closing)
+  if (!current && action === 'close' && !missing && (!others.length || ownLineWithoutTask(root, branch, session))) {
+    return closeWithoutNotebook(root, branch, values, env, { session, date, out });
+  }
   if (!current) {
     if (missing) throw new CliError(`Task "${missing}" has no notebook on ${branch}. Create it with \`reins progress new ${missing}\`.`);
     const open = others.map((t) => `  - ${taskName(t)}${t.summary.goal ? `: ${t.summary.goal}` : ''}`);
@@ -202,14 +206,15 @@ export async function progress(ctx) {
 }
 
 /**
- * The task's state from triage.log: its own lines when it has a name, else the branch's. Null without a line.
+ * The task's state from triage.log: its own lines when it has a name, else this session's, else the branch's.
+ * Null without a line.
  * @param {string | null} task
  */
-function triageState(root, branch, task) {
+function triageState(root, branch, task, session = null) {
   const text = readText(root, TRIAGE_LOG);
   if (!text) return null;
   const entries = parseTriageLog(text).entries.filter((e) => e.branch === branch);
-  const own = task ? entries.filter((e) => e.task === task) : entries;
+  const own = task ? entries.filter((e) => e.task === task) : entries.filter((e) => session && e.session === session);
   return taskState(own.length ? own : entries, branch);
 }
 
@@ -218,7 +223,7 @@ function triageState(root, branch, task) {
  * (resume stops asking for triage, check and doctor stop proposing the close). Skipped when nothing was measured.
  */
 function recordClose(root, branch, task, { session, date, reason }) {
-  const state = triageState(root, branch, task);
+  const state = triageState(root, branch, task, session);
   if (!state || state.closed) return;
   appendTriageLine(root, formatTriageLine({
     date, branch, level: state.level, reason: reason ? `closed (notes unchanged: ${reason})` : 'closed',
@@ -226,9 +231,17 @@ function recordClose(root, branch, task, { session, date, reason }) {
   }));
 }
 
+/** Whether this session's latest triage line on the branch names no task and is still open. */
+function ownLineWithoutTask(root, branch, session) {
+  if (!session) return false;
+  const text = readText(root, TRIAGE_LOG);
+  const latest = text ? parseTriageLog(text).entries.filter((e) => e.branch === branch && e.session === session).at(-1) : null;
+  return Boolean(latest && !latest.task && !latest.closed);
+}
+
 /** `progress close` on a task without a notebook (a small one, or one reins met mid-way): same checks, one line in triage.log. */
 function closeWithoutNotebook(root, branch, values, env, { session, date, out }) {
-  const state = triageState(root, branch, null);
+  const state = triageState(root, branch, null, session);
   if (!state) throw new CliError(`Nothing to close on ${branch}: no notebook and no task in ${TRIAGE_LOG}. Measure the task first with \`reins triage "<reason>" --files <paths>\`.`);
   if (state.closed) {
     out(`The task on ${branch}${state.task ? ` (${state.task})` : ''} was already closed on ${state.date}.`);

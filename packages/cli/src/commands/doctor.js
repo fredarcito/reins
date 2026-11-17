@@ -1,7 +1,7 @@
 // reins doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { runDoctor, formatText, formatJson, taskState } from '@agentreins/core';
+import { runDoctor, formatText, formatJson, scopeSignals, taskState } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, listNotebooks, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { TRIAGE_LOG, readTriage, taskFiles } from '../triage-log.js';
@@ -83,7 +83,8 @@ export function levelDrift(root, env) {
 
 /**
  * The doctor's findings for the current branch and task, without printing. Shared with `progress close`, `check`
- * and `triage`. `state`: the current task from triage.log (`taskState`), null outside git or without a line.
+ * and `triage`. `state`: the current task from triage.log (`taskState`), null outside git, without a line, or when
+ * the task's diff has no counted file.
  * @param {string} root
  * @param {Record<string, any>} values
  * @param {NodeJS.ProcessEnv} env
@@ -130,6 +131,9 @@ export function doctorResult(root, values, env) {
     seenNotes: seenBy(root, sessionId(env)),
   });
 
-  const state = triage.log ? taskState(triage.log.entries, branch) : null;
+  // a task is only "current" while it has changes: once its work landed, its lines are stale and an older line
+  // (written before lines had a commit) would otherwise read as an open task with nothing to close
+  const signals = scopeSignals(files, [], ARCHITECTURE_FILE, config.triage.not_counted);
+  const state = triage.log && (signals.files || signals.architecture) ? taskState(triage.log.entries, branch) : null;
   return { result, notes, state };
 }
