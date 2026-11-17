@@ -8,7 +8,8 @@ export { REPORT_SCHEMA, formatText, formatJson } from './report/index.js';
 export { globToRegExp, matchesAny } from './glob.js';
 export { impactOf } from './impact/index.js';
 export {
-  DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel,
+  DOCTOR_RULES, runDoctor, parseDoctorConfig, DOCTOR_DEFAULTS, LEVELS, parseTriageLog, formatTriageLine, taskAnchor, taskState, scopeSignals, suggestLevel,
+  uncoveredFolders, describeUncovered, UNCOVERED_FIX,
   parseNotebook, formatProblems, notebookFile, taskFolder, branchFolder, PROGRESS_DIR, NOTEBOOK_NAME, TASK_RE, formatHeader, summarizeNotebook,
   cleanupPlan, MARKERS, countLines,
 } from './doctor/index.js';

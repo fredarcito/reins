@@ -163,7 +163,7 @@ test('scope: domains, public API, notes and minimum level; folders are expanded'
   const small = await cli(dir, ['scope', 'src/features/billing/tax.ts', '--json']);
   assert.deepEqual(JSON.parse(small.stdout), {
     files: ['src/features/billing/tax.ts'], domains: ['billing'], publicApi: [], architecture: false,
-    notes: ['.reins/notes/billing.md'], level: 'small', reasons: ['1 file(s) in 1 domain'], warnings: [],
+    notes: ['.reins/notes/billing.md'], level: 'small', reasons: ['1 file(s) in 1 domain'], uncovered: [], warnings: [],
   });
 
   const folder = JSON.parse((await cli(dir, ['scope', 'src/lib', '--json'])).stdout);
@@ -173,6 +173,12 @@ test('scope: domains, public API, notes and minimum level; folders are expanded'
   const large = await cli(dir, ['scope', 'src/features/billing/tax.ts', 'src/features/orders/queries.ts']);
   assert.match(large.stdout, /Domains: billing, orders\n/);
   assert.match(large.stdout, /Minimum level: large \(2 domains \(billing, orders\)\)/);
+
+  // a new feature folder next to the domain folders, in none: named, not silently left domain-less (DEV-8914)
+  mkdirSync(path.join(dir, 'src/features/invoices'), { recursive: true });
+  writeFileSync(path.join(dir, 'src/features/invoices/list.ts'), 'export const x = 1;\n');
+  const uncovered = await cli(dir, ['scope', 'src/features/invoices']);
+  assert.match(uncovered.stdout, /! warning {2}src\/features\/invoices\/ \(1 file, 1 changed\) is in no domain, unlike the other folders of src\/features\/\.\n {4}Fix: Add it to a domain/);
 
   const arch = JSON.parse((await cli(dir, ['scope', '.reins/architecture.yml', '--json'])).stdout);
   assert.equal(arch.level, 'large');

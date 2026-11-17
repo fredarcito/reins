@@ -1,7 +1,7 @@
 // reins doctor: local, informational process rules. Exit 0 unless --strict. Skipped in CI.
 // Reads triage.log, the current branch's notebook, AGENTS.md and the local diff. No baseline, no adapter.
 import { execFileSync } from 'node:child_process';
-import { runDoctor, formatText, formatJson } from '@agentreins/core';
+import { runDoctor, formatText, formatJson, taskState } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, isGitRepo } from '../context.js';
 import { DOCTOR_FILE, listNotebooks, listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText as read } from '../project.js';
 import { TRIAGE_LOG, readTriage, taskFiles } from '../triage-log.js';
@@ -42,18 +42,31 @@ export async function doctor(ctx) {
     return 0;
   }
 
-  const { result, notes } = doctorResult(root, values, env);
+  const { result, notes, state } = doctorResult(root, values, env);
   if (values.json) out(formatJson(result, { warnings: notes }));
-  else out(formatText(result, { title: 'reins doctor', warnings: notes, baseline: false }));
+  else {
+    out(formatText(result, { title: 'reins doctor', warnings: notes, baseline: false }));
+    const ready = readyToClose(state, result.violations, env);
+    if (ready) out(ready);
+  }
   return values.strict && result.violations.length ? 1 : 0;
 }
 
 /**
- * The doctor's findings for the current branch and task, without printing. Shared with `progress close`.
- * @param {string} root
- * @param {Record<string, any>} values
+ * The line that proposes closing the task, at the moment it can be closed: a medium or large task still open, with
+ * nothing left for the doctor to flag (`check` asks only when it passes too). Null otherwise, and always in CI.
+ * The agent follows the output of the command it just ran far more reliably than a rule in AGENTS.md (DEV-8914:
+ * a large task was never proposed for closing).
+ * @param {ReturnType<typeof taskState>} state
+ * @param {unknown[]} violations the doctor's
  * @param {NodeJS.ProcessEnv} env
+ * @returns {string | null}
  */
+export function readyToClose(state, violations, env) {
+  if (env.CI || !state || state.closed || state.level === 'small' || violations.length) return null;
+  return `Ready to close${state.task ? ` task ${state.task}` : ''} (${state.level}): nothing left for check or doctor to flag. When the person confirms it works, follow the done skill (\`reins-done\`) and close it with \`npx reins progress close\`.`;
+}
+
 /**
  * The warning to show mid-task when the task's diff already looks bigger than its declared level, or null.
  * Never throws: it runs after commands whose own work must not fail because of it.
@@ -68,6 +81,13 @@ export function levelDrift(root, env) {
   }
 }
 
+/**
+ * The doctor's findings for the current branch and task, without printing. Shared with `progress close`, `check`
+ * and `triage`. `state`: the current task from triage.log (`taskState`), null outside git or without a line.
+ * @param {string} root
+ * @param {Record<string, any>} values
+ * @param {NodeJS.ProcessEnv} env
+ */
 export function doctorResult(root, values, env) {
   const config = readDoctorConfig(root);
 
@@ -110,5 +130,6 @@ export function doctorResult(root, values, env) {
     seenNotes: seenBy(root, sessionId(env)),
   });
 
-  return { result, notes };
+  const state = triage.log ? taskState(triage.log.entries, branch) : null;
+  return { result, notes, state };
 }

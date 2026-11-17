@@ -4,13 +4,13 @@
 // .reins/progress/: stale triage.log lines and old notebooks (notebooks.js).
 // --hook is the Claude Code SessionStart hook that reins sync installs (matcher startup|compact|clear).
 import { execFileSync } from 'node:child_process';
-import { notesFor } from '@agentreins/core';
+import { notesFor, scopeSignals, suggestLevel, taskState } from '@agentreins/core';
 import { baseBranch, refExists } from '../base.js';
-import { CliError, hookEventName, isGitRepo } from '../context.js';
+import { ARCHITECTURE_FILE, CliError, hookEventName, isGitRepo } from '../context.js';
 import { buildImpactMapInBackground } from '../impact-map.js';
 import { branchTasks, cleanNotebooks, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
-import { loadNotes } from '../project.js';
+import { loadNotes, readDoctorConfig, readDomains } from '../project.js';
 import { cleanTriageLog, readTriage, taskFiles } from '../triage-log.js';
 
 const MAX_FILES = 30;
@@ -48,7 +48,7 @@ const quietly = (fn, fallback) => {
  *   `base`: --base
  */
 export function gather(root, env, { session = null, today = new Date().toISOString().slice(0, 10), base: explicit } = {}) {
-  const empty = { branch: null, notebook: null, guessed: false, coldDir: null, others: [], closed: [], removed: [], files: [], anchor: null, compared: null, warnings: [], notes: [] };
+  const empty = { branch: null, notebook: null, guessed: false, coldDir: null, others: [], closed: [], removed: [], files: [], anchor: null, compared: null, warnings: [], notes: [], task: null, measured: null };
   if (!isGitRepo(root)) return empty;
   const branch = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
   const removed = quietly(() => cleanNotebooks(root, today), []);
@@ -57,20 +57,26 @@ export function gather(root, env, { session = null, today = new Date().toISOStri
   let files = [];
   let anchor = null;
   let compared = null;
+  /** @type {ReturnType<typeof taskState>} */
+  let task = null;
   /** @type {string[]} */
   let warnings = [];
   try {
     const base = baseBranch(root, explicit, env);
     warnings = base.warnings;
     quietly(() => cleanTriageLog(root, base.ref));
-    const task = taskFiles(root, readTriage(root, base.ref).log, branch, { explicit, env, base });
-    ({ files, anchor } = task);
-    compared = task.label;
+    const { log } = readTriage(root, base.ref);
+    task = log ? taskState(log.entries, branch) : null;
+    const changed = taskFiles(root, log, branch, { explicit, env, base });
+    ({ files, anchor } = changed);
+    compared = changed.label;
   } catch {
     /* no commits yet */
   }
   const all = loadNotes(root).notes;
   const notes = all.filter((n) => files.some((f) => notesFor(f, [n]).length));
+  // measured, never assumed: an untriaged branch with 31 files must not read as "fine for a small task" (DEV-8914)
+  const measured = files.length ? quietly(() => measure(root, files), null) : null;
   return {
     ...empty,
     branch,
@@ -85,7 +91,34 @@ export function gather(root, env, { session = null, today = new Date().toISOStri
     compared,
     warnings,
     notes,
+    task,
+    measured,
   };
+}
+
+/** The level the files suggest, with doctor.yml's thresholds. Null when no file counts (docs, tests, reins' own). */
+function measure(root, files) {
+  const thresholds = readDoctorConfig(root).triage;
+  const signals = scopeSignals(files, readDomains(root, []), ARCHITECTURE_FILE, thresholds.not_counted);
+  if (!signals.files && !signals.architecture) return null;
+  return suggestLevel(signals, thresholds);
+}
+
+/**
+ * What resume says about the task's state when this session has no notebook: the instruction, measured, not a
+ * reassurance. Null when there is nothing to do.
+ */
+function taskLine(g) {
+  const name = g.task?.task ? ` ${g.task.task}` : '';
+  if (!g.task) {
+    if (!g.measured) return null;
+    const { level, reasons } = g.measured;
+    const plan = level === 'small' ? '' : ` It is ${level}: read .reins/core/policies/progress.md and keep a notebook (\`npx reins progress new <task>${level === 'large' ? ' --hot' : ''}\`).`;
+    return `## Task level: not measured\nThe changes on ${g.branch} look ${level} (${reasons.join('; ')}) and no task was measured on this branch. Before continuing, run \`npx reins triage "<reason>" --files <paths>\` and state the level.${plan}`;
+  }
+  if (g.task.closed) return `The last task on ${g.branch}${name} was closed on ${g.task.date}. A new request is a new task: measure it with \`npx reins triage "<reason>" --files <paths>\`.`;
+  if (g.task.level === 'small') return null;
+  return `Task${name} is open (${g.task.level}) and has no notebook: create it with \`npx reins progress new <task>${g.task.level === 'large' ? ' --hot' : ''}\` and write its done criteria before continuing.`;
 }
 
 /** One or two lines for another session's task. */
@@ -104,7 +137,8 @@ export function render(g, notes = g.notes) {
       parts.push(`This session has not claimed this task: it was picked because it is the ${g.notebook.task ? 'only open task' : 'older one-per-branch notebook'}. If the request is a different task, create a new one with \`npx reins progress new <task>\`.`);
     }
   } else if (!g.others.length) {
-    parts.push('No progress notebook for this branch (fine for a small task).');
+    const line = taskLine(g);
+    if (line) parts.push(line);
   }
   if (g.others.length) {
     const shown = g.others.slice(0, MAX_OTHERS).map(summaryLine);
@@ -174,8 +208,8 @@ export async function resume(ctx) {
   if (values.base && isGitRepo(root) && !refExists(root, values.base)) throw new CliError(`Base ref "${values.base}" not found.`);
   const g = gather(root, env, { today: ctx.today, base: values.base });
   if (values.json) {
-    const { branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes } = g;
-    out(JSON.stringify({ branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes }, null, 2));
+    const { branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes, task, measured } = g;
+    out(JSON.stringify({ branch, notebook, guessed, coldDir, others, closed, removed, files, anchor, compared, warnings, notes, task, measured }, null, 2));
     return 0;
   }
   out(render(g) ?? `Nothing to resume${g.branch ? ` on ${g.branch}` : ''}: no progress notebook and no changes on this branch.`);

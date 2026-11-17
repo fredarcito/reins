@@ -7,13 +7,14 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   NotebookError, notebookFile, taskFolder, listItems, markDone, markStarted, markDropped, addItem, setNext, newNotebook, setHeader,
-  parseNotebook, formatProblems, TASK_RE,
+  parseNotebook, formatProblems, TASK_RE, formatTriageLine, parseTriageLog, taskState,
 } from '@agentreins/core';
 import { CliError } from '../context.js';
 import { declaredLevel } from '../impact-map.js';
 import { branchTasks, explicitTask, resolveTask, sessionId, taskName } from '../notebooks.js';
 import { readText } from '../project.js';
 import { readTemplate } from '../templates.js';
+import { TRIAGE_LOG, appendTriageLine } from '../triage-log.js';
 import { doctorResult, levelDrift } from './doctor.js';
 
 /**
@@ -59,7 +60,8 @@ another session's task does not take it. Never edit another session's task. Ever
 close runs the end of the done skill for you and refuses while it is not finished: every item must be done [x] or
 dropped [-] with a reason, and the doctor must not flag the module notes of the task's files (missing, not updated,
 draft, dead paths). When nothing durable changed in a flagged note, close with --notes-ok "<why>": the reason is
-kept in the notebook.`;
+kept in the notebook. Every close appends a status:closed line to .reins/progress/triage.log; a task without a
+notebook (only its triage line) is closed that way too, so "open" and "closed" are states reins can read.`;
 
 const today = (ctx) => ctx.today ?? new Date().toISOString().slice(0, 10);
 
@@ -123,6 +125,7 @@ export async function progress(ctx) {
 
   const tasks = branchTasks(root, branch);
   const { current, missing, others } = resolveTask(tasks, { task: explicitTask(values, env), session });
+  if (!current && action === 'close' && !missing && !others.length) return closeWithoutNotebook(root, branch, values, env, { session, date, out });
   if (!current) {
     if (missing) throw new CliError(`Task "${missing}" has no notebook on ${branch}. Create it with \`reins progress new ${missing}\`.`);
     const open = others.map((t) => `  - ${taskName(t)}${t.summary.goal ? `: ${t.summary.goal}` : ''}`);
@@ -185,7 +188,9 @@ export async function progress(ctx) {
         if (blockers.length) throw new CliError(`Not closed: the done steps are not finished (the done skill, .reins/core/skills/done/SKILL.md).\n\n${blockers.join('\n\n')}`);
         const reason = values['notes-ok']?.trim();
         const closed = reason ? setNext(text, `Closed with module notes unchanged: ${reason}`, date) : text;
-        return write(setHeader(closed, { status: 'closed' }, date), `Closed ${taskName(current)}. reins deletes its notebook 7 days from now.`);
+        const code = write(setHeader(closed, { status: 'closed' }, date), `Closed ${taskName(current)}. reins deletes its notebook 7 days from now.`);
+        recordClose(root, branch, current.task ?? null, { session, date, reason });
+        return code;
       }
       default:
         throw new CliError(`Unknown action "${action}".\n\n${help}`);
@@ -196,16 +201,57 @@ export async function progress(ctx) {
   }
 }
 
+/**
+ * The task's state from triage.log: its own lines when it has a name, else the branch's. Null without a line.
+ * @param {string | null} task
+ */
+function triageState(root, branch, task) {
+  const text = readText(root, TRIAGE_LOG);
+  if (!text) return null;
+  const entries = parseTriageLog(text).entries.filter((e) => e.branch === branch);
+  const own = task ? entries.filter((e) => e.task === task) : entries;
+  return taskState(own.length ? own : entries, branch);
+}
+
+/**
+ * Appends the `status:closed` line, so "open" and "closed" are states reins can read with or without a notebook
+ * (resume stops asking for triage, check and doctor stop proposing the close). Skipped when nothing was measured.
+ */
+function recordClose(root, branch, task, { session, date, reason }) {
+  const state = triageState(root, branch, task);
+  if (!state || state.closed) return;
+  appendTriageLine(root, formatTriageLine({
+    date, branch, level: state.level, reason: reason ? `closed (notes unchanged: ${reason})` : 'closed',
+    commit: state.commit, task: task ?? state.task, session, closed: true,
+  }));
+}
+
+/** `progress close` on a task without a notebook (a small one, or one reins met mid-way): same checks, one line in triage.log. */
+function closeWithoutNotebook(root, branch, values, env, { session, date, out }) {
+  const state = triageState(root, branch, null);
+  if (!state) throw new CliError(`Nothing to close on ${branch}: no notebook and no task in ${TRIAGE_LOG}. Measure the task first with \`reins triage "<reason>" --files <paths>\`.`);
+  if (state.closed) {
+    out(`The task on ${branch}${state.task ? ` (${state.task})` : ''} was already closed on ${state.date}.`);
+    return 0;
+  }
+  const blockers = closeBlockers(root, null, values, env);
+  if (blockers.length) throw new CliError(`Not closed: the done steps are not finished (the done skill, .reins/core/skills/done/SKILL.md).\n\n${blockers.join('\n\n')}`);
+  recordClose(root, branch, state.task, { session, date, reason: values['notes-ok']?.trim() });
+  out(`Closed the ${state.level} task${state.task ? ` ${state.task}` : ''} on ${branch} (no notebook): recorded in ${TRIAGE_LOG}.`);
+  return 0;
+}
+
 const NOTE_RULES = new Set(['note-missing', 'note-outdated', 'note-draft', 'note-dead-paths', 'note-dead-refs', 'note-unseen']);
 
 /**
  * What still stops a task from closing: items not done or dropped, and module notes the doctor flags (unless
  * --notes-ok says why they need nothing). Each entry is a paragraph for the error message.
+ * @param {string | null} text the notebook; null for a task without one
  * @returns {string[]}
  */
 function closeBlockers(root, text, values, env) {
   const blockers = [];
-  const open = listItems(text).filter((it) => it.marker === ' ' || it.marker === '~');
+  const open = text === null ? [] : listItems(text).filter((it) => it.marker === ' ' || it.marker === '~');
   if (open.length) {
     blockers.push(['Items still open. Mark each one done (`reins progress done <n>`) or drop it with a reason (`reins progress drop <n> <reason>`):',
       ...open.map((it) => `  ${it.n}. [${it.marker}] ${it.text}`)].join('\n'));

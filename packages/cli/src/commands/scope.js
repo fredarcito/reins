@@ -2,9 +2,9 @@
 // (same thresholds as the doctor's triage-mismatch, from .reins/doctor.yml).
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { notesFor, scopeSignals, suggestLevel } from '@agentreins/core';
+import { UNCOVERED_FIX, describeUncovered, notesFor, scopeSignals, suggestLevel, uncoveredFolders } from '@agentreins/core';
 import { ARCHITECTURE_FILE, toRepoPath } from '../context.js';
-import { loadNotes, readDoctorConfig, readDomains } from '../project.js';
+import { listRepoFiles, loadNotes, readDoctorConfig, readDomains } from '../project.js';
 
 const SKIP = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'out', 'coverage']);
 
@@ -18,6 +18,7 @@ minimum task level the objective signals suggest:
   small  = 1 domain and ≤ 3 files;  medium = 1 domain, more files;
   large  = 2+ domains, a public API, or architecture.yml.
 Docs and tests are not counted. Thresholds and what is not counted come from .reins/doctor.yml.
+A folder in no domain whose sibling folders are domains (a new feature folder left out) is named, with the fix.
 reins triage --files <paths> measures the same and records the level.`;
 
 /** Expands folders into the files they contain (repo-relative). */
@@ -47,9 +48,11 @@ export async function scope(ctx) {
   const suggestion = suggestLevel(signals, thresholds);
   const { notes: all } = loadNotes(root);
   const notes = [...new Set(files.flatMap((f) => notesFor(f, all).map((n) => n.file)))];
+  // a feature folder next to domain folders but in none: its files were silently domain-less (DEV-8914)
+  const uncovered = uncoveredFolders({ changedFiles: files, repoFiles: listRepoFiles(root), domains, notes: all, notCounted: thresholds.not_counted });
 
   if (values.json) {
-    out(JSON.stringify({ files, domains: signals.domains, publicApi: signals.publicApi, architecture: signals.architecture, notes, level: suggestion.level, reasons: suggestion.reasons, warnings: notesInfo }, null, 2));
+    out(JSON.stringify({ files, domains: signals.domains, publicApi: signals.publicApi, architecture: signals.architecture, notes, level: suggestion.level, reasons: suggestion.reasons, uncovered, warnings: notesInfo }, null, 2));
     return 0;
   }
   for (const w of notesInfo) out(`! warning  ${w}`);
@@ -63,5 +66,6 @@ export async function scope(ctx) {
       `Minimum level: ${suggestion.level} (${suggestion.reasons.join('; ')})`,
     ].join('\n'),
   );
+  for (const u of uncovered) out(`! warning  ${describeUncovered(u)}\n    Fix: ${UNCOVERED_FIX}`);
   return 0;
 }

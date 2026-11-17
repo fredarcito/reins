@@ -13,7 +13,7 @@
     ".reins/core/skills/arch/SKILL.md": "a65add4561adb138fe1822fad71d27191137bf925bb53dcbb14da15475366b93",
     ".reins/core/skills/audit/SKILL.md": "4c62f319df2f19c18f58d4ba9a2870f85c699a3f859f3d3085787b6c52580e68",
     ".reins/core/skills/backlog/SKILL.md": "9affee7b8c3ee2eb14b3aface0cdd03900a06319a176955c53987c2a80fc04c2",
-    ".reins/core/skills/done/SKILL.md": "8aa2265b1ac08902f0df3bae7f329349bcb27c4a931943c7af6e9179fb847034",
+    ".reins/core/skills/done/SKILL.md": "83261be65fe9af66639432d44cbfcc2b6a8cfe794b96efdb826cd1e03c187767",
     ".reins/core/skills/notes/SKILL.md": "2ec9d6e9073cecf356e6d485bd4b6c432626065161a84927413f0908b18c997b",
     ".reins/core/templates/progress-cold/decisions.md": "216234331c4326d541ada778463170816dc4cef786bb3afb4cfc7b29934bb55b",
     ".reins/core/templates/progress-cold/delivery.md": "fba6dd4789b25c2141b9afc04a7ced80685f11edd52c7d59c4241ac65366f96a",
@@ -28,7 +28,7 @@
     ".claude/skills/reins-arch/SKILL.md": "50d22129ee51f25503ad639bedc296e3e12f324e47ed5898cd7f8145de19cb73",
     ".claude/skills/reins-audit/SKILL.md": "9ffa7e9ec25495cc2e52d075f7ed9cc099c07af118963bb44fb7387b7e47bb29",
     ".claude/skills/reins-backlog/SKILL.md": "9637f24e567c40641b67e0aedb2a25505aac03514d9c9168df08f86113de11aa",
-    ".claude/skills/reins-done/SKILL.md": "7fe3e06ced44f29426416f62d7d14655486e070c2e32a7795d3c2e06ce71ea32",
+    ".claude/skills/reins-done/SKILL.md": "58bae508fcf4c5cf917a8d5292158aab7cc6770c1e75f567b5fcd3dda71d6c2f",
     ".claude/skills/reins-notes/SKILL.md": "2e992bc2301b3849cd6439797bf14d6c62d5c8a70644cadae7d6cb987c807b3b",
     ".claude/agents/reins-explorer.md": "aad14f84393ea97b91a1387952ee3e420fe64aed696f524d1873ea5b0f2185ce",
     ".claude/agents/reins-reviewer.md": "4675c8fa40679bb18cde972a189cf7a66fcaf250a4ed48d25311fb07d63525bc"

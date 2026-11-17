@@ -13,6 +13,7 @@ import { ARCHITECTURE_FILE, BASELINE_FILE, CliError, isGitRepo, toRepoPath } fro
 import { sync as runSync, MANIFEST_FILE } from '../sync/index.js';
 import { computeCoverage, formatCoverage } from '../coverage.js';
 import { conventions, presetsOf } from '../init/conventions.js';
+import { doctorResult, readyToClose } from './doctor.js';
 
 export const options = {
   files: { type: 'string', multiple: true },
@@ -164,6 +165,17 @@ export function readBaseline(root) {
   }
 }
 
+/** After a passing check of the whole project: the close proposal when the doctor is clean too. Never throws. */
+function readyAfterCheck(root, env) {
+  if (env.CI) return null;
+  try {
+    const { result, state } = doctorResult(root, {}, env);
+    return readyToClose(state, result.violations, env);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * @param {{ root: string, cwd: string, values: Record<string, any>, out: (s: string) => void, err: (s: string) => void,
  *   adapterSearchPaths?: string[], env?: NodeJS.ProcessEnv }} ctx
@@ -234,6 +246,12 @@ export async function check(ctx) {
 
   const result = runCheck({ edges: graph.edges, config, baseline, extra: [...extra, ...integrity], files });
   if (values.json) out(formatJson(result, { warnings }));
-  else out(formatText(result, { verbose: values.verbose, warnings }));
+  else {
+    out(formatText(result, { verbose: values.verbose, warnings }));
+    if (result.ok && !files) {
+      const ready = readyAfterCheck(root, ctx.env ?? process.env);
+      if (ready) out(ready);
+    }
+  }
   return result.ok ? 0 : 1;
 }

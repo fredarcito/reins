@@ -110,7 +110,14 @@ The agent does not guess the level: once it knows the files, it runs `npx reins 
 | `note-dead-paths` | Any note: a glob in its `paths` matches no file, so the note may reach nobody (several notes: one warning) |
 | `note-dead-refs` | Any note: it names, in backticks, a repo file or folder that no longer exists (several notes: one warning) |
 | `note-uncovered` | A medium or large diff changed files in a direct subfolder of a note's `<dir>/**` with at least `notes.uncovered_min_files` files (default 10; 0 turns it off), and the note never names that folder nor does a part note cover it: the next agent would get the note and still explore that folder from scratch |
+| `domain-uncovered` | The task put code in a folder no domain covers, while most folders next to it (at least 2, and 3 of 4) are each a domain: a new feature folder left out of `architecture.yml` (`src/pages/gtm/` next to `src/pages/jobs/`, `src/pages/talent/`). Names the notes that already describe it. `reins scope` says the same for the paths it gets |
 | `note-unseen` | The task changed files of a module whose note this agent session never received (from the hook, `triage`, `resume`, `reins notes` or reading the note file). Any level; skipped without a session id (CI, a person's terminal). Catches edits the hooks can't see, such as a script that edits files (`python3 fix.py`). `progress close` refuses on it |
+
+**The task's state is in the output, not in a rule to remember.** An agent follows what the command it just ran prints far more reliably than a rule in `AGENTS.md`, so:
+
+- `reins resume` measures a branch that has changes and no triage line (files, domains, level) and says what to run, instead of assuming a small task. It also says when the task is medium or large and has no notebook, and when the last task was closed (a new request is a new task).
+- `reins check` (when it passes, outside CI) and `reins doctor` end with **Ready to close** for an open medium or large task with nothing left to flag. The done skill takes it from there: once the person confirms it works, it proposes closing.
+- `reins progress close` records every close in `triage.log` (`| status:closed`), with or without a notebook, so open and closed are states reins can read.
 
 Thresholds are starting values in `.reins/doctor.yml`; tune them to your team:
 
@@ -235,9 +242,9 @@ Boundary crossings are imports that reach a domain's internals instead of its pu
 | `reins notes --hook` | The same, as the Claude Code hook (JSON in/out, once per note and session) |
 | `reins notes stale` | Notes ranked by commits to their paths since the note last changed (git history). `--limit <n>` (default 10, 0 for all), `--json` |
 | `reins notes new <domain\|folder>` | Drafts `.reins/notes/<name>.md` from the import graph: public API, most imported files, who uses the module, what it depends on. The rest are `TODO` lines to fill in. `--paths` sets the globs, `--force` overwrites |
-| `reins resume` | This session's task notebook, one line per other open task on the branch, the files the task changed and their notes: what an agent needs to pick a task up. Also tidies old notebooks and triage lines. `--json` for agents, `--base <ref>` to compare with another branch |
+| `reins resume` | This session's task notebook, one line per other open task on the branch, the files the task changed and their notes: what an agent needs to pick a task up. Without a notebook, the task's state: the measured level and the command to run when nothing was triaged, or that the last task was closed. Also tidies old notebooks and triage lines. `--json` for agents, `--base <ref>` to compare with another branch |
 | `reins resume --hook` | The same, as the Claude Code `SessionStart` hook (startup, `/clear`, compaction). After a compaction the notes are delivered again |
-| `reins scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`) |
+| `reins scope <path…>` | Domains, public APIs, notes to read and the minimum task level (`small` / `medium` / `large`); warns about a folder in no domain whose sibling folders are domains |
 | `reins impact <file-or-folder>` | The reverse of `scope`: the domains that consume a file, imports that bypass a public API, violations that already involve it, and the minimum level if the change breaks its importers. `--json` |
 
 ## `reins audit`, `reins progress`, `reins review`
@@ -278,5 +285,6 @@ flowchart LR
 | `progress done <n>` | `[x]` |
 | `progress drop <n> <reason>` | `[-] … — reason` (kept, so it isn't proposed again) |
 | `progress next <text>` | The "Next step" line |
+| `progress close [--notes-ok <why>]` | Closes the task once the person confirms it: refuses while an item is open or the doctor flags a module note. Appends a `status:closed` line to `triage.log`; a task without a notebook (only its triage line) closes the same way |
 
 **`reins review`**: prints a review prompt (instructions, changed files, checklist, notes of the touched paths, diff including uncommitted and untracked files) for any agent. It calls no API; `--executor` is the extension point for a future runner.

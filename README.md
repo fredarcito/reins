@@ -246,12 +246,12 @@ Your agent runs these for you. You mostly talk to it; this is what it uses. `npx
 | `reins install` | Wires the git hook, CI job, `AGENTS.md` and `.reins/` (additive, never overwrites) |
 | `reins init` | Drafts the architecture plan, the baseline and a note per domain from your code (`--dry-run` to preview) |
 | `reins check` | Checks the rules; exit 1 on new errors. `--files`, `--json`, `--update-baseline`, `--coverage` |
-| `reins doctor` | Local warnings about how the work is going (triage, notebook, notes). Never blocks, never runs in CI |
+| `reins doctor` | Local warnings about how the work is going (triage, notebook, notes, folders in no domain), and "Ready to close" when nothing is left. Never blocks, never runs in CI |
 | `reins sync` | Refreshes `.reins/core`, the `AGENTS.md` blocks and the optional Claude Code files (a gitignored `.claude/` is rebuilt on every install) |
 | `reins update` | Updates the CLI and adapters, then runs `sync` |
 | `reins notes <path…>` | The notes that apply to a path. `notes new <folder>` drafts one; `notes stale` ranks the ones behind their code |
 | `reins scope <path…>` · `reins impact <file>` | Path → domains and minimum task level · file → the domains that import it |
-| `reins resume` | The session's task notebook and notes: what an agent needs to pick a task up |
+| `reins resume` | The session's task notebook and notes: what an agent needs to pick a task up. With no notebook, the task's measured level and the next step |
 | `reins triage "<why>"` | Before exploring: the likely areas of the task and their module notes (word matching; nothing recorded) |
 | `reins triage "<why>" --files <paths>` | Measures the task level from the files the agent expects to touch, and records it |
 | `reins progress` · `reins audit` | The task notebook and the audit backlog, edited one line at a time |

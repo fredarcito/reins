@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseDoctorConfig, DOCTOR_DEFAULTS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel, runDoctor,
   parseNotebook, formatProblems, notebookFile, formatText, DOCTOR_RULES, rankStaleNotes,
-  taskFolder, formatHeader, summarizeNotebook, cleanupPlan, newNotebook, setHeader,
+  taskFolder, formatHeader, summarizeNotebook, cleanupPlan, newNotebook, setHeader, taskState, uncoveredFolders,
 } from '@agentreins/core';
 
 const domains = [
@@ -392,4 +392,34 @@ test('rankStaleNotes: commits to a note\'s paths since the note last changed, mo
   ]);
   const editing = rankStaleNotes(notes, history, { dirty: ['.reins/notes/a.md'] });
   assert.deepEqual(editing.find((e) => e.file === '.reins/notes/a.md'), { file: '.reins/notes/a.md', lastChange: '2026-11-02', commits: 0, files: 0, uncommitted: true });
+});
+
+test('triage log: status:closed marks a closed task; taskState reads the current task of a branch', () => {
+  const line = formatTriageLine({ date: '2026-11-17', branch: 'feat/x', level: 'large', reason: 'closed', commit: 'abc', task: 'gtm', closed: true });
+  assert.equal(line, '2026-11-17 | feat/x | large | closed | commit:abc | task:gtm | status:closed');
+  const { entries } = parseTriageLog(`2026-11-16 | feat/x | medium | gtm page | commit:abc | task:gtm\n2026-11-16 | feat/x | large | grew | commit:abc | task:gtm\n${line}\n`);
+  assert.deepEqual(entries.map((e) => e.closed), [false, false, true]);
+  assert.deepEqual(taskState(entries.slice(0, 2), 'feat/x'), { level: 'large', task: 'gtm', closed: false, date: '2026-11-16', commit: 'abc' });
+  assert.equal(taskState(entries, 'feat/x')?.closed, true);
+  assert.equal(taskState(entries, 'main'), null);
+});
+
+test('domain-uncovered: a new folder next to domain folders, in none; shared folders and gaps inside domains are not reported', () => {
+  const doms = [
+    { name: 'jobs', paths: ['src/pages/jobs/**'], publicApi: [] },
+    { name: 'talent', paths: ['src/pages/talent/**'], publicApi: [] },
+    { name: 'reviews', paths: ['src/pages/reviews/**'], publicApi: [] },
+  ];
+  const repoFiles = ['src/pages/jobs/a.js', 'src/pages/talent/a.js', 'src/pages/reviews/a.js', 'src/pages/gtm/a.js', 'src/pages/gtm/parts/b.js', 'src/ui/Button.js', 'src/lib/date.js'];
+  const notes = [{ file: '.reins/notes/talent.md', body: 'Also renders `pages/gtm/` widgets.' }];
+  const changed = ['src/pages/gtm/a.js', 'src/pages/gtm/parts/b.js', 'src/ui/Button.js', 'src/pages/gtm/a.test.js'];
+  const found = uncoveredFolders({ changedFiles: changed, repoFiles, domains: doms, notes, notCounted: DOCTOR_DEFAULTS.triage.not_counted });
+  assert.deepEqual(found, [{ folder: 'src/pages/gtm', files: 2, changed: 2, parent: 'src/pages', notes: ['.reins/notes/talent.md'] }]);
+  const r = doctor({ changedFiles: changed, domains: doms, repoFiles });
+  const v = r.violations.find((x) => x.rule === 'domain-uncovered');
+  assert.match(v?.message ?? '', /^src\/pages\/gtm\/ \(2 files, 2 changed\) is in no domain, unlike the other folders of src\/pages\/\.$/);
+  assert.ok(DOCTOR_RULES.includes('domain-uncovered'));
+  // siblings mostly not domains (only one domain folder next to it): shared code, silent
+  assert.deepEqual(uncoveredFolders({ changedFiles: ['src/ui/Button.js'], repoFiles, domains: doms }), []);
+  assert.deepEqual(uncoveredFolders({ changedFiles: ['src/pages/gtm/a.js'], repoFiles, domains: [] }), []);
 });

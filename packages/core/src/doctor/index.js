@@ -4,10 +4,12 @@
 // Pure: the caller reads the files and git state and passes them in.
 import { checkTriage, parseTriageLog, scopeSignals, suggestLevel } from './triage.js';
 import { checkNotes } from './notes.js';
+import { checkUncoveredFolders } from './domains.js';
 import { checkNotebook, countLines } from './progress.js';
 
 export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 'agents-size', 'progress-hot-size', 'progress-format', 'progress-closed',
-  'note-missing', 'note-outdated', 'note-draft', 'note-size', 'note-layout', 'note-dead-paths', 'note-dead-refs', 'note-uncovered', 'note-unseen']);
+  'note-missing', 'note-outdated', 'note-draft', 'note-size', 'note-layout', 'note-dead-paths', 'note-dead-refs', 'note-uncovered', 'note-unseen',
+  'domain-uncovered']);
 
 /**
  * @param {object} input
@@ -22,7 +24,7 @@ export const DOCTOR_RULES = Object.freeze(['triage-mismatch', 'triage-missing', 
  * @param {{ file: string, text: string | null }} input.agentsMd
  * @param {{ file: string, text: string }[]} input.notebooks hot notebooks to check (usually the current branch's)
  * @param {{ file: string, paths: string[], body: string }[]} [input.notes] module notes of the repo
- * @param {string[] | null} [input.repoFiles] every file of the repo; without it the note-dead-* rules are skipped
+ * @param {string[] | null} [input.repoFiles] every file of the repo; without it the note-dead-* and domain-uncovered rules are skipped
  * @param {string[] | null} [input.seenNotes] note files this agent session received; null (no session) skips note-unseen
  * @returns {import('../check/index.js').CheckResult}
  */
@@ -57,6 +59,8 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
     ...checkNotes({ changedFiles, notes, domains, planChanged: changedFiles.includes(architectureFile), level: suggestLevel(signals, config.triage).level, maxLines: config.notes.max_lines, uncoveredMinFiles: config.notes.uncovered_min_files, repoFiles, seenNotes }),
   );
 
+  if (repoFiles) findings.push(...checkUncoveredFolders({ changedFiles, repoFiles, domains, notes, notCounted: config.triage.not_counted }));
+
   for (const nb of notebooks) findings.push(...checkNotebook({ file: nb.file, text: nb.text, maxLines: config.progress.hot_max_lines }));
 
   const violations = findings.map((f) => ({ ...f, status: /** @type {const} */ ('new') }));
@@ -70,7 +74,8 @@ export function runDoctor({ config, branch, changedFiles, domains, architectureF
 }
 
 export { parseDoctorConfig, DOCTOR_DEFAULTS } from './config.js';
-export { LEVELS, parseTriageLog, formatTriageLine, taskAnchor, scopeSignals, suggestLevel } from './triage.js';
+export { LEVELS, parseTriageLog, formatTriageLine, taskAnchor, taskState, scopeSignals, suggestLevel } from './triage.js';
+export { uncoveredFolders, describeUncovered, UNCOVERED_FIX } from './domains.js';
 export {
   parseNotebook, formatProblems, notebookFile, taskFolder, branchFolder, PROGRESS_DIR, NOTEBOOK_NAME, TASK_RE, formatHeader, summarizeNotebook,
   cleanupPlan, MARKERS, countLines,

@@ -2,6 +2,7 @@
 // matter, the current task's diff (since the commit it started from) and the automatic cleanup that resume runs.
 /** @typedef {import('./base.js').baseBranch} baseBranch */
 import { execFileSync } from 'node:child_process';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { parseTriageLog, taskAnchor } from '@agentreins/core';
 import { REINS_DIR, isGitRepo } from './context.js';
@@ -74,6 +75,16 @@ export function readTriage(root, baseRef) {
   const parsed = parseTriageLog(text);
   const stale = isGitRepo(root) ? staleLines(root, parsed.entries, baseRef) : new Set();
   return { text, log: { entries: parsed.entries.filter((e) => !stale.has(e.line)), malformed: parsed.malformed }, stale };
+}
+
+/** Appends one line to triage.log, under the lock other sessions' writes take. */
+export function appendTriageLine(root, line) {
+  const file = path.join(root, TRIAGE_LOG);
+  withFileLock(file, () => {
+    mkdirSync(path.dirname(file), { recursive: true });
+    const current = readText(root, TRIAGE_LOG);
+    appendFileSync(file, `${current && !current.endsWith('\n') ? '\n' : ''}${line}\n`);
+  });
 }
 
 /**

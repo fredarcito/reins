@@ -1,15 +1,12 @@
 // reins triage: the agent records a task level in .reins/progress/triage.log. reins adds the date, the branch and
 // the commit the task starts from (HEAD), so doctor and resume can look at this task's diff only.
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync } from 'node:fs';
-import path from 'node:path';
 import { LEVELS, TASK_RE, formatTriageLine, matchesAny, notesFor, scopeSignals, suggestLevel, suggestNotes } from '@agentreins/core';
 import { ARCHITECTURE_FILE, CliError, isGitRepo, toRepoPath } from '../context.js';
-import { withFileLock } from '../local-state.js';
 import { branchTasks, explicitTask, resolveTask, sessionId } from '../notebooks.js';
 import { takeUnseen } from '../notes-seen.js';
-import { listRepoFiles, loadNotes, readDoctorConfig, readDomains, readText } from '../project.js';
-import { TRIAGE_LOG } from '../triage-log.js';
+import { listRepoFiles, loadNotes, readDoctorConfig, readDomains } from '../project.js';
+import { TRIAGE_LOG, appendTriageLine } from '../triage-log.js';
 import { levelDrift } from './doctor.js';
 import { render } from './notes.js';
 import { expand } from './scope.js';
@@ -99,12 +96,7 @@ export async function triage(ctx) {
     task,
     session: sessionId(env), // lets the notes hook tell this session's level from other sessions' on the branch
   });
-  const file = path.join(root, TRIAGE_LOG);
-  withFileLock(file, () => {
-    mkdirSync(path.dirname(file), { recursive: true });
-    const current = readText(root, TRIAGE_LOG);
-    appendFileSync(file, `${current && !current.endsWith('\n') ? '\n' : ''}${line}\n`);
-  });
+  appendTriageLine(root, line);
   // the task may already have outgrown the level (a second triage after some work, or an escalation that falls short)
   const drift = levelDrift(root, env);
   if (drift) notes.push(`! warning  ${drift.message}`, `    Fix: ${drift.fix}`);

@@ -1,17 +1,18 @@
 // Triage: the agent declares a task level (small | medium | large) in .reins/progress/triage.log,
 // one line per task: `YYYY-MM-DD | branch | level | reason`, optionally followed by `| commit:<sha>` (the commit the
 // task started from, written by `reins triage`), `| task:<name>` and `| session:<id>` (the agent session that
-// measured it: the notes hook reminds a session that edits code before measuring its task). With a commit, the doctor compares the current
+// measured it: the notes hook reminds a session that edits code before measuring its task) and `| status:closed` (written by
+// `reins progress close`: the task was closed, with or without a notebook). With a commit, the doctor compares the current
 // task's level with the diff since that commit; without one, the highest level declared on the branch with the
 // branch diff.
 import { matchesAny } from '../glob.js';
 
 export const LEVELS = Object.freeze(['small', 'medium', 'large']);
 const rank = (level) => LEVELS.indexOf(level);
-const FIELD_RE = /^(commit|task|session):([^\s|]+)$/;
+const FIELD_RE = /^(commit|task|session|status):([^\s|]+)$/;
 
 /**
- * @typedef {{ line: number, date: string, branch: string, level: string, reason: string, commit: string | null, task: string | null, session: string | null }} TriageEntry
+ * @typedef {{ line: number, date: string, branch: string, level: string, reason: string, commit: string | null, task: string | null, session: string | null, closed: boolean }} TriageEntry
  */
 
 /**
@@ -36,7 +37,7 @@ export function parseTriageLog(text) {
     if (parts.length < 4 || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !branch || !LEVELS.includes(level) || !reason) {
       malformed.push({ line: i + 1, text: line });
     } else {
-      entries.push({ line: i + 1, date, branch, level, reason, commit: fields.commit ?? null, task: fields.task ?? null, session: fields.session ?? null });
+      entries.push({ line: i + 1, date, branch, level, reason, commit: fields.commit ?? null, task: fields.task ?? null, session: fields.session ?? null, closed: fields.status === 'closed' });
     }
   });
   return { entries, malformed };
@@ -44,10 +45,10 @@ export function parseTriageLog(text) {
 
 /**
  * One triage.log line.
- * @param {{ date: string, branch: string, level: string, reason: string, commit?: string | null, task?: string | null, session?: string | null }} entry
+ * @param {{ date: string, branch: string, level: string, reason: string, commit?: string | null, task?: string | null, session?: string | null, closed?: boolean }} entry
  */
-export function formatTriageLine({ date, branch, level, reason, commit = null, task = null, session = null }) {
-  const fields = [commit && `commit:${commit}`, task && `task:${task}`, session && `session:${session}`];
+export function formatTriageLine({ date, branch, level, reason, commit = null, task = null, session = null, closed = false }) {
+  const fields = [commit && `commit:${commit}`, task && `task:${task}`, session && `session:${session}`, closed && 'status:closed'];
   return [date, branch, level, reason.replace(/\s+/g, ' ').trim(), ...fields].filter(Boolean).join(' | ');
 }
 
@@ -60,6 +61,23 @@ export function formatTriageLine({ date, branch, level, reason, commit = null, t
 export function taskAnchor(entries, branch) {
   const mine = entries.filter((e) => e.branch === branch);
   return mine.length ? mine[mine.length - 1].commit : null;
+}
+
+/**
+ * The state of a branch's current task, from its triage lines: the level declared for it (the highest among the
+ * lines of its start commit, as the doctor compares), its name, and whether its latest line closed it. Null when the
+ * branch has no line.
+ * @param {TriageEntry[]} entries live lines
+ * @param {string} branch
+ * @returns {{ level: string, task: string | null, closed: boolean, date: string, commit: string | null } | null}
+ */
+export function taskState(entries, branch) {
+  const mine = entries.filter((e) => e.branch === branch);
+  if (!mine.length) return null;
+  const latest = mine[mine.length - 1];
+  const window = latest.commit ? mine.filter((e) => e.commit === latest.commit && (e.task ?? null) === (latest.task ?? null)) : [latest];
+  const level = window.reduce((best, e) => (rank(e.level) > rank(best) ? e.level : best), latest.level);
+  return { level, task: latest.task, closed: latest.closed, date: latest.date, commit: latest.commit };
 }
 
 /** Agent instructions and generated tool files: they change with the work but are not "files of the task". */
