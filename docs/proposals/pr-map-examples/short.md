@@ -13,7 +13,7 @@ flowchart LR
   n2("`**jobs**
   affected · 12 files`"):::affected
 
-  n2 --> n1
+  n1 --> n2
 
   classDef default fill:#ffffff,stroke:#afb8c1,stroke-width:1px,color:#1f2328
   classDef touched fill:#fff5cc,stroke:#bf8700,stroke-width:2px,color:#1f2328
@@ -22,7 +22,7 @@ flowchart LR
 ```
 
 <sub>**Boxes:** &nbsp; 🟨 Touched &nbsp; 🟦 Affected</sub><br>
-<sub>**Lines:** &nbsp; the arrow points to the code being used (jobs → billing: jobs uses billing) &nbsp; ── Unchanged</sub>
+<sub>**Lines:** &nbsp; the arrow follows the change (billing → jobs: a change in billing reaches jobs, which uses it) &nbsp; ── Unchanged</sub>
 
 <details>
 <summary><b>Files by domain</b> (4)</summary>

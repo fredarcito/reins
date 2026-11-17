@@ -106,7 +106,7 @@ test('render: ids are n1, n2… and names are escaped only inside labels', () =>
   assert.match(text, /n3\("`\*\*end\*\*\n  2 files changed`"\):::touched/);
   assert.match(text, /\*\*app\/\(auth\)\/\[id\]\*\*/);
   assert.match(text, /\*\*say #quot;hi#quot; #96;x#96;\*\*/);
-  assert.match(text, /n3 --> n1\n  n3 --> n2\n  n3 --> n4/);
+  assert.match(text, /n1 --> n3\n  n2 --> n3\n  n4 --> n3/);
   assert.doesNotMatch(text, /--> end|end -->/);
 });
 

@@ -26,14 +26,14 @@ flowchart LR
   n8("`**ui**`")
   n9("`**utils**`")
 
-  n2 --> n1
-  n1 --> n6
-  n3 --> n1
-  n7 --> n1
-  n5 --> n8
-  n3 -.-> n9
-  n3 -. "#nbsp;#nbsp;breaks domain-boundary#nbsp;#nbsp;" .-> n2
-  n4 --> n2
+  n1 --> n2
+  n6 --> n1
+  n1 --> n3
+  n1 --> n7
+  n8 --> n5
+  n9 -.-> n3
+  n2 -. "#nbsp;#nbsp;breaks domain-boundary#nbsp;#nbsp;" .-> n3
+  n2 --> n4
 
   classDef default fill:#ffffff,stroke:#afb8c1,stroke-width:1px,color:#1f2328
   classDef touched fill:#fff5cc,stroke:#bf8700,stroke-width:2px,color:#1f2328
@@ -47,7 +47,7 @@ flowchart LR
 ```
 
 <sub>**Boxes:** &nbsp; 🟨 Touched &nbsp; 🟦 Affected &nbsp; 🟪 New &nbsp; ⬜ Unchanged &nbsp; ⬚ Not in architecture.yml</sub><br>
-<sub>**Lines:** &nbsp; the arrow points to the code being used (profile → billing: profile uses billing) &nbsp; 🟪 New &nbsp; 🟥 Breaks a rule &nbsp; ┈┈ Removed &nbsp; ── Unchanged</sub>
+<sub>**Lines:** &nbsp; the arrow follows the change (billing → profile: a change in billing reaches profile, which uses it) &nbsp; 🟪 New &nbsp; 🟥 Breaks a rule &nbsp; ┈┈ Removed &nbsp; ── Unchanged</sub>
 
 ```diff
 - profile              now uses        billing internals  ✖ breaks domain-boundary
@@ -66,12 +66,12 @@ flowchart LR
 | --- | --- |
 | New domain | `notifications` added to architecture.yml (`src/features/notifications/**`) |
 | Not in architecture.yml | `src/features/digest/` (4 files): no domain covers it, so no rule checks it |
-| New dependency | `billing → notifications`: `billing/changePlan.ts` imports `notifications/index.ts` |
-| New dependency | `notifications → api-client`: `notifications/send.ts` imports `api-client/index.ts` |
-| New dependency | `profile → notifications`: `profile/Settings.tsx` imports `notifications/index.ts` |
-| New dependency | `routes → notifications`: `app/settings/notifications/page.tsx` imports `notifications/index.ts` |
-| New dependency | `src/features/digest → ui`: `src/features/digest/DigestCard.tsx` imports `ui/index.ts` |
-| Removed dependency | `profile → utils`: last import removed from `profile/format.ts` |
+| New dependency | `billing` now uses `notifications`: `billing/changePlan.ts` imports `notifications/index.ts` |
+| New dependency | `notifications` now uses `api-client`: `notifications/send.ts` imports `api-client/index.ts` |
+| New dependency | `profile` now uses `notifications`: `profile/Settings.tsx` imports `notifications/index.ts` |
+| New dependency | `routes` now uses `notifications`: `app/settings/notifications/page.tsx` imports `notifications/index.ts` |
+| New dependency | `src/features/digest` now uses `ui`: `src/features/digest/DigestCard.tsx` imports `ui/index.ts` |
+| Removed dependency | `profile` no longer uses `utils`: last import removed from `profile/format.ts` |
 | Affected | `jobs` (12) |
 
 </details>

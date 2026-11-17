@@ -29,7 +29,7 @@ Exact output: see the three examples. This section gives the rules behind them.
 
 ### 3.1 Forms
 
-There is **one map rule** for every PR: draw only what changed. Nodes: those on a new, removed, mutual or forbidden edge, new domains, no-domain folders, and affected nodes when there are at most 4 (more: only counted in the context line and Details). Edges: the structural ones, plus one thin grey edge per drawn affected node to the touched node it imports (the only unchanged edge ever drawn). Touched domains with no structural change are not drawn; when there are any, a `<sub>` note says how many and points to Files by domain. A small PR and a large refactor go through the same code; the large one just has more boxes.
+There is **one map rule** for every PR: draw only what changed. Nodes: those on a new, removed, mutual or forbidden edge, new domains, no-domain folders, and affected nodes when there are at most 4 (more: only counted in the context line and Details). Edges: the structural ones, plus one thin grey edge per drawn affected node from the touched node it imports (the only unchanged edge ever drawn). Every arrow follows the change: it goes from the code being used to the code using it (`shared → talentData`: a change in shared reaches talentData), the reverse of the import; the diff block and Details say in words who uses whom. Touched domains with no structural change are not drawn; when there are any, a `<sub>` note says how many and points to Files by domain. A small PR and a large refactor go through the same code; the large one just has more boxes.
 
 Two variations remain, and neither is a different map:
 
@@ -68,7 +68,7 @@ Two variations remain, and neither is a different map:
 
 Two `<sub>` lines, only the entries that appear on this map:
 - `**Boxes:**` 🟨 Touched · 🟦 Affected · 🟪 New · ⬜ Unchanged · ⬚ Not in architecture.yml
-- `**Lines:**` the arrow points to the code being used (`<a real edge of this map>`: `<a> uses <b>`) · 🟪 New · 🟧 Mutual · 🟥 Breaks a rule · ┈┈ Removed · ── Unchanged
+- `**Lines:**` the arrow follows the change (`<b> → <a>` for a real edge of this map: a change in `<b>` reaches `<a>`, which uses it) · 🟪 New · 🟧 Mutual · 🟥 Breaks a rule · ┈┈ Removed · ── Unchanged
 
 The example in the Lines entry uses the first edge of the map in this preference: forbidden, new, mutual, affected, removed.
 

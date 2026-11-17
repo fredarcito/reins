@@ -40,26 +40,26 @@ flowchart LR
   n11("`**api-client**`")
   n12("`**legacy-api**`")
 
-  n3 --> n1
-  n4 --> n2
-  n5 --> n1
-  n1 --> n11
-  n1 --> n10
-  n6 --> n2
-  n7 --> n2
-  n9 --> n1
-  n9 --> n2
-  n2 --> n11
-  n8 --> n2
+  n1 --> n3
+  n2 --> n4
+  n1 --> n5
+  n11 --> n1
+  n10 --> n1
+  n2 --> n6
+  n2 --> n7
+  n1 --> n9
+  n2 --> n9
+  n11 --> n2
   n2 --> n8
-  n3 -.-> n5
-  n4 -.-> n12
-  n5 -.-> n12
-  n6 -.-> n4
-  n7 -.-> n4
-  n8 -.-> n4
-  n1 -. "#nbsp;#nbsp;breaks domain-boundary#nbsp;#nbsp;" .-> n5
-  n10 -. "#nbsp;#nbsp;breaks layer-direction#nbsp;#nbsp;" .-> n2
+  n8 --> n2
+  n5 -.-> n3
+  n12 -.-> n4
+  n12 -.-> n5
+  n4 -.-> n6
+  n4 -.-> n7
+  n4 -.-> n8
+  n5 -. "#nbsp;#nbsp;breaks domain-boundary#nbsp;#nbsp;" .-> n1
+  n2 -. "#nbsp;#nbsp;breaks layer-direction#nbsp;#nbsp;" .-> n10
 
   classDef default fill:#ffffff,stroke:#afb8c1,stroke-width:1px,color:#1f2328
   classDef touched fill:#fff5cc,stroke:#bf8700,stroke-width:2px,color:#1f2328
@@ -71,7 +71,7 @@ flowchart LR
 ```
 
 <sub>**Boxes:** &nbsp; 🟨 Touched &nbsp; 🟪 New &nbsp; ⬜ Unchanged</sub><br>
-<sub>**Lines:** &nbsp; the arrow points to the code being used (invoices → billing: invoices uses billing) &nbsp; 🟪 New &nbsp; 🟧 Mutual &nbsp; 🟥 Breaks a rule &nbsp; ┈┈ Removed</sub>
+<sub>**Lines:** &nbsp; the arrow follows the change (billing → invoices: a change in billing reaches invoices, which uses it) &nbsp; 🟪 New &nbsp; 🟧 Mutual &nbsp; 🟥 Breaks a rule &nbsp; ┈┈ Removed</sub>
 
 ```diff
 - invoices  now uses        billing internals  ✖ breaks domain-boundary
@@ -103,23 +103,23 @@ flowchart LR
 | --- | --- |
 | New domain | `invoices` added to architecture.yml (`src/features/invoices/**`) |
 | New domain | `session` added to architecture.yml (`src/features/session/**`) |
-| New dependency | `admin → invoices`: `admin/Billing.tsx` imports `invoices/index.ts` |
-| New dependency | `auth → session`: `auth/login.ts` imports `session/index.ts` |
-| New dependency | `billing → invoices`: `billing/checkout.ts` imports `invoices/index.ts` |
-| New dependency | `invoices → api-client`: `invoices/fetch.ts` imports `api-client/index.ts` |
-| New dependency | `invoices → ui`: `invoices/InvoiceTable.tsx` imports `ui/index.ts` |
-| New dependency | `jobs → session`: `jobs/JobList.tsx` imports `session/index.ts` |
-| New dependency | `profile → session`: `profile/useUser.ts` imports `session/index.ts` |
-| New dependency | `routes → invoices`: `app/billing/invoices/page.tsx` imports `invoices/index.ts` |
-| New dependency | `routes → session`: `app/layout.tsx` imports `session/index.ts` (+3 more) |
-| New dependency | `session → api-client`: `session/refresh.ts` imports `api-client/index.ts` |
+| New dependency | `admin` now uses `invoices`: `admin/Billing.tsx` imports `invoices/index.ts` |
+| New dependency | `auth` now uses `session`: `auth/login.ts` imports `session/index.ts` |
+| New dependency | `billing` now uses `invoices`: `billing/checkout.ts` imports `invoices/index.ts` |
+| New dependency | `invoices` now uses `api-client`: `invoices/fetch.ts` imports `api-client/index.ts` |
+| New dependency | `invoices` now uses `ui`: `invoices/InvoiceTable.tsx` imports `ui/index.ts` |
+| New dependency | `jobs` now uses `session`: `jobs/JobList.tsx` imports `session/index.ts` |
+| New dependency | `profile` now uses `session`: `profile/useUser.ts` imports `session/index.ts` |
+| New dependency | `routes` now uses `invoices`: `app/billing/invoices/page.tsx` imports `invoices/index.ts` |
+| New dependency | `routes` now uses `session`: `app/layout.tsx` imports `session/index.ts` (+3 more) |
+| New dependency | `session` now uses `api-client`: `session/refresh.ts` imports `api-client/index.ts` |
 | Mutual | `reviews ⇄ session`: `reviews/ReviewForm.tsx` imports `session/index.ts`; `session/SessionGate.tsx` imports `reviews/ReviewPrompt.tsx` |
-| Removed dependency | `admin → billing`: last import removed from `admin/Billing.tsx` |
-| Removed dependency | `auth → legacy-api`: last import removed from `auth/token.ts` |
-| Removed dependency | `billing → legacy-api`: last import removed from `billing/charge.ts` |
-| Removed dependency | `jobs → auth`: last import removed from `jobs/JobList.tsx` |
-| Removed dependency | `profile → auth`: last import removed from `profile/useUser.ts` |
-| Removed dependency | `reviews → auth`: last import removed from `reviews/ReviewForm.tsx` |
+| Removed dependency | `admin` no longer uses `billing`: last import removed from `admin/Billing.tsx` |
+| Removed dependency | `auth` no longer uses `legacy-api`: last import removed from `auth/token.ts` |
+| Removed dependency | `billing` no longer uses `legacy-api`: last import removed from `billing/charge.ts` |
+| Removed dependency | `jobs` no longer uses `auth`: last import removed from `jobs/JobList.tsx` |
+| Removed dependency | `profile` no longer uses `auth`: last import removed from `profile/useUser.ts` |
+| Removed dependency | `reviews` no longer uses `auth`: last import removed from `reviews/ReviewForm.tsx` |
 | Affected | `search` (18), `settings` (14), `reports` (11), `onboarding` (9), `messages` (6), `notifications` (4), `analytics` (2) |
 
 </details>

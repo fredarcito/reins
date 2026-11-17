@@ -112,8 +112,11 @@ function mermaid(model, { drawn, edges, byName }) {
   if (!emitted.length) lines[2] = 'flowchart TB';
   if (emitted.length) {
     lines.push('');
+    // drawn in the direction of the change, from the code being used to the code using it: a change in `shared`
+    // reaches `talentData`. In import direction the affected arrows read backwards; the Details table and
+    // the diff block still say in words who uses whom.
     for (const e of emitted) {
-      const [a, b] = [ids.get(e.from), ids.get(e.to)];
+      const [a, b] = [ids.get(e.to), ids.get(e.from)];
       lines.push(e.status === 'removed' ? `  ${a} -.-> ${b}` : e.status === 'forbidden' ? `  ${a} -. "#nbsp;#nbsp;breaks ${label(e.rule ?? '')}#nbsp;#nbsp;" .-> ${b}` : `  ${a} --> ${b}`);
     }
   }
@@ -140,7 +143,7 @@ function mermaid(model, { drawn, edges, byName }) {
     if (emitted.some((e) => e.status === 'forbidden')) kinds.push('🟥 Breaks a rule');
     if (emitted.some((e) => e.status === 'removed')) kinds.push('┈┈ Removed');
     if (emitted.some((e) => e.status === 'affected')) kinds.push('── Unchanged');
-    const head = `the arrow points to the code being used (${ex.from} → ${ex.to}: ${ex.from} uses ${ex.to})`;
+    const head = `the arrow follows the change (${ex.to} → ${ex.from}: a change in ${ex.to} reaches ${ex.from}, which uses it)`;
     legend.push(`<sub>**Lines:** &nbsp; ${[head, ...kinds].join(' &nbsp; ')}</sub>`);
   }
   if (zones.length) legend.push(`<sub>**Frames:** &nbsp; one per language (${zones.join(', ')})${zones.length > 1 ? '; an arrow between two frames crosses languages' : ''}</sub>`);
@@ -182,13 +185,13 @@ function detailRows(model) {
   }
   for (const e of model.edges.filter((x) => x.status === 'new')) {
     const p = first(e);
-    rows.push(['New dependency', `${code(`${e.from} → ${e.to}`)}: ${code(p.from)} imports ${code(p.to)}${e.pairs.length > 1 ? ` (+${e.pairs.length - 1} more)` : ''}`]);
+    rows.push(['New dependency', `${code(e.from)} now uses ${code(e.to)}: ${code(p.from)} imports ${code(p.to)}${e.pairs.length > 1 ? ` (+${e.pairs.length - 1} more)` : ''}`]);
   }
   for (const m of model.mutual) {
     rows.push(['Mutual', `${code(`${m.a} ⇄ ${m.b}`)}: ${code(m.ab.from)} imports ${code(m.ab.to)}; ${code(m.ba.from)} imports ${code(m.ba.to)}`]);
   }
   for (const e of model.edges.filter((x) => x.status === 'removed')) {
-    rows.push(['Removed dependency', `${code(`${e.from} → ${e.to}`)}: last import removed from ${code(first(e).from)}`]);
+    rows.push(['Removed dependency', `${code(e.from)} no longer uses ${code(e.to)}: last import removed from ${code(first(e).from)}`]);
   }
   const affected = model.nodes.filter((n) => n.status === 'affected').sort((a, b) => b.importers - a.importers || cmp(a.name, b.name));
   if (affected.length) rows.push(['Affected', affected.map((n) => `${code(n.name)} (${n.importers})`).join(', ')]);
